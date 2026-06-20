@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import { roleOrFilter } from '@/lib/feedFilter'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -8,9 +9,26 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/')
 
-  // Run all four reads in parallel instead of sequentially — this is the main
-  // cause of the tab-switch latency (4 round-trips became 1 round-trip worth).
   const FEED_LIMIT = 200
+
+  // Read-time role guard so the feed always reflects the CURRENT target role,
+  // even before a backend re-filter prunes stale rows.
+  const { data: prof } = await supabase
+    .from('user_profiles').select('target_roles').eq('user_id', user.id).maybeSingle()
+  const roleFilter = roleOrFilter(prof?.target_roles)
+
+  const feedQ    = () => {
+    let q = supabase.from('job_feed').select('*')
+      .eq('user_id', user.id).eq('is_dismissed', false).eq('is_applied', false)
+    if (roleFilter) q = q.or(roleFilter)
+    return q
+  }
+  const countQ   = (extra?: (q: any) => any) => {
+    let q = supabase.from('job_feed').select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id).eq('is_dismissed', false).eq('is_applied', false)
+    if (roleFilter) q = q.or(roleFilter)
+    return extra ? extra(q) : q
+  }
 
   const [
     { data: jobs },
@@ -19,31 +37,12 @@ export default async function DashboardPage() {
     { count: appliedCount },
     { data: scraperHealth },
   ] = await Promise.all([
-    // The feed itself: top matches, applied jobs excluded (they live in the tracker).
-    supabase
-      .from('job_feed')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('is_dismissed', false)
-      .eq('is_applied', false)
+    feedQ()
       .order('match_score', { ascending: false })
       .order('scraped_at', { ascending: false })
       .limit(FEED_LIMIT),
-    // "New" = genuinely new, not-yet-applied postings.
-    supabase
-      .from('job_feed')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_new', true)
-      .eq('is_dismissed', false)
-      .eq('is_applied', false),
-    // Total matched jobs in the feed (so "In Feed" is the truth, not the page size).
-    supabase
-      .from('job_feed')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_dismissed', false)
-      .eq('is_applied', false),
+    countQ(q => q.eq('is_new', true)),
+    countQ(),
     supabase
       .from('applications')
       .select('*', { count: 'exact', head: true })

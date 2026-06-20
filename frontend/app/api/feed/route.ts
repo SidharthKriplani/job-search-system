@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { roleOrFilter } from '@/lib/feedFilter'
 
 /**
  * Server-side feed query — so search, source filter, and "New/Saved" run against
@@ -22,6 +23,11 @@ export async function GET(req: Request) {
   const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0)
   const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || String(PAGE), 10) || PAGE)
 
+  // Current target roles → read-time role guard (kills stale off-role rows).
+  const { data: prof } = await supabase
+    .from('user_profiles').select('target_roles').eq('user_id', user.id).maybeSingle()
+  const roleFilter = roleOrFilter(prof?.target_roles)
+
   let query = supabase
     .from('job_feed')
     .select('*', { count: 'exact' })
@@ -29,6 +35,7 @@ export async function GET(req: Request) {
     .eq('is_dismissed', false)
     .eq('is_applied', false)
 
+  if (roleFilter)        query = query.or(roleFilter)
   if (scope === 'new')   query = query.eq('is_new', true)
   if (scope === 'saved') query = query.eq('is_saved', true)
 

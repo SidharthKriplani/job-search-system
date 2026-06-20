@@ -4,6 +4,31 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-21 (g) — feed auto-populates the moment Refresh finishes
+
+- User complaint: after Refresh completes, the feed didn't change until a manual
+  reload. Cause: after the pagination rewrite the feed list is client-fetched, but
+  run-completion only did `router.refresh()` (server props), which the client list
+  state ignored — completion and feed-population were disconnected.
+- Fix: `RefreshButton` takes an `onDone` callback; `DashboardClient.reloadFeed()`
+  re-pulls the feed + "New" count the instant the run reports completed (with one
+  short retry in case the DB write lands a beat later). No manual reload.
+
+---
+
+## 2026-06-21 (f) — read-time role guard (stale off-role rows can't show)
+
+- Root cause of "investment banker → Engineers": `match_score` is computed by the
+  backend at scrape time; changing the role leaves stored rows stale until an async
+  re-filter runs, and the feed just read those rows. The relevance fix was correct
+  but couldn't take effect without a backend run.
+- Fix: `frontend/lib/feedFilter.ts` `roleOrFilter()` — the feed query + counts
+  (`/api/feed`, `dashboard/page.tsx`) now require each shown job's title or
+  description to contain a significant word from a target role. Off-role rows are
+  excluded at query time, independent of backend prune timing. Deterministic.
+
+---
+
 ## 2026-06-21 (e) — cleared the deferred audit items
 
 - **Feed pagination + server-side search/filter.** New `frontend/app/api/feed`

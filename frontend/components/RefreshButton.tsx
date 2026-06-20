@@ -18,7 +18,7 @@ function fmt(sec: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export default function RefreshButton() {
+export default function RefreshButton({ onDone }: { onDone?: () => void | Promise<void> }) {
   const router = useRouter()
   const [state, setState] = useState<State>('idle')
   const [statusText, setStatusText] = useState<string | null>(null)
@@ -56,8 +56,11 @@ export default function RefreshButton() {
         stop()
         if (d.conclusion === 'success') {
           setState('done')
-          setStatusText('Completed — refreshing your feed…')
-          router.refresh()
+          setStatusText('Completed — loading new jobs…')
+          // Pull the fresh feed into view immediately (no manual reload). Fall
+          // back to a server refresh if no handler was provided.
+          if (onDone) { Promise.resolve(onDone()).then(() => setStatusText('Feed updated.')) }
+          else router.refresh()
           setTimeout(() => { setState('idle'); setStatusText(null) }, 6000)
         } else {
           setState('error')

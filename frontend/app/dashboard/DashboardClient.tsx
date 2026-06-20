@@ -85,6 +85,30 @@ export default function DashboardClient({
     setLoadingMore(false)
   }
 
+  // Called the moment a manual Refresh finishes — re-pull the feed (and counts)
+  // so new jobs appear immediately, no manual reload. Tries a couple of times in
+  // case the DB write lands a beat after the run reports "completed".
+  const reloadFeed = useCallback(async () => {
+    setLoading(true)
+    let res = await fetchPage(0)
+    if (res && res.total === nTotal) {
+      // Nothing new yet — give the DB write a moment and try once more.
+      await new Promise(r => setTimeout(r, 2500))
+      res = await fetchPage(0)
+    }
+    if (res) {
+      setJobs(res.jobs)
+      setQueryTotal(res.total)
+      if (!isFiltered) setNTotal(res.total)
+    }
+    // Refresh the "New" tile from the server (a scrape doesn't change Applied).
+    try {
+      const n = await fetch('/api/feed?scope=new&limit=1', { cache: 'no-store' }).then(r => r.json())
+      if (n?.ok) setNNew(n.total)
+    } catch { /* best-effort */ }
+    setLoading(false)
+  }, [fetchPage, nTotal, isFiltered])
+
   const handleUpdate = (id: string, updates: Partial<Job>) => {
     const job = jobs.find(j => j.id === id)
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...updates } : j))
@@ -119,7 +143,7 @@ export default function DashboardClient({
               Welcome back, {userName.split(' ')[0]}. {nNew > 0 ? `${nNew} new since your last visit.` : 'All caught up!'}
             </p>
           </div>
-          <RefreshButton />
+          <RefreshButton onDone={reloadFeed} />
         </div>
 
         {/* Stats row */}
