@@ -1,13 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { Briefcase, Mail, Zap, Eye, EyeOff } from 'lucide-react'
 
 type Mode = 'signin' | 'signup'
 
-export default function LoginPage() {
+const FRIENDLY_ERRORS: Record<string, string> = {
+  access_denied:        'Google sign-in is restricted to test users while the app is in review. Use email/password below instead.',
+  redirect_uri_mismatch:'OAuth configuration error — please contact support.',
+  invalid_request:      'Invalid sign-in request. Please try again.',
+}
+
+function friendlyError(raw: string): string {
+  for (const [key, msg] of Object.entries(FRIENDLY_ERRORS)) {
+    if (raw.toLowerCase().includes(key)) return msg
+  }
+  // strip empty object/JSON noise
+  if (raw.trim() === '{}' || raw.trim() === 'null' || raw.trim() === '') return 'Something went wrong. Please try again.'
+  return raw
+}
+
+export default function Page() {
+  return <Suspense><LoginPage /></Suspense>
+}
+
+function LoginPage() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
   const [mode, setMode]         = useState<Mode>('signin')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -16,6 +37,11 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [message, setMessage]   = useState<string | null>(null)
+
+  useEffect(() => {
+    const urlError = searchParams.get('error')
+    if (urlError) setError(friendlyError(decodeURIComponent(urlError)))
+  }, [searchParams])
 
   const signInWithGoogle = async () => {
     setGoogleLoading(true)
@@ -28,7 +54,7 @@ export default function LoginPage() {
         queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     })
-    if (error) { setError(error.message); setGoogleLoading(false) }
+    if (error) { setError(friendlyError(error.message)); setGoogleLoading(false) }
   }
 
   const handleEmailAuth = async (e: React.FormEvent) => {
