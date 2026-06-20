@@ -2,10 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, Check, AlertCircle, ExternalLink } from 'lucide-react'
+import { RefreshCw, Check, AlertCircle, ExternalLink, Coffee } from 'lucide-react'
 import clsx from 'clsx'
 
 type State = 'idle' | 'running' | 'done' | 'error'
+
+// A typical end-to-end run (queue + scrape + filter) lands around here. The bar
+// eases toward this ceiling but never claims 100% until the run actually finishes,
+// so the estimate guiding the user is honest about being an estimate.
+const EXPECTED_SEC = 210 // ~3.5 min
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60)
@@ -113,13 +118,21 @@ export default function RefreshButton() {
     : state === 'error' ? <AlertCircle className="w-4 h-4" />
     : <RefreshCw className="w-4 h-4" />
 
+  // Eased progress: fast at first, asymptotes toward 95% by EXPECTED_SEC, then
+  // snaps to 100% only when the run truly completes.
+  const pct =
+    state === 'done'    ? 100
+    : state === 'running' ? Math.min(95, Math.round((1 - Math.exp(-elapsed / (EXPECTED_SEC / 2.5))) * 100))
+    : 0
+  const remaining = Math.max(0, EXPECTED_SEC - elapsed)
+
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-end gap-1.5 w-60">
       <button
         onClick={trigger}
         disabled={state === 'running'}
         className={clsx(
-          'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-80',
+          'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-80 self-end',
           state === 'error' ? 'bg-red-600 hover:bg-red-700 text-white'
           : state === 'done' ? 'bg-green-600 text-white'
           : 'bg-indigo-600 hover:bg-indigo-700 text-white'
@@ -128,6 +141,30 @@ export default function RefreshButton() {
         {Icon}
         {label}
       </button>
+
+      {(state === 'running' || state === 'done') && (
+        <div className="w-full">
+          <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className={clsx(
+                'h-full rounded-full transition-all duration-700 ease-out',
+                state === 'done' ? 'bg-green-500' : 'bg-indigo-500'
+              )}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          {state === 'running' && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <Coffee className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>
+                {remaining > 30
+                  ? `Good time for a coffee — about ${fmt(remaining)} left.`
+                  : 'Almost there — finishing up…'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {statusText && (
         <div className="flex items-center gap-2 text-xs max-w-xs text-right">
