@@ -134,7 +134,7 @@ export function expandRoleKeywords(
     else if (key.includes('health') || key.includes('pharma')) sectors.add('healthcare')
     else if (key.includes('commerce') || key.includes('retail')) sectors.add('ecommerce')
   }
-  for (const s of sectors) for (const kw of SECTORS[s] || []) words.add(kw)
+  Array.from(sectors).forEach(s => (SECTORS[s] || []).forEach(kw => words.add(kw)))
 
   return Array.from(words)
 }
