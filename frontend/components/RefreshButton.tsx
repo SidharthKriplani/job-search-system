@@ -1,38 +1,117 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { RefreshCw, Check, AlertCircle } from 'lucide-react'
+import { RefreshCw, Check, AlertCircle, ExternalLink } from 'lucide-react'
 import clsx from 'clsx'
 
 type State = 'idle' | 'running' | 'done' | 'error'
 
+function fmt(sec: number) {
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 export default function RefreshButton() {
   const router = useRouter()
   const [state, setState] = useState<State>('idle')
-  const [msg, setMsg] = useState<string | null>(null)
+  const [statusText, setStatusText] = useState<string | null>(null)
+  const [runUrl, setRunUrl] = useState<string | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+
+  const startedRef = useRef(0)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stop = () => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    if (timerRef.current) clearInterval(timerRef.current)
+    pollRef.current = null
+    timerRef.current = null
+  }
+  useEffect(() => stop, [])
+
+  const poll = async () => {
+    try {
+      const r = await fetch('/api/scrape/status', { cache: 'no-store' })
+      const d = await r.json()
+      if (!d.ok) return
+      if (d.html_url) setRunUrl(d.html_url)
+
+      // Is this run ours? (created at/after we clicked, minus a small buffer)
+      const created = d.created_at ? new Date(d.created_at).getTime() : 0
+      const ours = created >= startedRef.current - 30000
+
+      if (!ours || d.status === 'none') {
+        setStatusText('Queued — waiting for the run to start…')
+        return
+      }
+      if (d.status === 'completed') {
+        stop()
+        if (d.conclusion === 'success') {
+          setState('done')
+          setStatusText('Completed — refreshing your feed…')
+          router.refresh()
+          setTimeout(() => { setState('idle'); setStatusText(null) }, 6000)
+        } else {
+          setState('error')
+          setStatusText(`Run ${d.conclusion || 'failed'} — open the log to see why`)
+        }
+      } else {
+        setStatusText(d.status === 'queued' ? 'Queued…' : 'Running the scraper…')
+      }
+    } catch {
+      /* transient — keep polling */
+    }
+  }
 
   const trigger = async () => {
+    stop()
     setState('running')
-    setMsg(null)
+    setRunUrl(null)
+    setElapsed(0)
+    setStatusText('Starting run…')
+    startedRef.current = Date.now()
     try {
       const res = await fetch('/api/scrape', { method: 'POST' })
       const data = await res.json()
-      if (data.ok) {
-        setState('done')
-        setMsg(data.message || 'Scraper started.')
-        // Refresh server data shortly after, then again a bit later.
-        setTimeout(() => router.refresh(), 8000)
-        setTimeout(() => { router.refresh(); setState('idle') }, 30000)
-      } else {
+      if (!data.ok) {
         setState('error')
-        setMsg(data.error || 'Failed to start scraper.')
+        setStatusText(data.error || 'Failed to start scraper.')
+        return
       }
+      timerRef.current = setInterval(
+        () => setElapsed(Math.floor((Date.now() - startedRef.current) / 1000)),
+        1000
+      )
+      pollRef.current = setInterval(poll, 5000)
+      setTimeout(poll, 2500) // first check quickly
+      // Safety cap: stop after 6 minutes
+      setTimeout(() => {
+        if (pollRef.current) {
+          stop()
+          setState('idle')
+          setStatusText('Still running — check the run log if jobs don’t appear.')
+        }
+      }, 360000)
     } catch (e: any) {
       setState('error')
-      setMsg(e?.message || 'Network error.')
+      setStatusText(e?.message || 'Network error.')
     }
   }
+
+  const label =
+    state === 'running' ? `Running ${fmt(elapsed)}`
+    : state === 'done'  ? 'Done'
+    : state === 'error' ? 'Retry'
+    : 'Refresh Now'
+
+  const Icon =
+    state === 'running' ? <RefreshCw className="w-4 h-4 animate-spin" />
+    : state === 'done'  ? <Check className="w-4 h-4" />
+    : state === 'error' ? <AlertCircle className="w-4 h-4" />
+    : <RefreshCw className="w-4 h-4" />
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -40,29 +119,32 @@ export default function RefreshButton() {
         onClick={trigger}
         disabled={state === 'running'}
         className={clsx(
-          'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60',
-          state === 'error'
-            ? 'bg-red-600 hover:bg-red-700 text-white'
-            : state === 'done'
-            ? 'bg-green-600 text-white'
-            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+          'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-80',
+          state === 'error' ? 'bg-red-600 hover:bg-red-700 text-white'
+          : state === 'done' ? 'bg-green-600 text-white'
+          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
         )}
       >
-        {state === 'running'
-          ? <><RefreshCw className="w-4 h-4 animate-spin" /> Starting…</>
-          : state === 'done'
-          ? <><Check className="w-4 h-4" /> Started</>
-          : state === 'error'
-          ? <><AlertCircle className="w-4 h-4" /> Retry</>
-          : <><RefreshCw className="w-4 h-4" /> Refresh Now</>}
+        {Icon}
+        {label}
       </button>
-      {msg && (
-        <span className={clsx(
-          'text-xs max-w-xs text-right',
-          state === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'
-        )}>
-          {msg}
-        </span>
+
+      {statusText && (
+        <div className="flex items-center gap-2 text-xs max-w-xs text-right">
+          <span className={clsx(state === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400')}>
+            {statusText}
+          </span>
+          {runUrl && (
+            <a
+              href={runUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap"
+            >
+              run log <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
       )}
     </div>
   )
