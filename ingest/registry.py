@@ -17,10 +17,15 @@ How to find a slug:
 
 # (slug, display_name)
 GREENHOUSE = [
-    # India companies (verified live)
+    # India / India-GCC companies (verified live)
     ("postman", "Postman"),
     ("groww", "Groww"),
     ("druva", "Druva"),
+    ("phonepe", "PhonePe"),
+    ("highradius", "HighRadius"),
+    ("mongodb", "MongoDB"),
+    ("elastic", "Elastic"),
+    ("rubrik", "Rubrik"),
     # Global tech
     ("stripe", "Stripe"),
     ("databricks", "Databricks"),
@@ -62,6 +67,13 @@ LEVER = [
 ]
 
 ASHBY = [
+    # India / India-GCC (verified live)
+    ("navi", "Navi"),
+    ("confluent", "Confluent"),
+    ("temporal", "Temporal"),
+    ("airbyte", "Airbyte"),
+    ("gainsight", "Gainsight"),
+    # Global
     ("ramp", "Ramp"),
     ("openai", "OpenAI"),
     ("linear", "Linear"),
@@ -73,8 +85,14 @@ ASHBY = [
     ("hex", "Hex"),
 ]
 
-# Workday tenants: (base_url, tenant, site, display_name). Verified per-company.
-# Left small/seed — Workday needs exact tenant+site, so add cautiously.
+# Workday tenants: (tenant, wd_number, site, display_name). Each VERIFIED to
+# return jobs live. Big global firms with large India GCCs. To add one: open the
+# company's Workday careers page, DevTools → Network → find the /wday/cxs/.../jobs
+# POST, and copy tenant + wd-number + site path.
 WORKDAY = [
-    # ("https://spglobal.wd1.myworkdayjobs.com", "spglobal", "Global", "S&P Global"),
+    ("nvidia",     "wd5",  "NVIDIAExternalCareerSite", "NVIDIA"),
+    ("salesforce", "wd12", "External_Career_Site",     "Salesforce"),
+    ("mastercard", "wd1",  "CorporateCareers",         "Mastercard"),
+    ("adobe",      "wd5",  "external_experienced",     "Adobe"),
+    ("workday",    "wd5",  "Workday",                  "Workday"),
 ]

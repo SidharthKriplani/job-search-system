@@ -6,6 +6,15 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Workday connector + big registry expansion (India GCC jobs)
+- New `ingest/connectors/workday.py` — pulls the CXS JSON API of big global firms
+  that run large India GCCs. Verified tenants: NVIDIA, Salesforce, Mastercard,
+  Adobe, Workday (~6,000 jobs total; India-located roles in Bangalore/Hyderabad/
+  Pune/Noida). Capped per company via `WORKDAY_MAX_PER_COMPANY` (default 150).
+- Registry expanded with verified boards: Greenhouse — PhonePe, HighRadius,
+  MongoDB, Elastic, Rubrik; Ashby — Navi, Confluent, Temporal, Airbyte, Gainsight.
+- All slugs/tenants verified live before adding (dead ones return 0, never crash).
+
 ### Fixed: Settings profile not persisting
 - `saveProfile` spread the whole profile object into the upsert and never checked
   the error, so a failed save still flashed "Saved!" and nothing persisted across
