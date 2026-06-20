@@ -6,6 +6,17 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Fixed: jobs never reached the DB (green-but-empty runs) ★
+- The ingestion engine put a `remote` field on every job, but `job_feed` has no
+  such column — so Supabase rejected every insert, `upsert_jobs` caught it and
+  returned 0, and the run still exited green. Net effect: runs succeeded but
+  wrote zero jobs (`total_jobs_in_db = 0` with an empty profile that should pass
+  everything). Diagnosed via a one-row SQL check.
+- _Fix:_ removed `remote` from the job dict (folded into `location`); added a
+  `JOB_FEED_COLUMNS` whitelist in `upsert_jobs` that strips any stray key before
+  insert; made a failed batch log loudly instead of silently. Verified the final
+  upsert payload is a strict subset of `job_feed` columns.
+
 ### Live scrape status (UX)
 - Rebuilt the "Refresh Now" button to poll the GitHub run and show real status
   (queued → running with ticking timer → completed/failed) + a direct run-log

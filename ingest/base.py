@@ -25,10 +25,11 @@ HEADERS = {
 }
 
 # Normalized job schema — keys match what utils/filter.py and upsert_jobs expect.
+# Every key here MUST be a real column in the job_feed table.
 JOB_KEYS = (
     "job_title", "company", "location", "salary_range", "job_url",
     "description_snippet", "posted_date", "source", "source_job_id",
-    "job_type", "seniority", "remote",
+    "job_type", "seniority",
 )
 
 
@@ -143,5 +144,8 @@ def make_job(
         "source_job_id":       str(source_job_id) if source_job_id else "",
         "job_type":            normalize_job_type(job_type),
         "seniority":           infer_seniority(title),
-        "remote":              bool(remote),
+        # NOTE: do NOT add keys that aren't columns in the job_feed table — the
+        # whole dict is sent straight to Supabase upsert, and an unknown column
+        # makes the insert fail (silently, returning 0). `remote` is folded into
+        # `location` above instead of being its own field.
     }

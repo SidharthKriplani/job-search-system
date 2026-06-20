@@ -54,6 +54,17 @@ def update_gmail_token(user_id: str, access_token: str, token_expiry: Optional[s
 
 # ─── Job feed helpers ────────────────────────────────────────────────────────
 
+# Exact set of writable columns in job_feed. Any key not in here is dropped
+# before upsert — an unknown column makes the WHOLE insert fail (Supabase
+# rejects it), which previously returned 0 silently and looked like "no jobs".
+JOB_FEED_COLUMNS = {
+    "user_id", "job_title", "company", "location", "salary_range", "job_url",
+    "description_snippet", "posted_date", "source", "source_job_id", "job_type",
+    "experience_required", "seniority", "is_new", "is_applied", "is_saved",
+    "is_dismissed", "match_score", "match_reasons",
+}
+
+
 def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
     """
     Upsert a batch of jobs for a user.
@@ -63,13 +74,15 @@ def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
     if not jobs:
         return 0
 
+    import hashlib
     sb = get_client()
     rows = []
     for job in jobs:
-        row = {**job, "user_id": user_id}
-        # Ensure source_job_id is set (fallback to URL hash)
+        # Keep only real job_feed columns — stray keys (e.g. a "remote" flag)
+        # would make Supabase reject the entire batch.
+        row = {k: v for k, v in job.items() if k in JOB_FEED_COLUMNS}
+        row["user_id"] = user_id
         if not row.get("source_job_id"):
-            import hashlib
             row["source_job_id"] = hashlib.md5(row.get("job_url", "").encode()).hexdigest()[:20]
         rows.append(row)
 
@@ -85,7 +98,9 @@ def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
             ).execute()
             total_new += len(result.data or [])
         except Exception as e:
-            logger.error(f"[Supabase] upsert_jobs batch failed: {e}")
+            # Loud, not silent — a failed insert is the difference between
+            # "jobs on screen" and a green-but-empty run.
+            logger.error(f"[Supabase] upsert_jobs batch FAILED ({len(batch)} rows lost): {e}")
 
     return total_new
 
