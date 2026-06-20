@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import { Application, ApplicationStage, STAGE_COLORS } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
-import { Plus, ExternalLink, ChevronDown } from 'lucide-react'
+import { Plus, ExternalLink, ChevronDown, Pencil, Trash2, Save, X } from 'lucide-react'
 import clsx from 'clsx'
 
 // Defined once at module level — used by both the main component and AppCard
@@ -48,11 +48,19 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
   const [saving, setSaving]       = useState(false)
 
   const updateStage = async (id: string, stage: ApplicationStage) => {
-    await supabase
-      .from('applications')
-      .update({ stage, date_stage_updated: new Date().toISOString().split('T')[0] })
-      .eq('id', id)
-    setApps(prev => prev.map(a => a.id === id ? { ...a, stage } : a))
+    const date_stage_updated = new Date().toISOString().split('T')[0]
+    setApps(prev => prev.map(a => a.id === id ? { ...a, stage, date_stage_updated } : a))
+    await supabase.from('applications').update({ stage, date_stage_updated }).eq('id', id)
+  }
+
+  const updateApp = async (id: string, patch: Partial<Application>) => {
+    setApps(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))
+    await supabase.from('applications').update(patch).eq('id', id)
+  }
+
+  const deleteApp = async (id: string) => {
+    setApps(prev => prev.filter(a => a.id !== id))
+    await supabase.from('applications').delete().eq('id', id)
   }
 
   const addApplication = async () => {
@@ -108,7 +116,8 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {groupApps.map(app => (
-                    <AppCard key={app.id} app={app} onStageChange={updateStage} />
+                    <AppCard key={app.id} app={app} onStageChange={updateStage}
+                             onUpdate={updateApp} onDelete={deleteApp} />
                   ))}
                 </div>
               </div>
@@ -189,11 +198,29 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
 function AppCard({
   app,
   onStageChange,
+  onUpdate,
+  onDelete,
 }: {
   app: Application
   onStageChange: (id: string, stage: ApplicationStage) => void
+  onUpdate: (id: string, patch: Partial<Application>) => void
+  onDelete: (id: string) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]     = useState(false)   // stage dropdown
+  const [editing, setEdit]  = useState(false)   // edit panel
+  const [draft, setDraft]   = useState<Partial<Application>>({})
+
+  const startEdit = () => {
+    setDraft({
+      notes: app.notes || '', follow_up_date: app.follow_up_date || '',
+      next_action: app.next_action || '', recruiter_name: app.recruiter_name || '',
+      priority: app.priority || 'medium',
+    })
+    setEdit(true)
+  }
+  const save = () => { onUpdate(app.id, draft); setEdit(false) }
+
+  const overdue = app.follow_up_date && app.follow_up_date <= new Date().toISOString().split('T')[0]
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 hover:shadow-sm transition-shadow">
@@ -210,52 +237,101 @@ function AppCard({
         </span>
       </div>
 
-      {app.location && (
-        <p className="text-slate-400 text-xs mt-2">{app.location}</p>
-      )}
+      {app.location && <p className="text-slate-400 dark:text-slate-500 text-xs mt-2">{app.location}</p>}
+      {app.date_applied && <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Applied: {app.date_applied}</p>}
       {app.follow_up_date && (
-        <p className="text-xs text-amber-600 mt-1.5">Follow-up: {app.follow_up_date}</p>
+        <p className={clsx('text-xs mt-1', overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-amber-600 dark:text-amber-500')}>
+          {overdue ? '⏰ Follow-up due' : 'Follow-up'}: {app.follow_up_date}
+        </p>
+      )}
+      {app.next_action && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Next: {app.next_action}</p>}
+      {app.notes && !editing && <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">{app.notes}</p>}
+
+      {/* Edit panel */}
+      {editing && (
+        <div className="mt-3 space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+          <textarea
+            placeholder="Notes…" rows={2} value={(draft.notes as string) || ''}
+            onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))}
+            className="w-full px-2 py-1.5 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <input
+            type="text" placeholder="Next action…" value={(draft.next_action as string) || ''}
+            onChange={e => setDraft(d => ({ ...d, next_action: e.target.value }))}
+            className="w-full px-2 py-1.5 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <input
+            type="text" placeholder="Recruiter name…" value={(draft.recruiter_name as string) || ''}
+            onChange={e => setDraft(d => ({ ...d, recruiter_name: e.target.value }))}
+            className="w-full px-2 py-1.5 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <div className="flex gap-2">
+            <label className="flex-1 text-xs text-slate-500 dark:text-slate-400">
+              Follow-up
+              <input
+                type="date" value={(draft.follow_up_date as string) || ''}
+                onChange={e => setDraft(d => ({ ...d, follow_up_date: e.target.value }))}
+                className="w-full px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded mt-0.5"
+              />
+            </label>
+            <label className="flex-1 text-xs text-slate-500 dark:text-slate-400">
+              Priority
+              <select
+                value={(draft.priority as string) || 'medium'}
+                onChange={e => setDraft(d => ({ ...d, priority: e.target.value as Application['priority'] }))}
+                className="w-full px-2 py-1 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded mt-0.5"
+              >
+                <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={save} className="flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded">
+              <Save className="w-3 h-3" /> Save
+            </button>
+            <button onClick={() => setEdit(false)} className="px-3 py-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">Cancel</button>
+            <button onClick={() => { if (confirm('Delete this application?')) onDelete(app.id) }}
+                    className="ml-auto flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:text-red-600">
+              <Trash2 className="w-3 h-3" /> Delete
+            </button>
+          </div>
+        </div>
       )}
 
-      <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-        {app.job_url && (
-          <a
-            href={app.job_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        )}
-
-        {/* Stage quick-change */}
-        <div className="relative ml-auto">
-          <button
-            onClick={() => setOpen(!open)}
-            className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-          >
-            Move stage <ChevronDown className="w-3 h-3" />
-          </button>
-          {open && (
-            <div className="absolute right-0 top-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-10
-                            max-h-48 overflow-y-auto w-52">
-              {ALL_STAGES.map(s => (
-                <button
-                  key={s}
-                  onClick={() => { onStageChange(app.id, s); setOpen(false) }}
-                  className={clsx(
-                    'w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors',
-                    s === app.stage && 'font-semibold text-indigo-600 dark:text-indigo-400'
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+      {!editing && (
+        <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+          {app.job_url && (
+            <a href={app.job_url} target="_blank" rel="noopener noreferrer"
+               className="text-slate-400 hover:text-indigo-600 transition-colors" title="Open job">
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           )}
+          <button onClick={startEdit} className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" title="Edit">
+            <Pencil className="w-3 h-3" /> Edit
+          </button>
+
+          {/* Stage quick-change */}
+          <div className="relative ml-auto">
+            <button onClick={() => setOpen(!open)}
+                    className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+              Move stage <ChevronDown className="w-3 h-3" />
+            </button>
+            {open && (
+              <div className="absolute right-0 top-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto w-52">
+                {ALL_STAGES.map(s => (
+                  <button key={s} onClick={() => { onStageChange(app.id, s); setOpen(false) }}
+                    className={clsx(
+                      'w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors',
+                      s === app.stage && 'font-semibold text-indigo-600 dark:text-indigo-400'
+                    )}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

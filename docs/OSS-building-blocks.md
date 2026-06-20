@@ -63,6 +63,90 @@ _Principle: each integration is maintenance surface. Add deliberately._
 | Pyxis / email-finder | with M5 (referrals) — borrow idea |
 | JobSync | reference design, don't fork |
 
+## Expanded catalogue — round 2 (résumé / outreach / gmail / autofill)
+
+### Résumé tailoring + ATS (Prepare, M4)
+- **ResumeLM** (`olyaiy/resume-lm`) — ⭐ OSS AI résumé builder, **Next.js 15 + React +
+  Tailwind = our exact stack.** Tailors ATS résumés to a JD. Best to borrow/embed.
+- **Resume-Tailor-AI** (`JaimeYeung/Resume-Tailor-AI`) — JD-tailoring + aggressive ATS
+  pass + clean **no-tables/columns PDF** output. Borrow the ATS-clean output logic.
+- **Resume-Matcher** (`srbhr/Resume-Matcher`) — local Ollama OR API LLM; match score +
+  keyword gaps. Already in catalogue.
+- **Smart ATS** (`Deba951`) — Gemini match % + missing keywords (reference).
+
+### Email finding (Reach, M5)
+- **Pyxis**, **giuseppebaldini/email-finder**, **MailFinder** — name+domain → likely
+  addresses (already catalogued). Borrow the permutation idea.
+
+### Gmail send / mail-merge (Reach, M5)
+- **ErikinBC/gmailAPI** — mail-merge via Gmail API **with attachments** → send the
+  tailored résumé from the user's own Gmail. We already have Gmail OAuth; extend to
+  `gmail.send`. Borrow.
+- **Group Merge** (Google Workspace add-on), **PyAutoMail** — personalised templated
+  sends. Reference.
+
+### Job-seeker cold outreach (Reach, M5) — closest peers
+- **ColdContactXLSX** (`aasthas2022`) — ⭐ *exactly our use case*: generate recruiter
+  emails + customisable templates + personalise, for job seekers. Borrow the flow.
+- **Automated-Cold-Email-Outreach-System** (`bhanuteja2001`) — cold emails for job apps
+  via **Google Sheets + GitHub Actions** (our exact infra pattern). Reference design.
+- **PaulleDemon/Email-automation** — scheduling, follow-up sequences, variable/if
+  templates. Borrow follow-up logic.
+
+### Autofill / apply-assist (Apply, M6)
+- **Job App Filler** (`berellevy/job_app_filler`) — ⭐ autofills the *painful* ATS forms
+  (**Workday, iCIMS**), open source, **no data leaves the browser**. The safe, high-value
+  one — extension-based.
+- **ApplyEase** (`sainikhil1605/ApplyEase`) — privacy-first Chrome ext, React+FastAPI,
+  autofill + tailored answers via **local LLM (Ollama/LM Studio)**. Aligns with our ethos.
+- **AIHawk**, **EasyApplyJobsBot**, **AutoApplyMax** — ⚠️ **borrow autofill, NOT mass
+  auto-submit.** Spray-and-pray LinkedIn auto-apply = ban risk + recruiters ignore it +
+  against our quality-over-quantity principle (cf. "LinkedIn stays manual"). Skip the bots.
+
+### Verdicts (round 2)
+| Tool | Verdict |
+|------|---------|
+| ResumeLM | ⭐ borrow/embed (same stack) — résumé builder + ATS output |
+| ColdContactXLSX, gmailAPI | ⭐ borrow — the outreach MVP (find email + template + Gmail send) |
+| Job App Filler | borrow — autofill Workday/iCIMS (extension) |
+| ApplyEase | reference — local-LLM autofill, privacy-first |
+| Auto-apply bots (AIHawk/EasyApply) | ⚠️ skip the auto-submit; ban risk + low quality |
+
+## Expanded catalogue — round 3 (agents / interview / salary)
+
+### End-to-end AI job agents — validate our pipeline; borrow, don't blindly run
+- **ApplyPilot** (`Pickle-Pixel/ApplyPilot`) — 6-stage autonomous pipeline (discover →
+  score → tailor → cover letter → submit). Same shape as our roadmap — reference.
+- **MadsLorentzen/ai-job-search** — ⭐ built **on Claude Code**: fork, fill profile, it
+  evaluates jobs / tailors CV / writes cover / preps interviews. Closest to *how we
+  work*; great reference for the agent layer.
+- **lookr-fyi/job-application-bot-by-ollama-ai** — end-to-end agent on **Ollama (local)**:
+  semantic filters + ATS résumés + referrals. Borrow the local-LLM approach.
+- **imon333/Job-apply-AI-agent** — Python + n8n + Selenium + OpenAI + Sheets. Reference.
+- ⚠️ **The auto-submit half of all of these is the trap** (ban/spam/quality). Borrow the
+  *pipeline shape* + *local-LLM*; keep submission human-in-the-loop.
+
+### Interview prep (GRAND-VISION stage; complements the Labs)
+- **IliaLarchenko/Interviewer** — ⭐ AI mock tech interview, runs **locally via Ollama**.
+  Free/open/local — could power live mock Q&A on top of the Labs' structured prep.
+- Next.js + Gemini mock-interview apps (`danielace1`, `modamaan`) — reference UIs.
+- **Natively** — local interview copilot / notes, BYOK. (Live-interview assist is
+  ethically grey — note, don't necessarily adopt.)
+
+### Salary / comp intel — honest gap
+- No strong **India-specific OSS comp dataset** exists. Levels.fyi is crowdsourced (free
+  site, not an OSS dataset); GitHub/Kaggle have generic global salary datasets.
+- **For India, build/aggregate:** the salary fields **Adzuna already returns** (we have
+  the connector) + Glassdoor estimates + (later) our own crowdsourced submissions. This
+  is a *build*, not a drop-in.
+
+## Honest research status
+Covered (3 rounds): job sources, ATS company lists, semantic matching, résumé
+tailoring, email-find, Gmail send, outreach, autofill, AI agents, interview prep,
+salary. **Not yet done — per-repo due diligence:** stars / last-commit / license /
+code quality for each candidate before we adopt it. That verification happens at
+integration time, repo by repo (and is the real "best research" for a given build).
+
 ## Sources
 - https://github.com/speedyapply/JobSpy
 - https://github.com/Feashliaa/job-board-aggregator
@@ -71,3 +155,11 @@ _Principle: each integration is maintenance surface. Add deliberately._
 - https://github.com/Gsync/jobsync
 - https://github.com/mxskeen/pyxis · https://github.com/giuseppebaldini/email-finder
 - https://github.com/AmruthPillai/Reactive-Resume
+- https://github.com/olyaiy/resume-lm · https://github.com/JaimeYeung/Resume-Tailor-AI
+- https://github.com/ErikinBC/gmailAPI
+- https://github.com/aasthas2022/ColdContactXLSX · https://github.com/bhanuteja2001/Automated-Cold-Email-Outreach-System
+- https://github.com/PaulleDemon/Email-automation
+- https://github.com/berellevy/job_app_filler · https://github.com/sainikhil1605/ApplyEase
+- https://github.com/Pickle-Pixel/ApplyPilot · https://github.com/MadsLorentzen/ai-job-search
+- https://github.com/lookr-fyi/job-application-bot-by-ollama-ai · https://github.com/imon333/Job-apply-AI-agent
+- https://github.com/IliaLarchenko/Interviewer

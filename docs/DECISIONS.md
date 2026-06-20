@@ -5,6 +5,20 @@ decision is reversed, add a new entry that supersedes it).
 
 ---
 
+### D10 — Own the layer; OSS only as commodity plumbing (2026-06-20)
+Build the product (the automation, the competence engine, the integration fabric,
+the data, the UX) **ourselves, in our own repos** — do NOT depend on third-party
+GitHub agents/tools for anything that *is* the product. Each property (JSS, PAL,
+MSL, GenAI) is built to readiness independently, then integrated into the Career OS
+on our terms (shared identity + profile + deep links).
+**Refinement (important):** "own the layer" ≠ "rewrite every library." Use OSS for
+pure commodity plumbing (React, FastEmbed, an LLM runtime, raw scraping) where
+reinventing adds zero moat. The OSS catalogue (`OSS-building-blocks.md`) is therefore
+a *"learn-from / commodity-to-reuse / do-NOT-rebuild"* map — **not a dependency list.**
+The line: own the differentiator + the automation logic; rent the plumbing.
+**Sequencing:** build in parallel to readiness, but lock the integration contracts
+(shared profile/identity) EARLY so the eventual integration is cheap.
+
 ### D9 — Prefix-stem matching, not stemmer lib or LLM (yet) (2026-06-20)
 Tokens stem to a 5-char prefix so word-forms unify (science/scientist→"scien").
 **Why:** real stemmers (Porter) don't unify science/scientist either; LLM/embeddings

@@ -1,0 +1,53 @@
+name: Harvest Company Registry
+
+# Discovers ATS company boards from Common Crawl, verifies they're live, and
+# commits the updated data/*_companies.json back to the repo. This is OUR own
+# registry (license-clean), replacing any dependency on third-party company lists.
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'      # weekly, Sunday 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: 'Common Crawl pages per ATS'
+        required: false
+        default: '8'
+
+permissions:
+  contents: write             # to commit the refreshed data files
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Harvest (discover + verify)
+        env:
+          HARVEST_VERIFY_LIMIT: '3000'
+        run: |
+          python -m ingest.harvester greenhouse lever ashby \
+            --max-pages ${{ github.event.inputs.max_pages || '8' }} \
+            --max-verify 3000
+
+      - name: Commit refreshed registry
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ingest/data/
+          if git diff --staged --quiet; then
+            echo "No registry changes."
+          else
+            git commit -m "chore: refresh harvested company registry [skip ci]"
+            git push
+          fi

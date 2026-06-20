@@ -13,7 +13,15 @@ How to find a slug:
   Greenhouse → company careers URL contains boards.greenhouse.io/<slug>
   Lever      → jobs.lever.co/<slug>
   Ashby      → jobs.ashbyhq.com/<slug>
+
+The curated lists below are the hand-verified core. They're UNIONED at runtime with
+our own harvested lists in `data/{ats}_companies.json` (built by ingest/harvester.py
+from Common Crawl — license-clean, ours). Use all_greenhouse() / all_lever() /
+all_ashby() to get the merged set.
 """
+
+import json
+import os
 
 # (slug, display_name)
 GREENHOUSE = [
@@ -146,3 +154,38 @@ WORKDAY = [
     ("adobe",      "wd5",  "external_experienced",     "Adobe"),
     ("workday",    "wd5",  "Workday",                  "Workday"),
 ]
+
+
+# ── Harvested lists (our own, from ingest/harvester.py via Common Crawl) ───────
+_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+# Cap how many harvested boards the daily run uses (sorted by job count), so the
+# run stays bounded even as the harvested file grows to thousands. The full file
+# is still kept; raise this as the scaling architecture matures.
+_MAX_HARVESTED = int(os.environ.get("MAX_HARVESTED_PER_ATS", "400"))
+
+
+def _harvested(ats: str):
+    """Load our harvested {slug: job_count} for an ATS → [(slug, slug)], capped."""
+    path = os.path.join(_DATA_DIR, f"{ats}_companies.json")
+    try:
+        with open(path) as f:
+            d = json.load(f)
+    except Exception:
+        return []
+    items = sorted(d.items(), key=lambda kv: kv[1] if isinstance(kv[1], int) else 0, reverse=True)
+    return [(s, s) for s, _ in items[:_MAX_HARVESTED]]
+
+
+def _merge(curated, harvested):
+    seen = {s for s, _ in curated}
+    out = list(curated)
+    for s, n in harvested:
+        if s not in seen:
+            out.append((s, n))
+            seen.add(s)
+    return out
+
+
+def all_greenhouse(): return _merge(GREENHOUSE, _harvested("greenhouse"))
+def all_lever():      return _merge(LEVER, _harvested("lever"))
+def all_ashby():      return _merge(ASHBY, _harvested("ashby"))

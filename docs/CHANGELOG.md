@@ -4,7 +4,45 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-21
+
+### Application tracker built up (M5 — jobs now flow into the tracker)
+- `frontend/components/JobCard.tsx` — "Mark Applied" now flags the feed row **and**
+  inserts a row into the `applications` table (user_id, job_feed_id, company, title,
+  url, location, source, stage='Applied', date_applied=today). Guarded against
+  duplicates (skips insert if a row already exists for that `job_feed_id`).
+  Best-effort: tracker insert failure never blocks the feed flag.
+- `frontend/app/applications/ApplicationsClient.tsx` — `AppCard` rewritten with an
+  expandable edit panel (notes, next action, recruiter, follow-up date, priority),
+  optimistic `updateApp`/`deleteApp` handlers, delete-with-confirm, and display of
+  `date_applied` + overdue follow-up highlight. `updateStage` is now optimistic.
+- _Why:_ the tracker was the missing half of the loop — applying to a job from the
+  feed now auto-populates the 18-stage tracker; cards are fully editable. No schema
+  change (applications table already exists in `supabase/schema.sql`).
+
+---
+
 ## 2026-06-20
+
+### Own the registry: Common Crawl harvester (replaces Feashliaa dependency)
+- `ingest/harvester.py` — discovers ATS company slugs (Greenhouse/Lever/Ashby) from
+  **Common Crawl** (public, open), VERIFIES each is live, and writes our own
+  `ingest/data/{ats}_companies.json`. Proven: 1 CDX page → 1,665 candidates → verified
+  → live boards (Relativity 304, IBKR 176, Instacart, Flexport, SoFi…).
+- Connectors now use `registry.all_greenhouse()/all_lever()/all_ashby()` = curated ∪
+  harvested (deduped, capped by `MAX_HARVESTED_PER_ATS`). New weekly
+  `.github/workflows/harvest.yml` refreshes + commits the lists.
+- _Why:_ own our data layer (D10/D11) — license-clean (vs Feashliaa CC-BY-NC),
+  regenerable, and the path to thousands of boards without a 3rd-party dependency.
+
+### GRAND-VISION: tie into the Labs ecosystem (Career OS)
+- `docs/GRAND-VISION.md` — the job-search-system is the "GET HIRED" half; the Labs
+  (Product Analytics Lab, ML Systems Lab, GenAI Lab) are the "GET READY" half. The
+  Labs are the retention layer job-search lacks; the job feed gives prep a target.
+  Closed loop: job → gap → route to exact Lab room → readiness ↑ → realistic-shot ↑
+  → apply → interview-sim → offer. Connect via shared identity + one profile
+  (extend `user_profiles`) + deep links — loosely coupled, don't merge runtimes.
+  PAL's JD→study-plan generator is already the bridge.
 
 ### Feashliaa company-list mine (→167 boards) + VISION doc
 - Mined the Feashliaa/job-board-aggregator slug list (95k slugs, CC BY-NC, mined

@@ -1,6 +1,6 @@
 # STATUS — current state
 
-_Last updated: 2026-06-20_
+_Last updated: 2026-06-21_
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
@@ -18,6 +18,9 @@ after every meaningful change.
   (science≈scientist), with human-readable reasons; scores spread meaningfully.
 - **M4 🟡 Intelligence** — Stage 1 done: résumé capture + free heuristic résumé
   matching. Stage 2 (LLM) deferred.
+- **M5 ✅ Application tracker** — "Mark Applied" on a feed job now creates a tracker
+  row; 18-stage pipeline with editable cards (notes, next action, recruiter,
+  follow-up date, priority), optimistic stage moves, delete, overdue highlights.
 - **Frontend** — dark mode, fast nav, live "Refresh Now" run-status, job-age +
   metadata cards, résumé box in Settings.
 - **Reliability** — idempotent schema; deps fixed (supabase 2.31); loud upsert

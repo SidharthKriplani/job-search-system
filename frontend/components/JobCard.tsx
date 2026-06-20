@@ -51,7 +51,33 @@ export default function JobCard({ job, onUpdate }: Props) {
     setSaving(false)
   }
 
-  const markApplied = () => update({ is_applied: true, is_new: false })
+  // Mark applied: flag the feed row AND create a tracker row so the job flows
+  // into the application tracker. Idempotent-ish: skip the insert if one already
+  // exists for this feed row.
+  const markApplied = async () => {
+    await update({ is_applied: true, is_new: false })
+    try {
+      const { data: existing } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('job_feed_id', job.id)
+        .limit(1)
+      if (existing && existing.length > 0) return
+      await supabase.from('applications').insert({
+        user_id:      job.user_id,
+        job_feed_id:  job.id,
+        company:      job.company,
+        job_title:    job.job_title,
+        job_url:      job.job_url,
+        location:     job.location,
+        source:       job.source,
+        stage:        'Applied',
+        date_applied: new Date().toISOString().split('T')[0],
+      })
+    } catch {
+      /* tracker insert is best-effort; the feed flag already succeeded */
+    }
+  }
   const dismiss     = () => update({ is_dismissed: true })
   const toggleSave  = () => update({ is_saved: !job.is_saved })
 

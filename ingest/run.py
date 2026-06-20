@@ -39,11 +39,12 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]]]]:
     """Flat list of (connector_label, unit_id, fetch_callable). One per board/tenant."""
     units: List[Tuple[str, str, Callable]] = []
 
-    for slug, disp in registry.GREENHOUSE:
+    # Curated lists UNIONed with our own harvested lists (data/*_companies.json).
+    for slug, disp in registry.all_greenhouse():
         units.append(("greenhouse", slug, lambda s=slug, d=disp: greenhouse.fetch_board(s, d)))
-    for slug, disp in registry.LEVER:
+    for slug, disp in registry.all_lever():
         units.append(("lever", slug, lambda s=slug, d=disp: lever.fetch_board(s, d)))
-    for slug, disp in registry.ASHBY:
+    for slug, disp in registry.all_ashby():
         units.append(("ashby", slug, lambda s=slug, d=disp: ashby.fetch_board(s, d)))
 
     cap = int(os.environ.get("WORKDAY_MAX_PER_COMPANY", "150"))
