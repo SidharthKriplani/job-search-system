@@ -6,6 +6,27 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Feashliaa company-list mine (→167 boards) + VISION doc
+- Mined the Feashliaa/job-board-aggregator slug list (95k slugs, CC BY-NC, mined
+  with attribution / non-commercial); live-verified a batch → +16 boards (Curaleaf,
+  Crunchyroll, Cribl, Dandy, D2L, Cresco…). Registry now 167. The full list is the
+  path to thousands (data-file + verify-promote), gated by the Stage-2 scaling refactor.
+- `docs/VISION.md` — the product is a **career copilot, not a job board**: discover →
+  match → decide → prepare → **reach (find email + LLM outreach + tailored résumé +
+  send via your Gmail)** → apply → referral → interview prep → negotiate → career-OS.
+  The "what after jobs" outreach stage is the flagship differentiator.
+
+### Free semantic matching (FastEmbed) + OSS building-blocks catalogue
+- `utils/embeddings.py` — opt-in local embeddings (FastEmbed/ONNX, no API, no
+  torch). Re-ranks the keyword-filtered shortlist by *meaning*: "ML Engineer" ≈
+  "Data Scientist" (verified: boosted a 20%-keyword job to 48% on semantics).
+  Off by default; enable with `USE_EMBEDDINGS=1` + `requirements-embeddings.txt`
+  (kept separate so default runs stay lean). Tags matches with "Semantic match".
+- `docs/OSS-building-blocks.md` — curated open-source tools mapped to the journey
+  (JobSpy, FastEmbed, job-board-aggregator/OpenPostings for 20k+ company slugs,
+  Ollama, Reactive Resume, Pyxis/email-finder, JobSync) with adopt/borrow/skip
+  verdicts. Standout next: the ATS company-list repos to bulk-expand the registry.
+
 ### Refresh rate-limit (admins exempt)
 - `/api/scrape` now rate-limits manual refresh per user: a non-admin gets one
   refresh, then a cooldown (`REFRESH_COOLDOWN_HOURS`, default 12) before the next;

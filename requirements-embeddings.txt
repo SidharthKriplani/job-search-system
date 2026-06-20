@@ -1,0 +1,7 @@
+# Optional: free local semantic matching (no API, no torch).
+# Enable by installing this on top of requirements.txt AND setting USE_EMBEDDINGS=1.
+#   pip install -r requirements-embeddings.txt
+# Kept separate so the default scraper run stays lean (fastembed + onnxruntime
+# add ~100MB of deps + a ~130MB model download on first use).
+fastembed==0.8.0
+numpy>=1.24

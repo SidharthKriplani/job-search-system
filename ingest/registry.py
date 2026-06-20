@@ -69,6 +69,13 @@ GREENHOUSE = [
     ("jetbrains", "JetBrains"), ("qualtrics", "Qualtrics"), ("marqeta", "Marqeta"),
     ("sumologic", "Sumo Logic"), ("yugabyte", "Yugabyte"), ("typeform", "Typeform"),
     ("buildkite", "Buildkite"), ("comet", "Comet"), ("lithic", "Lithic"),
+    # Batch 4 — mined from Feashliaa/job-board-aggregator slug list (CC BY-NC),
+    # then live-verified here. (Attribution per dataset license; non-commercial.)
+    ("curaleaf", "Curaleaf"), ("crunchyroll", "Crunchyroll"), ("cribl", "Cribl"),
+    ("crescolabs", "Cresco Labs"), ("d2l", "D2L"), ("crossriverbank", "Cross River Bank"),
+    ("customerio", "Customer.io"), ("crexi", "Crexi"), ("cultureamp", "Culture Amp"),
+    ("cymulate", "Cymulate"), ("creativex", "CreativeX"), ("crashplan", "CrashPlan"),
+    ("creativefabrica", "Creative Fabrica"), ("crossbeam", "Crossbeam"), ("credible", "Credible"),
 ]
 
 LEVER = [
@@ -124,6 +131,8 @@ ASHBY = [
     ("pleo", "Pleo"), ("anyscale", "Anyscale"), ("statsig", "Statsig"),
     ("unit", "Unit"), ("moderntreasury", "Modern Treasury"), ("fullstory", "FullStory"),
     ("stream", "Stream"), ("scaler", "Scaler"),
+    # Batch 4 — Feashliaa list, verified
+    ("dandy", "Dandy"),
 ]
 
 # Workday tenants: (tenant, wd_number, site, display_name). Each VERIFIED to

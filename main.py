@@ -41,6 +41,7 @@ from scrapers import gmail_parser
 
 # ── Utils ─────────────────────────────────────────────────────────────────────
 from utils import supabase_client as sb
+from utils import embeddings
 from utils.filter import filter_and_score, deduplicate_across_sources
 from utils.email_digest import send_daily_digest
 
@@ -99,6 +100,13 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
     unique   = deduplicate_across_sources(filtered)
 
     logger.info(f"After filter + dedup: {len(unique)} jobs")
+
+    # ── Optional semantic re-rank (free local embeddings; opt-in) ──────────
+    # Re-ranks the keyword-filtered shortlist by meaning ("ML Engineer" ≈
+    # "Data Scientist"). No-op unless USE_EMBEDDINGS=1 and fastembed installed.
+    if embeddings.available():
+        profile_text = " ".join(profile.get("target_roles", []) or []) + " " + (profile.get("resume_text") or "")
+        unique = embeddings.rerank(profile_text, unique)
 
     # ── Determine which jobs are genuinely NEW (not already in the feed) ────
     # Must run BEFORE upsert. We mirror the same source_job_id fallback that
