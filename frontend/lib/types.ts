@@ -161,4 +161,16 @@ export const SOURCE_LABELS: Record<string, string> = {
   gmail_foundit:    '📧 Foundit Alert',
   gmail_timesjobs:  '📧 TimesJobs Alert',
   gmail_shine:      '📧 Shine Alert',
+  // ATS + aggregators (ingestion engine)
+  ashby:            'Ashby',
+  indeed:           'Indeed',
+  naukri:           'Naukri',
+  linkedin:         'LinkedIn',
+  glassdoor:        'Glassdoor',
+  google:           'Google Jobs',
+  remotive:         'Remotive',
+  arbeitnow:        'Arbeitnow',
+  adzuna_in:        'Adzuna India',
+  adzuna_gb:        'Adzuna UK',
+  adzuna_us:        'Adzuna US',
 }

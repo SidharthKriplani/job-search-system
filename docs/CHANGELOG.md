@@ -6,6 +6,19 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### All-India coverage (JobSpy) + job-age/metadata on cards
+- **JobSpy connector** (`ingest/connectors/jobspy.py`) — adopted `python-jobspy`
+  as the primary all-India engine: scrapes Indeed/Naukri India across every field
+  (broad cross-sector terms), failsafe-wrapped. Verified live. Reframes the
+  product away from finance-only to general India coverage.
+- **Adzuna** defaults broadened to India-first + cross-sector terms (was
+  finance-weighted); still needs free `ADZUNA_APP_ID`/`_KEY`.
+- **Job cards** now show relative **age** ("today / 3d ago / 2w ago", amber when
+  stale >21d), **job type**, and **seniority** chips; added friendly source
+  labels (Indeed/Naukri/Ashby/Adzuna…) and updated the source filter pills.
+- Research captured in `docs/RESEARCH-india-coverage.md` (JobSpy, Adzuna, ATS
+  company-list repos, Apify Naukri actors).
+
 ### M2 + M3: India coverage + JD-aware, profile-driven scoring
 - **Registry:** added verified India-company boards — Postman, Groww, Druva
   (Greenhouse); Meesho, Zeta, Mindtickle, CRED (Lever). Real India breadth still

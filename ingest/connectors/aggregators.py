@@ -77,8 +77,10 @@ def fetch_adzuna() -> List[Dict]:
         logger.info("[adzuna] no ADZUNA_APP_ID/KEY set — skipping (free key enables India + salary data)")
         return []
 
-    countries = [c.strip() for c in os.environ.get("ADZUNA_COUNTRIES", "in,gb,us").split(",") if c.strip()]
-    queries = [q.strip() for q in os.environ.get("ADZUNA_QUERIES", "manager,analyst,engineer,research,finance").split(",") if q.strip()]
+    # India-first, broad cross-sector (not finance-specific).
+    countries = [c.strip() for c in os.environ.get("ADZUNA_COUNTRIES", "in").split(",") if c.strip()]
+    queries = [q.strip() for q in os.environ.get("ADZUNA_QUERIES",
+               "manager,engineer,analyst,sales,marketing,operations,developer,designer").split(",") if q.strip()]
 
     out: List[Dict] = []
     for country in countries:

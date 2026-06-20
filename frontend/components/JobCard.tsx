@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, DollarSign, Calendar, ExternalLink, Bookmark, X, CheckCircle } from 'lucide-react'
+import { MapPin, DollarSign, Calendar, Clock, Briefcase, BarChart3, ExternalLink, Bookmark, X, CheckCircle } from 'lucide-react'
 import { Job, SOURCE_LABELS } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 import clsx from 'clsx'
@@ -9,6 +9,30 @@ import clsx from 'clsx'
 interface Props {
   job: Job
   onUpdate?: (id: string, updates: Partial<Job>) => void
+}
+
+// Relative age, e.g. "today", "3d ago", "2w ago".
+function timeAgo(dateStr: string | null): { label: string; stale: boolean } | null {
+  if (!dateStr) return null
+  const then = new Date(dateStr).getTime()
+  if (isNaN(then)) return null
+  const days = Math.floor((Date.now() - then) / 86400000)
+  if (days < 0) return null
+  const label =
+    days === 0 ? 'today'
+    : days === 1 ? 'yesterday'
+    : days < 7 ? `${days}d ago`
+    : days < 30 ? `${Math.floor(days / 7)}w ago`
+    : `${Math.floor(days / 30)}mo ago`
+  return { label, stale: days > 21 }
+}
+
+function prettyType(t: string | null): string | null {
+  if (!t) return null
+  const map: Record<string, string> = {
+    full_time: 'Full-time', part_time: 'Part-time', contract: 'Contract', internship: 'Internship',
+  }
+  return map[t] || null
 }
 
 export default function JobCard({ job, onUpdate }: Props) {
@@ -76,12 +100,28 @@ export default function JobCard({ job, onUpdate }: Props) {
                 <DollarSign className="w-3 h-3" /> {job.salary_range}
               </span>
             )}
-            {job.posted_date && (
-              <span className="flex items-center gap-1 text-slate-400 text-xs">
-                <Calendar className="w-3 h-3" /> {job.posted_date}
+            {(() => {
+              const age = timeAgo(job.posted_date)
+              return age ? (
+                <span className={clsx(
+                  'flex items-center gap-1 text-xs',
+                  age.stale ? 'text-amber-600 dark:text-amber-500' : 'text-slate-400 dark:text-slate-500'
+                )}>
+                  <Clock className="w-3 h-3" /> {age.label}
+                </span>
+              ) : null
+            })()}
+            {prettyType(job.job_type) && (
+              <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-xs">
+                <Briefcase className="w-3 h-3" /> {prettyType(job.job_type)}
               </span>
             )}
-            <span className="text-slate-400 text-xs">{SOURCE_LABELS[job.source] || job.source}</span>
+            {job.seniority && (
+              <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-xs capitalize">
+                <BarChart3 className="w-3 h-3" /> {job.seniority}
+              </span>
+            )}
+            <span className="text-slate-400 dark:text-slate-500 text-xs">{SOURCE_LABELS[job.source] || job.source}</span>
           </div>
 
           {/* Match reasons */}

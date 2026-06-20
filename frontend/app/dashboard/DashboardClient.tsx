@@ -9,8 +9,8 @@ import clsx from 'clsx'
 import RefreshButton from '@/components/RefreshButton'
 
 const SOURCES = [
-  'All', 'workday', 'greenhouse', 'lever', 'iimjobs',
-  'foundit', 'naukrigulf', 'instahyre', 'cutshort', 'gmail'
+  'All', 'indeed', 'naukri', 'greenhouse', 'lever', 'ashby',
+  'adzuna_in', 'remotive', 'gmail'
 ]
 
 interface Props {

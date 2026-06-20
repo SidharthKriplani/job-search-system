@@ -15,13 +15,14 @@ import logging
 import sys
 from typing import Callable, Dict, List
 
-from .connectors import greenhouse, lever, ashby, aggregators
+from .connectors import greenhouse, lever, ashby, aggregators, jobspy
 from .dedup import deduplicate
 
 logger = logging.getLogger("ingest")
 
 # (label, fetch_fn)
 SOURCES: List[tuple] = [
+    ("jobspy",      jobspy.fetch),       # all-India coverage (Indeed/Naukri), any field
     ("greenhouse",  greenhouse.fetch),
     ("lever",       lever.fetch),
     ("ashby",       ashby.fetch),
