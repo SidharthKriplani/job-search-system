@@ -6,6 +6,11 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Fixed: Settings profile not persisting
+- `saveProfile` spread the whole profile object into the upsert and never checked
+  the error, so a failed save still flashed "Saved!" and nothing persisted across
+  reloads. Now sends only editable columns, checks the error, and shows it.
+
 ### All-India coverage (JobSpy) + job-age/metadata on cards
 - **JobSpy connector** (`ingest/connectors/jobspy.py`) — adopted `python-jobspy`
   as the primary all-India engine: scrapes Indeed/Naukri India across every field

@@ -71,6 +71,7 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
 
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
+  const [error, setError]         = useState<string | null>(null)
   const [newRole, setNewRole]     = useState('')
   const [newLocation, setNewLocation] = useState('')
   const [newIndustry, setNewIndustry] = useState('')
@@ -78,8 +79,28 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
 
   const saveProfile = async () => {
     setSaving(true)
-    await supabase.from('user_profiles').upsert({ ...profile, user_id: userId }, { onConflict: 'user_id' })
+    setError(null)
+    // Send ONLY editable columns — not id/created_at/updated_at/email — and
+    // CHECK the error so a silent failure can't masquerade as "Saved!".
+    const payload = {
+      user_id:           userId,
+      target_roles:      profile.target_roles || [],
+      locations:         profile.locations || [],
+      industries:        profile.industries || [],
+      target_companies:  profile.target_companies || [],
+      exclude_companies: profile.exclude_companies || [],
+      salary_floor:      profile.salary_floor || 0,
+      experience_years:  profile.experience_years || 0,
+      is_active:         true,
+    }
+    const { error: upsertError } = await supabase
+      .from('user_profiles')
+      .upsert(payload, { onConflict: 'user_id' })
     setSaving(false)
+    if (upsertError) {
+      setError(upsertError.message || 'Could not save. Are you signed in?')
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
@@ -223,6 +244,15 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
           >
             {saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Profile'}</>}
           </button>
+
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400 mt-2">⚠️ {error}</p>
+          )}
+          {saved && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Saved to your profile. The next scrape run will use these.
+            </p>
+          )}
         </div>
       </main>
     </div>
