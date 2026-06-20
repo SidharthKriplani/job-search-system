@@ -4,6 +4,29 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (b) — precision pass: India-default + tighter read-guard + tsconfig
+
+- **Root-cause fix for the repeated build failures:** `frontend/tsconfig.json` had
+  no `target`, so it defaulted to ES5 and the type-checker rejected every Set/Map
+  iteration. Set `target: es2017` + `downlevelIteration` — the whole class is gone.
+- **India by default:** the overseas-drop now applies even when no location is set
+  (this is an India-focused product), and `_FOREIGN_HINTS` is broadened (Mexico,
+  London-area, EU, APAC, etc.). Verified: finance roles in SF/Mexico/London drop,
+  Mumbai ones stay.
+- **Precision read-guard:** the guard was letting engineers in via broad finance
+  words ("Trading Systems Engineer" on "trading"). Rewrote `expandRoleKeywords` to
+  split distinctive SINGLES (matched on title+company only) from high-precision
+  PHRASES (title+desc+company); ambiguous singles (equity/capital/credit/trading…)
+  only count inside a phrase; the broad sector net is added only when industries
+  are explicitly set. Verified: Financial Analyst / IB Analyst kept, Design/Service/
+  Trading Engineer dropped.
+
+_Note:_ India finance-role coverage in the DB is still thin (most finance postings
+come from global ATS boards) — removing the foreign noise makes that scarcity
+visible. Next: add India finance sources.
+
+---
+
 ## 2026-06-22 — role-family graph + sector layer (relevance neighbourhood)
 
 A target role is now a weighted NEIGHBOURHOOD, not a point, plus a domain/sector

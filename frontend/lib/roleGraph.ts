@@ -102,39 +102,63 @@ function normalize(role: string): string {
   return ALIASES[r] || r
 }
 
-/** Distinctive keywords (>=3 chars, non-generic) that should let a job through. */
+// Single words that are too noisy as standalone substrings (they appear in
+// unrelated titles/descriptions), so we only allow them inside a full PHRASE.
+const AMBIGUOUS = new Set([
+  'equity', 'capital', 'credit', 'research', 'corporate', 'private', 'fund',
+  'trading', 'risk', 'transaction', 'treasury', 'debt', 'securities', 'asset',
+  'portfolio', 'venture', 'growth', 'strategy', 'data', 'design', 'security',
+  'cloud', 'mobile', 'platform', 'content', 'digital', 'brand', 'systems',
+  'services', 'solutions', 'science', 'machine', 'learning', 'applied',
+])
+
+/**
+ * Precision read-guard expansion. Returns:
+ *  • singles — distinctive single words from what the user TYPED (matched against
+ *    title + company only, to avoid noisy description matches).
+ *  • phrases — full role/sector phrases (matched against title + desc + company);
+ *    phrase matching is high-precision so "Trading Systems Engineer" doesn't slip
+ *    in on the word "trading".
+ */
 export function expandRoleKeywords(
   roles: string[] | null | undefined,
   industries?: string[] | null,
-): string[] {
-  const words = new Set<string>()
+): { singles: string[]; phrases: string[] } {
+  const singles = new Set<string>()
+  const phrases = new Set<string>()
   const sectors = new Set<string>()
-
-  const addPhrase = (phrase: string) => {
-    for (const w of phrase.split(/\s+/)) {
-      const c = w.replace(/[^a-z0-9&]/g, '')
-      if (c.length >= 3 && !GENERIC.has(c)) words.add(c)
-    }
-  }
 
   for (const raw of roles || []) {
     const canon = normalize(raw)
-    addPhrase(canon)
+    if (canon.includes(' ')) phrases.add(canon)
+    // distinctive singles only from the typed role
+    for (const w of canon.split(/\s+/)) {
+      const c = w.replace(/[^a-z0-9&]/g, '')
+      if (c.length >= 4 && !GENERIC.has(c) && !AMBIGUOUS.has(c)) singles.add(c)
+    }
     const fam = MEMBER_TO_FAMILY[canon]
     if (fam) {
-      for (const m of FAMILIES[fam]) addPhrase(m)
+      for (const m of FAMILIES[fam]) phrases.add(m)        // neighbourhood as phrases
       if (FAMILY_SECTOR[fam]) sectors.add(FAMILY_SECTOR[fam] as string)
     }
   }
+
+  // Sector net only when the user EXPLICITLY set industries (domain-search mode).
   for (const ind of industries || []) {
     const key = (ind || '').trim().toLowerCase()
     if (SECTORS[key]) sectors.add(key)
-    else if (key.includes('fin') || key.includes('bank') || key.includes('invest')) sectors.add('finance')
     else if (key.includes('fintech')) sectors.add('fintech')
+    else if (key.includes('fin') || key.includes('bank') || key.includes('invest')) sectors.add('finance')
     else if (key.includes('health') || key.includes('pharma')) sectors.add('healthcare')
     else if (key.includes('commerce') || key.includes('retail')) sectors.add('ecommerce')
   }
-  Array.from(sectors).forEach(s => (SECTORS[s] || []).forEach(kw => words.add(kw)))
+  const industriesSet = (industries || []).length > 0
+  if (industriesSet) {
+    Array.from(sectors).forEach(s => (SECTORS[s] || []).forEach(kw => {
+      if (kw.includes(' ')) phrases.add(kw)
+      else if (!AMBIGUOUS.has(kw)) singles.add(kw)
+    }))
+  }
 
-  return Array.from(words)
+  return { singles: Array.from(singles), phrases: Array.from(phrases) }
 }

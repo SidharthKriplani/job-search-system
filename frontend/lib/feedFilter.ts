@@ -19,14 +19,22 @@ export function roleOrFilter(
   roles: string[] | null | undefined,
   industries?: string[] | null,
 ): string | null {
-  const keywords = expandRoleKeywords(roles, industries)
-  if (keywords.length === 0) return null
+  const { singles, phrases } = expandRoleKeywords(roles, industries)
+  if (singles.length === 0 && phrases.length === 0) return null
+  const clean = (w: string) => w.replace(/[,()]/g, ' ')
   const parts: string[] = []
-  for (const w of keywords.slice(0, 30)) {
-    const safe = w.replace(/[,()]/g, ' ')
-    parts.push(`job_title.ilike.%${safe}%`)
-    parts.push(`description_snippet.ilike.%${safe}%`)
-    parts.push(`company.ilike.%${safe}%`)
+  // Phrases are high-precision → match across title, description, company.
+  for (const p of phrases.slice(0, 22)) {
+    const s = clean(p)
+    parts.push(`job_title.ilike.%${s}%`)
+    parts.push(`description_snippet.ilike.%${s}%`)
+    parts.push(`company.ilike.%${s}%`)
+  }
+  // Singles are noisier → restrict to title + company (skip descriptions).
+  for (const w of singles.slice(0, 8)) {
+    const s = clean(w)
+    parts.push(`job_title.ilike.%${s}%`)
+    parts.push(`company.ilike.%${s}%`)
   }
   return parts.join(',')
 }

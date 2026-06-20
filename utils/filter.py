@@ -164,6 +164,14 @@ _FOREIGN_HINTS = (
     "london", " dublin", " berlin", "amsterdam", " paris", " munich",
     "toronto", " sydney", "tel aviv", "united states", " usa", " u.s.",
     "united kingdom", " u.k.", "germany", "singapore", "netherlands",
+    # broadened — common foreign hubs seen in ATS/aggregator feeds
+    "mexico", "brazil", "são paulo", "sao paulo", "argentina", "colombia",
+    "philippines", "manila", "jakarta", "indonesia", "vietnam", "hanoi",
+    "warsaw", "poland", "madrid", "spain", "barcelona", "france", "italy",
+    " canada", "australia", "japan", "tokyo", "china", "shanghai", "beijing",
+    "hong kong", "kuala lumpur", "malaysia", "thailand", "bangkok", "egypt",
+    "nigeria", "kenya", "south africa", "ireland", "portugal", "lisbon",
+    "stockholm", "sweden", "zurich", "switzerland", "austria", "belgium",
 )
 
 
@@ -254,16 +262,16 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
             role_pass = text_eff >= ROLE_PASS
             if not (role_pass or (industries_set and sector_hit)):
                 continue
-        # Location: when the user sets preferences, drop clearly-overseas,
-        # non-remote roles (keeps India + remote + anything we can't classify).
-        # India/remote/preferred always win, so a Bangalore job that merely
+        # Location: this is an India-focused product, so we drop clearly-overseas,
+        # non-remote roles by DEFAULT (even when the user hasn't set a location —
+        # otherwise the feed fills with US/Mexico/London jobs). India / remote /
+        # any preferred location always win, so a Bangalore job that merely
         # mentions an overseas team isn't dropped as "foreign".
-        if locations:
-            matched_loc = any(loc in location for loc in locations)
-            is_remote   = any(k in location for k in ("remote", "wfh", "anywhere"))
-            is_foreign  = any(h in location for h in _FOREIGN_HINTS)
-            if is_foreign and not (matched_loc or is_remote or _is_india(location)):
-                continue
+        matched_loc = bool(locations) and any(loc in location for loc in locations)
+        is_remote   = any(k in location for k in ("remote", "wfh", "anywhere"))
+        is_foreign  = any(h in location for h in _FOREIGN_HINTS)
+        if is_foreign and not (matched_loc or is_remote or _is_india(location)):
+            continue
         salary_lpa = _extract_salary_lpa(salary_str)
         if salary_lpa > 0 and salary_floor > 0 and salary_lpa < salary_floor * 0.8:
             continue
