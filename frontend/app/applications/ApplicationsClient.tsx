@@ -7,19 +7,19 @@ import { createClient } from '@/lib/supabase'
 import { Plus, ExternalLink, ChevronDown } from 'lucide-react'
 import clsx from 'clsx'
 
+// Defined once at module level — used by both the main component and AppCard
+const ALL_STAGES: ApplicationStage[] = [
+  'Not Applied', 'Applied', 'Application Acknowledged', 'Recruiter Screening',
+  'HM Interview Scheduled', 'HM Interview Done', 'Technical Round Scheduled',
+  'Technical Round Done', 'Case Study / Assignment', 'Final Round Scheduled',
+  'Final Round Done', 'Reference Check', 'Background Check', 'Offer Verbal',
+  'Offer Written', 'Offer Negotiating', 'Offer Accepted', 'Rejected', 'Withdrawn', 'Ghosted',
+]
+
 const STAGE_GROUPS: { label: string; stages: ApplicationStage[] }[] = [
-  {
-    label: 'Sourcing',
-    stages: ['Not Applied'],
-  },
-  {
-    label: 'Applied',
-    stages: ['Applied', 'Application Acknowledged'],
-  },
-  {
-    label: 'Screening',
-    stages: ['Recruiter Screening'],
-  },
+  { label: 'Sourcing',      stages: ['Not Applied'] },
+  { label: 'Applied',       stages: ['Applied', 'Application Acknowledged'] },
+  { label: 'Screening',     stages: ['Recruiter Screening'] },
   {
     label: 'Interviewing',
     stages: [
@@ -32,18 +32,7 @@ const STAGE_GROUPS: { label: string; stages: ApplicationStage[] }[] = [
     label: 'Offer',
     stages: ['Reference Check', 'Background Check', 'Offer Verbal', 'Offer Written', 'Offer Negotiating', 'Offer Accepted'],
   },
-  {
-    label: 'Closed',
-    stages: ['Rejected', 'Withdrawn', 'Ghosted'],
-  },
-]
-
-const ALL_STAGES: ApplicationStage[] = [
-  'Not Applied', 'Applied', 'Application Acknowledged', 'Recruiter Screening',
-  'HM Interview Scheduled', 'HM Interview Done', 'Technical Round Scheduled',
-  'Technical Round Done', 'Case Study / Assignment', 'Final Round Scheduled',
-  'Final Round Done', 'Reference Check', 'Background Check', 'Offer Verbal',
-  'Offer Written', 'Offer Negotiating', 'Offer Accepted', 'Rejected', 'Withdrawn', 'Ghosted'
+  { label: 'Closed', stages: ['Rejected', 'Withdrawn', 'Ghosted'] },
 ]
 
 interface Props {
@@ -53,28 +42,32 @@ interface Props {
 
 export default function ApplicationsClient({ initialApplications, userId }: Props) {
   const supabase = createClient()
-  const [apps, setApps] = useState<Application[]>(initialApplications)
+  const [apps, setApps]           = useState<Application[]>(initialApplications)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [newApp, setNewApp] = useState<Partial<Application>>({ stage: 'Not Applied', priority: 'medium' })
-  const [saving, setSaving] = useState(false)
+  const [newApp, setNewApp]       = useState<Partial<Application>>({ stage: 'Not Applied', priority: 'medium' })
+  const [saving, setSaving]       = useState(false)
 
   const updateStage = async (id: string, stage: ApplicationStage) => {
-    await supabase.from('applications').update({
-      stage,
-      date_stage_updated: new Date().toISOString().split('T')[0]
-    }).eq('id', id)
+    await supabase
+      .from('applications')
+      .update({ stage, date_stage_updated: new Date().toISOString().split('T')[0] })
+      .eq('id', id)
     setApps(prev => prev.map(a => a.id === id ? { ...a, stage } : a))
   }
 
   const addApplication = async () => {
     if (!newApp.company || !newApp.job_title) return
     setSaving(true)
-    const { data } = await supabase.from('applications').insert({
-      ...newApp,
-      user_id: userId,
-      date_applied: newApp.date_applied || new Date().toISOString().split('T')[0],
-    }).select().single()
-    if (data) setApps(prev => [data, ...prev])
+    const { data } = await supabase
+      .from('applications')
+      .insert({
+        ...newApp,
+        user_id: userId,
+        date_applied: newApp.date_applied || new Date().toISOString().split('T')[0],
+      })
+      .select()
+      .single()
+    if (data) setApps(prev => [data as Application, ...prev])
     setNewApp({ stage: 'Not Applied', priority: 'medium' })
     setShowAddModal(false)
     setSaving(false)
@@ -100,8 +93,8 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
           </button>
         </div>
 
-        {/* Kanban-style stage groups */}
-        <div className="space-y-4">
+        {/* Stage groups */}
+        <div className="space-y-6">
           {STAGE_GROUPS.map(group => {
             const groupApps = apps.filter(a => (group.stages as string[]).includes(a.stage))
             if (groupApps.length === 0) return null
@@ -109,7 +102,9 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
               <div key={group.label}>
                 <div className="flex items-center gap-2 mb-2">
                   <h2 className="text-sm font-semibold text-slate-700">{group.label}</h2>
-                  <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-full">{groupApps.length}</span>
+                  <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-full">
+                    {groupApps.length}
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {groupApps.map(app => (
@@ -129,25 +124,25 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
         )}
       </main>
 
-      {/* Add Application Modal */}
+      {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <h2 className="font-bold text-lg text-slate-900 mb-4">Add Application</h2>
             <div className="space-y-3">
-              {[
+              {([
                 { key: 'job_title', label: 'Job Title', required: true },
                 { key: 'company',   label: 'Company',   required: true },
-                { key: 'job_url',   label: 'Job URL' },
-                { key: 'location',  label: 'Location' },
-              ].map(({ key, label, required }) => (
-                <div key={key}>
+                { key: 'job_url',   label: 'Job URL',   required: false },
+                { key: 'location',  label: 'Location',  required: false },
+              ] as { key: keyof Application; label: string; required: boolean }[]).map(({ key, label, required }) => (
+                <div key={String(key)}>
                   <label className="text-xs font-medium text-slate-600 mb-1 block">
                     {label}{required && ' *'}
                   </label>
                   <input
                     type="text"
-                    value={(newApp as any)[key] || ''}
+                    value={(newApp[key] as string) || ''}
                     onChange={e => setNewApp(p => ({ ...p, [key]: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm
                                focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -166,7 +161,6 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
                 </select>
               </div>
             </div>
-
             <div className="flex gap-3 mt-5">
               <button
                 onClick={() => setShowAddModal(false)}
@@ -190,6 +184,8 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
   )
 }
 
+// ─── AppCard ─────────────────────────────────────────────────────────────────
+
 function AppCard({
   app,
   onStageChange,
@@ -206,7 +202,10 @@ function AppCard({
           <p className="font-semibold text-slate-900 text-sm truncate">{app.job_title}</p>
           <p className="text-slate-600 text-xs mt-0.5">{app.company}</p>
         </div>
-        <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 whitespace-nowrap', STAGE_COLORS[app.stage])}>
+        <span className={clsx(
+          'text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 whitespace-nowrap',
+          STAGE_COLORS[app.stage]
+        )}>
           {app.stage}
         </span>
       </div>
@@ -214,17 +213,18 @@ function AppCard({
       {app.location && (
         <p className="text-slate-400 text-xs mt-2">{app.location}</p>
       )}
-
       {app.follow_up_date && (
-        <p className="text-xs text-amber-600 mt-1.5">
-          Follow-up: {app.follow_up_date}
-        </p>
+        <p className="text-xs text-amber-600 mt-1.5">Follow-up: {app.follow_up_date}</p>
       )}
 
       <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100">
         {app.job_url && (
-          <a href={app.job_url} target="_blank" rel="noopener noreferrer"
-             className="text-slate-400 hover:text-indigo-600 transition-colors">
+          <a
+            href={app.job_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-400 hover:text-indigo-600 transition-colors"
+          >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         )}
@@ -259,11 +259,3 @@ function AppCard({
     </div>
   )
 }
-
-const ALL_STAGES: ApplicationStage[] = [
-  'Not Applied', 'Applied', 'Application Acknowledged', 'Recruiter Screening',
-  'HM Interview Scheduled', 'HM Interview Done', 'Technical Round Scheduled',
-  'Technical Round Done', 'Case Study / Assignment', 'Final Round Scheduled',
-  'Final Round Done', 'Reference Check', 'Background Check', 'Offer Verbal',
-  'Offer Written', 'Offer Negotiating', 'Offer Accepted', 'Rejected', 'Withdrawn', 'Ghosted'
-]
