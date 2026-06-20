@@ -64,17 +64,22 @@ function LoginPage() {
     setMessage(null)
 
     if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       })
-      if (error) setError(error.message)
-      else setMessage('Check your email for a confirmation link.')
+      if (error) { setError(error.message); setLoading(false); return }
+      // If email confirmation is OFF, signUp returns a live session → go straight in.
+      if (data.session) { window.location.href = '/dashboard'; return }
+      // Otherwise confirmation is required (email may be slow/rate-limited).
+      setMessage('Account created. If a confirmation email doesn’t arrive, ask the admin to disable email confirmation, then just Sign in.')
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError(error.message)
-      // redirect handled by middleware on success
+      if (error) { setError(error.message); setLoading(false); return }
+      // Force a full navigation so the server picks up the new session cookie.
+      window.location.href = '/dashboard'
+      return
     }
     setLoading(false)
   }

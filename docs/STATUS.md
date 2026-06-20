@@ -5,6 +5,26 @@ _Last updated: 2026-06-20_
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
 
+## Capabilities built to date (the journey)
+
+- **M1 ✅ Jobs live** — durable ingestion engine; first real feed (4,359 jobs).
+- **Data foundation** — ATS-source engine (Greenhouse/Lever/Ashby/**Workday**) +
+  **JobSpy** (all-India: Indeed/Naukri) + aggregators (Remotive/Arbeitnow/Adzuna)
+  + user Gmail. No fragile portal scraping. ~70 verified ATS boards + 5 Workday
+  tenants + JobSpy.
+- **M2 🟡 Relevance** — India companies seeded; profile-driven filtering; Adzuna
+  India ready (needs keys).
+- **M3 ✅ Scoring** — JD-aware, profile-driven, **prefix-stem** matching
+  (science≈scientist), with human-readable reasons; scores spread meaningfully.
+- **M4 🟡 Intelligence** — Stage 1 done: résumé capture + free heuristic résumé
+  matching. Stage 2 (LLM) deferred.
+- **Frontend** — dark mode, fast nav, live "Refresh Now" run-status, job-age +
+  metadata cards, résumé box in Settings.
+- **Reliability** — idempotent schema; deps fixed (supabase 2.31); loud upsert
+  errors; project spine in `docs/`.
+- **Scaling plan** — `docs/SCALING.md` (staged); **building now:** concurrent +
+  sharded ingestion (Stage 1).
+
 ## At a glance
 
 | | |

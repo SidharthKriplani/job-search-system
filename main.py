@@ -169,10 +169,15 @@ def main():
         logger.info("No active users. Exiting.")
         return
 
-    # ── Fetch the shared ATS/aggregator pool ONCE for the whole run ─────────
-    logger.info("Fetching shared job pool (ATS + aggregator APIs)...")
+    # ── Fetch the shared ATS/aggregator pool (concurrent; optionally sharded) ──
+    # Sharding spreads breadth across scheduled runs (see docs/SCALING.md). Set
+    # BATCH_TOTAL>1 on the scheduled cron; each run takes shard = (UTC hour mod N).
+    # Manual / unsharded runs (BATCH_TOTAL=1) do the full pool.
+    shard_total = max(1, int(os.environ.get("BATCH_TOTAL", "1")))
+    shard_index = int(os.environ.get("BATCH_INDEX", datetime.now(timezone.utc).hour % shard_total))
+    logger.info(f"Fetching job pool (shard {shard_index + 1}/{shard_total}, concurrent)...")
     try:
-        shared_pool = collect_jobs()
+        shared_pool = collect_jobs(shard_index, shard_total)
     except Exception as e:
         logger.error(f"Ingestion engine failed: {e}")
         shared_pool = []

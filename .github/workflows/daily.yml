@@ -2,10 +2,17 @@ name: Daily Job Scraper
 
 on:
   schedule:
-    # 00:30 UTC = 06:00 IST daily
-    - cron: '30 0 * * *'
+    # Sharded batches: 6 hourly runs 18:30–23:30 UTC (00:00–05:00 IST). Each run
+    # processes shard = (UTC hour mod 6), so all shards are covered by ~06:00 IST.
+    # See docs/SCALING.md. (18%6=0, 19%6=1, … 23%6=5.)
+    - cron: '30 18 * * *'
+    - cron: '30 19 * * *'
+    - cron: '30 20 * * *'
+    - cron: '30 21 * * *'
+    - cron: '30 22 * * *'
+    - cron: '30 23 * * *'
 
-  # Manual trigger for testing
+  # Manual trigger (also used by the "Refresh Now" button) — does a FULL run.
   workflow_dispatch:
     inputs:
       debug:
@@ -50,6 +57,9 @@ jobs:
           # Free keys at developer.adzuna.com. Leave unset to skip cleanly.
           ADZUNA_APP_ID:         ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY:        ${{ secrets.ADZUNA_APP_KEY }}
+          # Scheduled runs are sharded (6 batches across the night); manual runs
+          # (and the Refresh Now button) do a full single run.
+          BATCH_TOTAL:           ${{ github.event_name == 'schedule' && '6' || '1' }}
           LOG_LEVEL:             ${{ github.event.inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
         run: python main.py
 

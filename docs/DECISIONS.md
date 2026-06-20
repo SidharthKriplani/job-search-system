@@ -5,6 +5,19 @@ decision is reversed, add a new entry that supersedes it).
 
 ---
 
+### D9 — Prefix-stem matching, not stemmer lib or LLM (yet) (2026-06-20)
+Tokens stem to a 5-char prefix so word-forms unify (science/scientist→"scien").
+**Why:** real stemmers (Porter) don't unify science/scientist either; LLM/embeddings
+do but are deferred. Prefix-stem is a cheap 80% fix. Limits: no synonyms/typos.
+
+### D8 — Scale via concurrency + sharding now; global-jobs refactor later (2026-06-20)
+Two axes stress different parts (breadth → ingestion/storage; users → matching/
+duplication). **Now:** concurrent fetch + sharded hourly batches (Stage 1). **Later,
+deliberately:** split per-user `job_feed` into a global `jobs` table + `user_matches`
+join (Stage 2) when the O(users×pool) wall bites. **Why:** don't pay the migration
+complexity before it's needed; concurrency+sharding buys runway. Full map in
+`docs/SCALING.md`.
+
 ### D7 — Live run status over fire-and-forget (2026-06-20)
 The refresh button polls the actual GitHub run and shows queued/running/done/
 failed. **Why:** an idle "wait 2-3 min and reload" gives no confidence and no

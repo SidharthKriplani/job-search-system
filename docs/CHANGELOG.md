@@ -6,6 +6,16 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Scaling Stage 1: concurrent + sharded ingestion
+- Rewrote `ingest/run.py` around flat "fetch units" (one per board/tenant) run
+  **concurrently** in a thread pool (verified: a shard of ~10 boards = 1,328 jobs
+  in 8.3s vs ~30s+ sequential).
+- **Sharding:** `collect_jobs(shard_index, shard_total)` slices the units; `main.py`
+  derives the shard from `BATCH_TOTAL` + UTC hour. `daily.yml` now runs **6 hourly
+  batches (00:00–05:00 IST)** — each does one shard, so the full feed is assembled
+  by ~6am without one giant run. Manual / "Refresh Now" runs stay full (BATCH_TOTAL=1).
+- Full staged plan logged in `docs/SCALING.md`; architecture direction in DECISIONS (D8).
+
 ### Prefix-stem matching (word-form "semantic" fix, no LLM)
 - Matching now stems tokens to a 5-char prefix so word-forms unify:
   science/scientist/scientific → "scien", analyst/analytics/analysis → "analy",
