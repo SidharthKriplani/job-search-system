@@ -49,6 +49,17 @@ GREENHOUSE = [
     ("sofi", "SoFi"),
     ("affirm", "Affirm"),
     ("lyft", "Lyft"),
+    # Bulk-verified batch (2026-06-20) — global SaaS w/ large India GCCs + India cos
+    ("datadog", "Datadog"), ("okta", "Okta"), ("twilio", "Twilio"),
+    ("clickhouse", "ClickHouse"), ("intercom", "Intercom"), ("fivetran", "Fivetran"),
+    ("smartsheet", "Smartsheet"), ("gusto", "Gusto"), ("slice", "slice"),
+    ("vercel", "Vercel"), ("newrelic", "New Relic"), ("checkr", "Checkr"),
+    ("amplitude", "Amplitude"), ("pendo", "Pendo"), ("sigmoid", "Sigmoid"),
+    ("turing", "Turing"), ("launchdarkly", "LaunchDarkly"), ("pagerduty", "PagerDuty"),
+    ("cockroachlabs", "Cockroach Labs"), ("airtable", "Airtable"), ("mixpanel", "Mixpanel"),
+    ("calendly", "Calendly"), ("starburst", "Starburst"), ("circleci", "CircleCI"),
+    ("labelbox", "Labelbox"), ("lattice", "Lattice"), ("planetscale", "PlanetScale"),
+    ("dremio", "Dremio"),
 ]
 
 LEVER = [
@@ -83,6 +94,14 @@ ASHBY = [
     ("clipboardhealth", "Clipboard Health"),
     ("posthog", "PostHog"),
     ("hex", "Hex"),
+    # Bulk-verified batch (2026-06-20)
+    ("snowflake", "Snowflake"), ("notion", "Notion"), ("cohere", "Cohere"),
+    ("plaid", "Plaid"), ("cerebras", "Cerebras"), ("handshake", "Handshake"),
+    ("kong", "Kong"), ("commure", "Commure"), ("perplexity", "Perplexity"),
+    ("supabase", "Supabase"), ("clickup", "ClickUp"), ("baseten", "Baseten"),
+    ("sentry", "Sentry"), ("modal", "Modal"), ("render", "Render"),
+    ("character", "Character.AI"), ("atlan", "Atlan"), ("neon", "Neon"),
+    ("materialize", "Materialize"),
 ]
 
 # Workday tenants: (tenant, wd_number, site, display_name). Each VERIFIED to

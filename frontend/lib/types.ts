@@ -34,6 +34,7 @@ export interface UserProfile {
   exclude_companies: string[]
   is_active: boolean
   gmail_connected: boolean
+  resume_text: string | null
   created_at: string
   updated_at: string
 }

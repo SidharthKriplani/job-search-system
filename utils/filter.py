@@ -59,10 +59,39 @@ def _recency_score(posted_date: Optional[str]) -> Tuple[float, str]:
     return 0.25, ""
 
 
-# ─── Main filter + scorer (profile-driven, JD-aware) ──────────────────────────
+# ─── Résumé tokenisation (résumé-aware matching) ──────────────────────────────
 
-# Score weights (sum to 1.0). Title + JD role fit dominate; the rest differentiate.
-_W_TITLE, _W_JD, _W_IND, _W_LOC, _W_SAL, _W_REC = 0.30, 0.25, 0.15, 0.15, 0.08, 0.07
+_STOPWORDS = {
+    "the","and","for","with","you","our","your","are","will","that","this","from",
+    "have","has","work","working","team","teams","role","roles","jobs","that","they",
+    "their","who","what","when","where","all","any","can","new","using","use","into",
+    "experience","years","year","strong","ability","including","across","within",
+    "skills","knowledge","required","preferred","plus","etc","per","via","such",
+    "company","companies","candidate","candidates","opportunity","looking","join","also",
+}
+
+def _tokens(text: str) -> set:
+    """Significant lowercase tokens (len>=4, no stopwords) — for résumé overlap."""
+    return {w for w in re.findall(r"[a-z][a-z0-9+#.]{3,}", (text or "").lower())
+            if w not in _STOPWORDS}
+
+
+def _stem(w: str) -> str:
+    """Crude prefix stem so word-forms unify: science/scientist/scientific → 'scien',
+    analyst/analytics/analysis → 'analy', manager/management → 'manag'. Cheap, no LLM —
+    it won't catch true synonyms (ML eng ≈ data scientist) or typos; that's Stage-2's job."""
+    return w[:5] if len(w) >= 6 else w
+
+
+def _stems(text: str) -> set:
+    return {_stem(w) for w in _tokens(text)}
+
+
+# ─── Main filter + scorer (profile-driven, JD-aware, résumé-aware) ────────────
+
+# Component weights. With a résumé, the résumé drives the score; without, role fit does.
+_WEIGHTS_RESUME    = dict(title=0.20, jd=0.15, ind=0.10, loc=0.15, sal=0.08, rec=0.07, resume=0.25)
+_WEIGHTS_NO_RESUME = dict(title=0.30, jd=0.25, ind=0.15, loc=0.15, sal=0.08, rec=0.07, resume=0.0)
 
 
 def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
@@ -78,11 +107,16 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     # Per-role word lists (for best-match scoring) + a flat set (for the hard filter).
     roles_words       = [[w for w in r.split() if len(w) > 2] for r in target_roles]
     roles_words       = [rw for rw in roles_words if rw]
-    role_words        = sorted({w for rw in roles_words for w in rw})
+    # Stemmed role words — so "data science" matches "Data Scientist", etc.
+    roles_stems       = [[_stem(w) for w in rw] for rw in roles_words]
+    role_stem_flat    = {s for rs in roles_stems for s in rs}
     locations         = [l.lower() for l in profile.get("locations", [])]
     industries        = [i.lower() for i in profile.get("industries", [])]
     exclude_companies = [c.lower() for c in profile.get("exclude_companies", [])]
     salary_floor      = profile.get("salary_floor", 0) or 0
+    resume_stems      = _stems(profile.get("resume_text") or "")
+    has_resume        = len(resume_stems) >= 12
+    W                 = _WEIGHTS_RESUME if has_resume else _WEIGHTS_NO_RESUME
 
     results: List[Dict] = []
 
@@ -92,13 +126,15 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
         location = job.get("location", "").lower()
         jd       = (job.get("description_snippet") or "").lower()
         salary_str = job.get("salary_range") or ""
-        text     = f"{title} {jd}"  # title + JD, for JD-aware matching
+        title_stems = _stems(title)
+        jd_stems    = _stems(jd)
+        text_stems  = title_stems | jd_stems  # stemmed title+JD, for fuzzy matching
 
         # ── Hard filters ──
         if any(ex in company for ex in exclude_companies):
             continue
-        # Role must appear in the title OR the JD (JD-aware — not title-only).
-        if role_words and not any(w in text for w in role_words):
+        # A target role (stemmed) must appear in the title OR the JD.
+        if role_stem_flat and not (role_stem_flat & text_stems):
             continue
         salary_lpa = _extract_salary_lpa(salary_str)
         if salary_lpa > 0 and salary_floor > 0 and salary_lpa < salary_floor * 0.8:
@@ -106,24 +142,24 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
 
         reasons: List[str] = []
 
-        # Best fraction of any ONE target role's words present in `s`.
-        def best_role_fit(s: str) -> float:
+        # Best fraction of any ONE target role's (stemmed) words present in `stem_set`.
+        def best_role_fit(stem_set: set) -> float:
             best = 0.0
-            for rw in roles_words:
-                best = max(best, sum(1 for w in rw if w in s) / len(rw))
+            for rs in roles_stems:
+                best = max(best, sum(1 for s in rs if s in stem_set) / len(rs))
             return best
 
         # 1. Title role fit (0..1) — against the best-matching single role
-        if roles_words:
-            title_score = best_role_fit(title)
+        if roles_stems:
+            title_score = best_role_fit(title_stems)
             if title_score >= 0.5:
                 reasons.append("Title matches your roles")
         else:
             title_score = 0.5  # no roles set → can't assess, stay neutral
 
         # 2. JD role fit (0..1) — M3: depends on the job description
-        if roles_words and jd:
-            jd_score = best_role_fit(jd)
+        if roles_stems and jd:
+            jd_score = best_role_fit(jd_stems)
             if jd_score >= 0.5:
                 reasons.append("Description aligns with your roles")
         else:
@@ -164,9 +200,19 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
         if rec_label:
             reasons.append(rec_label)
 
+        # 7. Résumé fit (0..1) — how much of this job's vocabulary the résumé covers
+        resume_score = 0.0
+        if has_resume:
+            matched = text_stems & resume_stems
+            resume_score = min(len(matched) / max(len(text_stems), 1) * 1.6, 1.0)
+            if matched and resume_score >= 0.35:
+                top3 = sorted(matched, key=len, reverse=True)[:3]
+                reasons.insert(0, "Résumé match: " + ", ".join(top3))
+
         score = (
-            _W_TITLE * title_score + _W_JD * jd_score + _W_IND * ind_score +
-            _W_LOC * loc_score + _W_SAL * sal_score + _W_REC * rec_score
+            W["title"] * title_score + W["jd"] * jd_score + W["ind"] * ind_score +
+            W["loc"] * loc_score + W["sal"] * sal_score + W["rec"] * rec_score +
+            W["resume"] * resume_score
         )
 
         job["match_score"]   = round(score, 3)

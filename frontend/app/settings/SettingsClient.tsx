@@ -91,6 +91,7 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
       exclude_companies: profile.exclude_companies || [],
       salary_floor:      profile.salary_floor || 0,
       experience_years:  profile.experience_years || 0,
+      resume_text:       (profile as any).resume_text || null,
       is_active:         true,
     }
     const { error: upsertError } = await supabase
@@ -231,6 +232,24 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
               onRemove={i => removeTag('exclude_companies', i)}
               placeholder="e.g. Previous Company Ltd"
             />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">
+              Master Résumé <span className="text-slate-400 font-normal">(paste plain text — powers résumé-based match scores)</span>
+            </label>
+            <textarea
+              value={(profile.resume_text as string) || ''}
+              onChange={e => setProfile(p => ({ ...p, resume_text: e.target.value }))}
+              rows={8}
+              placeholder="Paste your full résumé here — skills, experience, tools, achievements. The matcher reads this to score how well each job fits you."
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800
+                         text-slate-900 dark:text-slate-100 rounded-lg text-sm font-mono leading-relaxed
+                         focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              {((profile.resume_text as string) || '').length} characters · the more detail, the better the matching.
+            </p>
           </div>
 
           <button

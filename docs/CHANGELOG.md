@@ -6,6 +6,30 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Prefix-stem matching (word-form "semantic" fix, no LLM)
+- Matching now stems tokens to a 5-char prefix so word-forms unify:
+  science/scientist/scientific → "scien", analyst/analytics/analysis → "analy",
+  manager/management → "manag". So "data science" matches "Data Scientist".
+  Applied to the role hard-filter, role-fit scoring, and résumé overlap.
+- Limits (honest): does NOT handle true synonyms (ML eng ≈ data scientist) or
+  typos ("Dats Sciencc") — that needs Stage-2 LLM/embeddings. Case was already
+  handled (everything lower-cased).
+
+### M4 Stage 1: résumé capture + free heuristic résumé-matching
+- **Résumé capture:** `resume_text` column on `user_profiles` (schema) + a
+  paste-your-résumé textarea in Settings (saved with the profile).
+- **Résumé-aware scoring:** `filter_and_score` now tokenises the résumé and adds
+  a résumé-fit component (0.25 weight when a résumé is present) — jobs whose
+  title+JD overlap the résumé rank higher, with a "Résumé match: x, y, z" reason.
+  Verified: a qualitative "Research Associate" drops below a finance "Equity
+  Research Associate" for a finance résumé, despite identical titles. Free, no API
+  (Stage 2 LLM deep-read deferred per decision).
+
+### Bulk registry expansion (~70 verified ATS boards)
+- Added ~48 live-verified Greenhouse/Ashby boards (global SaaS w/ large India
+  GCCs + Indian companies): Datadog, Snowflake, Okta, Twilio, Intercom, Notion,
+  Plaid, Cohere, Handshake, slice, Sigmoid, Turing, and more.
+
 ### Workday connector + big registry expansion (India GCC jobs)
 - New `ingest/connectors/workday.py` — pulls the CXS JSON API of big global firms
   that run large India GCCs. Verified tenants: NVIDIA, Salesforce, Mastercard,

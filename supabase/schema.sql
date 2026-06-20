@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 -- Backfill the optional Naukri columns on pre-existing installs.
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_email    TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_password TEXT;
+-- Master resume text — powers resume-aware job matching (M4).
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS resume_text     TEXT;
 
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
