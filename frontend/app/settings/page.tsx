@@ -8,17 +8,19 @@ export default async function SettingsPage() {
 
   if (!user) redirect('/')
 
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
-
-  const { data: gmailToken } = await supabase
-    .from('gmail_tokens')
-    .select('updated_at')
-    .eq('user_id', user.id)
-    .single()
+  // Parallel + maybeSingle() so a missing row returns null instead of throwing.
+  const [{ data: profile }, { data: gmailToken }] = await Promise.all([
+    supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('gmail_tokens')
+      .select('updated_at')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ])
 
   return (
     <SettingsClient

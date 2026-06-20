@@ -35,8 +35,8 @@ export default function JobCard({ job, onUpdate }: Props) {
 
   return (
     <div className={clsx(
-      'bg-white border rounded-xl p-4 transition-all hover:shadow-md',
-      job.is_new ? 'border-indigo-200' : 'border-slate-200',
+      'bg-white dark:bg-slate-900 border rounded-xl p-4 transition-all hover:shadow-md dark:hover:shadow-black/40',
+      job.is_new ? 'border-indigo-200 dark:border-indigo-500/30' : 'border-slate-200 dark:border-slate-800',
       job.is_applied && 'opacity-60'
     )}>
       <div className="flex items-start justify-between gap-3">
@@ -47,7 +47,7 @@ export default function JobCard({ job, onUpdate }: Props) {
               href={job.job_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-slate-900 hover:text-indigo-700 text-sm leading-snug"
+              className="font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-700 dark:hover:text-indigo-400 text-sm leading-snug"
             >
               {job.job_title}
             </a>
@@ -62,7 +62,7 @@ export default function JobCard({ job, onUpdate }: Props) {
           </div>
 
           {/* Company + source */}
-          <p className="text-slate-700 text-sm font-medium mt-0.5">{job.company}</p>
+          <p className="text-slate-700 dark:text-slate-300 text-sm font-medium mt-0.5">{job.company}</p>
 
           {/* Meta row */}
           <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -88,7 +88,7 @@ export default function JobCard({ job, onUpdate }: Props) {
           {job.match_reasons?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {job.match_reasons.map(r => (
-                <span key={r} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">
+                <span key={r} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs rounded">
                   {r}
                 </span>
               ))}
@@ -103,7 +103,7 @@ export default function JobCard({ job, onUpdate }: Props) {
       </div>
 
       {/* Action bar */}
-      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
         <a
           href={job.job_url}
           target="_blank"

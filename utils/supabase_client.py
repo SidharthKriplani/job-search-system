@@ -104,6 +104,24 @@ def get_seen_job_ids(user_id: str, source: str) -> set:
     return {row["source_job_id"] for row in (result.data or [])}
 
 
+def get_existing_job_keys(user_id: str) -> set:
+    """
+    Return the set of (source, source_job_id) tuples already stored for a user,
+    across ALL sources. Used to decide which scraped jobs are genuinely *new*
+    so the daily digest only emails new jobs (not the whole feed every day).
+    """
+    sb = get_client()
+    try:
+        result = sb.table("job_feed") \
+            .select("source, source_job_id") \
+            .eq("user_id", user_id) \
+            .execute()
+    except Exception as e:
+        logger.error(f"[Supabase] get_existing_job_keys failed: {e}")
+        return set()
+    return {(row.get("source"), row.get("source_job_id")) for row in (result.data or [])}
+
+
 # ─── Scraper health helpers ──────────────────────────────────────────────────
 
 def update_scraper_health(

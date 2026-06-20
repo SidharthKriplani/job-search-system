@@ -46,6 +46,10 @@ jobs:
           GOOGLE_CLIENT_SECRET:  ${{ secrets.GOOGLE_CLIENT_SECRET }}
           RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
           NEXT_PUBLIC_APP_URL:   ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          # Optional: enables Adzuna (adds India + salary data to the pool).
+          # Free keys at developer.adzuna.com. Leave unset to skip cleanly.
+          ADZUNA_APP_ID:         ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY:        ${{ secrets.ADZUNA_APP_KEY }}
           LOG_LEVEL:             ${{ github.event.inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
         run: python main.py
 

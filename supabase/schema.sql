@@ -1,6 +1,11 @@
 -- ============================================================
 -- JOB SEARCH SYSTEM — MULTI-TENANT SUPABASE SCHEMA
 -- Run this in Supabase SQL Editor (Project → SQL Editor → New query)
+--
+-- This script is IDEMPOTENT: it is safe to run repeatedly. Every policy,
+-- trigger and index is dropped-if-exists before being (re)created, and all
+-- tables use CREATE TABLE IF NOT EXISTS, so re-running NEVER drops your data
+-- and never errors with "policy/trigger already exists".
 -- ============================================================
 
 -- Enable UUID extension
@@ -24,24 +29,34 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     exclude_companies TEXT[] DEFAULT '{}',
     is_active       BOOLEAN DEFAULT TRUE,
     gmail_connected BOOLEAN DEFAULT FALSE,
+    -- Optional Naukri auto-refresh credentials (used by naukri_refresh.py).
+    -- Opt-in only; many users leave these null.
+    naukri_email    TEXT,
+    naukri_password TEXT,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Backfill the optional Naukri columns on pre-existing installs.
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_email    TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_password TEXT;
+
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own profile"   ON user_profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 
 CREATE POLICY "Users can view own profile"
     ON user_profiles FOR SELECT USING (auth.uid() = user_id);
-
 CREATE POLICY "Users can insert own profile"
     ON user_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
-
 CREATE POLICY "Users can update own profile"
     ON user_profiles FOR UPDATE USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TABLE: gmail_tokens
--- Encrypted OAuth tokens per user. Scrapers read these at runtime.
+-- OAuth tokens per user. Scrapers read these at runtime (service role).
 -- ============================================================
 CREATE TABLE IF NOT EXISTS gmail_tokens (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -56,16 +71,18 @@ CREATE TABLE IF NOT EXISTS gmail_tokens (
 
 ALTER TABLE gmail_tokens ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role only"               ON gmail_tokens;
+DROP POLICY IF EXISTS "Users can view own token status" ON gmail_tokens;
+DROP POLICY IF EXISTS "Users can upsert own tokens"     ON gmail_tokens;
+DROP POLICY IF EXISTS "Users can update own tokens"     ON gmail_tokens;
+
 -- Only service role can read tokens (scrapers use service key)
 CREATE POLICY "Service role only"
     ON gmail_tokens FOR ALL USING (auth.role() = 'service_role');
-
 CREATE POLICY "Users can view own token status"
     ON gmail_tokens FOR SELECT USING (auth.uid() = user_id);
-
 CREATE POLICY "Users can upsert own tokens"
     ON gmail_tokens FOR INSERT WITH CHECK (auth.uid() = user_id);
-
 CREATE POLICY "Users can update own tokens"
     ON gmail_tokens FOR UPDATE USING (auth.uid() = user_id);
 
@@ -109,28 +126,30 @@ CREATE TABLE IF NOT EXISTS job_feed (
     UNIQUE(user_id, source, source_job_id)
 );
 
-CREATE INDEX idx_job_feed_user_id ON job_feed(user_id);
-CREATE INDEX idx_job_feed_scraped_at ON job_feed(scraped_at DESC);
-CREATE INDEX idx_job_feed_source ON job_feed(source);
-CREATE INDEX idx_job_feed_is_new ON job_feed(is_new) WHERE is_new = TRUE;
+CREATE INDEX IF NOT EXISTS idx_job_feed_user_id     ON job_feed(user_id);
+CREATE INDEX IF NOT EXISTS idx_job_feed_scraped_at  ON job_feed(scraped_at DESC);
+CREATE INDEX IF NOT EXISTS idx_job_feed_source      ON job_feed(source);
+CREATE INDEX IF NOT EXISTS idx_job_feed_is_new      ON job_feed(is_new) WHERE is_new = TRUE;
 
 ALTER TABLE job_feed ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own jobs"      ON job_feed;
+DROP POLICY IF EXISTS "Service role can insert jobs" ON job_feed;
+DROP POLICY IF EXISTS "Users can update own jobs"    ON job_feed;
+DROP POLICY IF EXISTS "Users can delete own jobs"    ON job_feed;
+
 CREATE POLICY "Users can view own jobs"
     ON job_feed FOR SELECT USING (auth.uid() = user_id);
-
 CREATE POLICY "Service role can insert jobs"
     ON job_feed FOR INSERT WITH CHECK (TRUE);  -- scrapers use service key
-
 CREATE POLICY "Users can update own jobs"
     ON job_feed FOR UPDATE USING (auth.uid() = user_id);
-
 CREATE POLICY "Users can delete own jobs"
     ON job_feed FOR DELETE USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TABLE: applications
--- 18-stage application tracking from the Bible
+-- 18-stage application tracking
 -- ============================================================
 CREATE TABLE IF NOT EXISTS applications (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -145,7 +164,7 @@ CREATE TABLE IF NOT EXISTS applications (
     salary_offered  TEXT,
     job_type        TEXT DEFAULT 'full_time',
 
-    -- 18-stage tracking (from the Bible)
+    -- 18-stage tracking
     stage           TEXT NOT NULL DEFAULT 'Not Applied' CHECK (stage IN (
         'Not Applied',
         'Applied',
@@ -195,18 +214,18 @@ CREATE TABLE IF NOT EXISTS applications (
     updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_applications_user_id ON applications(user_id);
-CREATE INDEX idx_applications_stage ON applications(stage);
-CREATE INDEX idx_applications_follow_up ON applications(follow_up_date) WHERE follow_up_date IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_applications_user_id   ON applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_applications_stage     ON applications(stage);
+CREATE INDEX IF NOT EXISTS idx_applications_follow_up ON applications(follow_up_date) WHERE follow_up_date IS NOT NULL;
 
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own applications" ON applications;
 CREATE POLICY "Users can manage own applications"
     ON applications FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TABLE: referral_pipeline
--- Track referral outreach per company
 -- ============================================================
 CREATE TABLE IF NOT EXISTS referral_pipeline (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -218,7 +237,6 @@ CREATE TABLE IF NOT EXISTS referral_pipeline (
     contact_linkedin TEXT,
     contact_email   TEXT,
 
-    -- Outreach tracking
     status          TEXT DEFAULT 'identified' CHECK (status IN (
         'identified',
         'message_drafted',
@@ -235,7 +253,6 @@ CREATE TABLE IF NOT EXISTS referral_pipeline (
     follow_up_date      DATE,
     notes               TEXT,
 
-    -- Link to application if they referred
     application_id  UUID REFERENCES applications(id) ON DELETE SET NULL,
 
     connection_type TEXT CHECK (connection_type IN (
@@ -247,16 +264,16 @@ CREATE TABLE IF NOT EXISTS referral_pipeline (
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_referral_pipeline_user_id ON referral_pipeline(user_id);
+CREATE INDEX IF NOT EXISTS idx_referral_pipeline_user_id ON referral_pipeline(user_id);
 
 ALTER TABLE referral_pipeline ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own referral pipeline" ON referral_pipeline;
 CREATE POLICY "Users can manage own referral pipeline"
     ON referral_pipeline FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TABLE: message_templates
--- Reusable outreach templates per user
 -- ============================================================
 CREATE TABLE IF NOT EXISTS message_templates (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -267,9 +284,9 @@ CREATE TABLE IF NOT EXISTS message_templates (
         'linkedin_referral', 'email_referral',
         'follow_up', 'thank_you', 'withdrawal', 'custom'
     )),
-    subject_line    TEXT,                -- for email templates
+    subject_line    TEXT,
     body            TEXT NOT NULL,
-    variables       TEXT[] DEFAULT '{}', -- e.g. {"{name}", "{company}", "{role}"}
+    variables       TEXT[] DEFAULT '{}',
 
     is_default      BOOLEAN DEFAULT FALSE,
     use_count       INTEGER DEFAULT 0,
@@ -280,12 +297,12 @@ CREATE TABLE IF NOT EXISTS message_templates (
 
 ALTER TABLE message_templates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own templates" ON message_templates;
 CREATE POLICY "Users can manage own templates"
     ON message_templates FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TABLE: contacts
--- General contacts (not necessarily referral pipeline)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS contacts (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -298,7 +315,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     linkedin_url    TEXT,
     phone           TEXT,
 
-    relationship    TEXT,   -- how you know them
+    relationship    TEXT,
     notes           TEXT,
     tags            TEXT[] DEFAULT '{}',
 
@@ -308,12 +325,12 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own contacts" ON contacts;
 CREATE POLICY "Users can manage own contacts"
     ON contacts FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TABLE: scraper_health
--- Track per-source health for monitoring (written by scrapers)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS scraper_health (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -329,8 +346,10 @@ CREATE TABLE IF NOT EXISTS scraper_health (
     UNIQUE(source)
 );
 
--- Service role only for health table
 ALTER TABLE scraper_health ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role manages health" ON scraper_health;
+DROP POLICY IF EXISTS "Users can read health"       ON scraper_health;
 CREATE POLICY "Service role manages health"
     ON scraper_health FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Users can read health"
@@ -347,66 +366,98 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at     ON user_profiles;
+DROP TRIGGER IF EXISTS update_gmail_tokens_updated_at      ON gmail_tokens;
+DROP TRIGGER IF EXISTS update_applications_updated_at      ON applications;
+DROP TRIGGER IF EXISTS update_referral_pipeline_updated_at ON referral_pipeline;
+DROP TRIGGER IF EXISTS update_message_templates_updated_at ON message_templates;
+
 CREATE TRIGGER update_user_profiles_updated_at
     BEFORE UPDATE ON user_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER update_gmail_tokens_updated_at
     BEFORE UPDATE ON gmail_tokens
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER update_applications_updated_at
     BEFORE UPDATE ON applications
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER update_referral_pipeline_updated_at
     BEFORE UPDATE ON referral_pipeline
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER update_message_templates_updated_at
     BEFORE UPDATE ON message_templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
--- SEED: Default message templates (inserted on user creation via trigger)
+-- SIGNUP HANDLER: create the user's profile row AND seed default templates.
+--
+-- IMPORTANT: the previous version only created message_templates and NOT a
+-- user_profiles row. That meant email/password signups never appeared in
+-- get_active_users(), so the scraper silently skipped them until they manually
+-- saved Settings. This combined handler fixes that. It is idempotent — safe if
+-- the trigger fires more than once or the script is re-run.
 -- ============================================================
-CREATE OR REPLACE FUNCTION create_default_templates()
+CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO message_templates (user_id, name, template_type, subject_line, body, variables, is_default)
-    VALUES
-    (
+    -- 1. Ensure a profile row exists so the scraper can find this user.
+    INSERT INTO user_profiles (user_id, email, full_name)
+    VALUES (
         NEW.id,
-        'LinkedIn Referral Request',
-        'linkedin_referral',
-        NULL,
-        'Hi {name}, I hope you''re well! I came across an opening for {role} at {company} and noticed we''re connected. I''d love to learn more about the team and culture — would you be open to a brief 15-min chat? Happy to share my background in return. Thanks so much!',
-        ARRAY['{name}', '{role}', '{company}'],
-        TRUE
-    ),
-    (
-        NEW.id,
-        'Email Follow-Up (1 week)',
-        'follow_up',
-        'Following up — {role} application at {company}',
-        'Hi {recruiter_name}, I wanted to follow up on my application for the {role} position submitted on {date_applied}. I remain very interested in this opportunity and would welcome the chance to discuss further. Please let me know if you need any additional information. Thank you!',
-        ARRAY['{recruiter_name}', '{role}', '{company}', '{date_applied}'],
-        TRUE
-    ),
-    (
-        NEW.id,
-        'Thank You — Post Interview',
-        'thank_you',
-        'Thank you — {role} interview',
-        'Hi {interviewer_name}, Thank you for taking the time to speak with me today about the {role} position. I enjoyed learning about {specific_topic} and I''m even more excited about the opportunity. Looking forward to next steps!',
-        ARRAY['{interviewer_name}', '{role}', '{specific_topic}'],
-        TRUE
-    );
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
+    )
+    ON CONFLICT (user_id) DO NOTHING;
+
+    -- 2. Seed default outreach templates, but only once per user.
+    IF NOT EXISTS (SELECT 1 FROM message_templates WHERE user_id = NEW.id) THEN
+        INSERT INTO message_templates (user_id, name, template_type, subject_line, body, variables, is_default)
+        VALUES
+        (
+            NEW.id,
+            'LinkedIn Referral Request',
+            'linkedin_referral',
+            NULL,
+            'Hi {name}, I hope you''re well! I came across an opening for {role} at {company} and noticed we''re connected. I''d love to learn more about the team and culture — would you be open to a brief 15-min chat? Happy to share my background in return. Thanks so much!',
+            ARRAY['{name}', '{role}', '{company}'],
+            TRUE
+        ),
+        (
+            NEW.id,
+            'Email Follow-Up (1 week)',
+            'follow_up',
+            'Following up — {role} application at {company}',
+            'Hi {recruiter_name}, I wanted to follow up on my application for the {role} position submitted on {date_applied}. I remain very interested in this opportunity and would welcome the chance to discuss further. Please let me know if you need any additional information. Thank you!',
+            ARRAY['{recruiter_name}', '{role}', '{company}', '{date_applied}'],
+            TRUE
+        ),
+        (
+            NEW.id,
+            'Thank You — Post Interview',
+            'thank_you',
+            'Thank you — {role} interview',
+            'Hi {interviewer_name}, Thank you for taking the time to speak with me today about the {role} position. I enjoyed learning about {specific_topic} and I''m even more excited about the opportunity. Looking forward to next steps!',
+            ARRAY['{interviewer_name}', '{role}', '{specific_topic}'],
+            TRUE
+        );
+    END IF;
 
     RETURN NEW;
 END;
 $$ language 'plpgsql' SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION create_default_templates();
+    FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ============================================================
+-- BACKFILL: create profile rows for any existing auth.users that don't have
+-- one yet (e.g. users who signed up before this fix). Safe to run repeatedly.
+-- ============================================================
+INSERT INTO user_profiles (user_id, email, full_name)
+SELECT u.id, u.email, COALESCE(u.raw_user_meta_data->>'full_name', split_part(u.email, '@', 1))
+FROM auth.users u
+LEFT JOIN user_profiles p ON p.user_id = u.id
+WHERE p.user_id IS NULL
+ON CONFLICT (user_id) DO NOTHING;

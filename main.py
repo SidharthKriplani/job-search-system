@@ -27,13 +27,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Callable, Tuple
 from datetime import datetime, timezone
 
-# ── Scrapers ──────────────────────────────────────────────────────────────────
-from scrapers import workday, greenhouse, lever
+# ── Ingestion engine (durable data foundation) ─────────────────────────────────
+# ATS source APIs (Greenhouse / Lever / Ashby) + official aggregators. No scraping.
+from ingest import collect_jobs, SOURCE_SUMMARY
+
+# ── Gmail (per-user, consent-based; the only path for Naukri/LinkedIn) ──────────
 from scrapers import gmail_parser
-from scrapers import iimjobs, foundit, naukrigulf
-from scrapers import bayt, gulftalent
-from scrapers import instahyre, cutshort, ambitionbox
-from scrapers import shine, timesjobs
+
+# NOTE: the legacy HTML portal scrapers (foundit, shine, timesjobs, bayt,
+# gulftalent, naukrigulf, instahyre, cutshort, ambitionbox, iimjobs) are
+# deliberately no longer in the pipeline — they were fragile and broke on any
+# site redesign. The ingest engine replaces them with stable JSON APIs.
 
 # ── Utils ─────────────────────────────────────────────────────────────────────
 from utils import supabase_client as sb
@@ -49,58 +53,33 @@ logging.basicConfig(
 logger = logging.getLogger("main")
 
 
-# ─── Scraper registry ─────────────────────────────────────────────────────────
-# Each entry: (source_name, scraper_module, needs_gmail_token)
-SCRAPERS: List[Tuple[str, object, bool]] = [
-    ("workday",     workday,     False),
-    ("greenhouse",  greenhouse,  False),
-    ("lever",       lever,       False),
-    ("iimjobs",     iimjobs,     False),
-    ("foundit",     foundit,     False),
-    ("naukrigulf",  naukrigulf,  False),
-    ("bayt",        bayt,        False),
-    ("gulftalent",  gulftalent,  False),
-    ("instahyre",   instahyre,   False),
-    ("cutshort",    cutshort,    False),
-    ("ambitionbox", ambitionbox, False),
-    ("shine",       shine,       False),
-    ("timesjobs",   timesjobs,   False),
-    ("gmail",       gmail_parser, True),  # requires connected Gmail
-]
-
-
-def run_scraper(
-    source: str,
-    scraper,
-    profile: Dict,
-    gmail_token: Dict = None,
-) -> Tuple[str, List[Dict], str]:
-    """
-    Run one scraper and return (source, jobs, error_or_None).
-    All exceptions are caught — never propagates.
-    """
+def fetch_gmail_jobs(profile: Dict) -> List[Dict]:
+    """Per-user Gmail read (Naukri/LinkedIn alerts). Never raises."""
+    if not profile.get("gmail_connected"):
+        return []
+    gmail_token = sb.get_gmail_token(profile["user_id"])
+    if not gmail_token:
+        return []
     try:
-        if source == "gmail":
-            if not gmail_token:
-                return source, [], None  # user hasn't connected Gmail
-            client_id     = os.environ.get("GOOGLE_CLIENT_ID", "")
-            client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-            jobs = scraper.scrape(
-                profile, gmail_token, client_id, client_secret,
-                supabase_client=sb.get_client()
-            )
-        else:
-            jobs = scraper.scrape(profile)
-        return source, jobs, None
+        return gmail_parser.scrape(
+            profile, gmail_token,
+            os.environ.get("GOOGLE_CLIENT_ID", ""),
+            os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            supabase_client=sb.get_client(),
+        ) or []
     except Exception as e:
-        err = f"{type(e).__name__}: {e}"
-        logger.error(f"[{source}] FAILED: {err}")
-        logger.debug(traceback.format_exc())
-        return source, [], err
+        logger.error(f"[gmail] FAILED for {profile['user_id'][:8]}: {e}")
+        return []
 
 
-def process_user(profile: Dict) -> None:
-    """Run the full pipeline for one user."""
+def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
+    """
+    Run the full pipeline for one user against the shared ATS job pool.
+
+    The ATS/aggregator pool (`shared_pool`) is fetched ONCE per run in main()
+    and reused for every user — it's global data, so there's no reason to pull
+    it per user. Only Gmail is per-user (it reads that user's own inbox).
+    """
     user_id    = profile["user_id"]
     user_email = profile.get("email", "")
     user_name  = profile.get("full_name", "there")
@@ -110,29 +89,10 @@ def process_user(profile: Dict) -> None:
     logger.info(f"Target roles: {profile.get('target_roles', [])}")
     logger.info(f"Locations:    {profile.get('locations', [])}")
 
-    # Fetch Gmail token if available
-    gmail_token = sb.get_gmail_token(user_id) if profile.get("gmail_connected") else None
-
-    # ── Run all scrapers concurrently ──────────────────────────────────────
-    all_raw_jobs: List[Dict] = []
-    source_results: Dict[str, Tuple[List[Dict], str]] = {}
-
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = {
-            executor.submit(run_scraper, src, mod, profile, gmail_token if needs_token else None): src
-            for src, mod, needs_token in SCRAPERS
-        }
-        for future in as_completed(futures):
-            source, jobs, error = future.result()
-            source_results[source] = (jobs, error)
-            all_raw_jobs.extend(jobs)
-            logger.info(f"  [{source}] {'ERROR' if error else f'{len(jobs)} jobs'}")
-
-    # ── Update scraper health ──────────────────────────────────────────────
-    for source, (jobs, error) in source_results.items():
-        sb.update_scraper_health(source, len(jobs), error)
-
-    logger.info(f"Total raw jobs: {len(all_raw_jobs)}")
+    # Shared ATS pool + this user's Gmail jobs
+    gmail_jobs = fetch_gmail_jobs(profile)
+    all_raw_jobs: List[Dict] = list(shared_pool) + gmail_jobs
+    logger.info(f"Pool: {len(shared_pool)} shared + {len(gmail_jobs)} gmail = {len(all_raw_jobs)} raw")
 
     # ── Filter, score, and dedup ───────────────────────────────────────────
     filtered = filter_and_score(all_raw_jobs, profile)
@@ -140,12 +100,24 @@ def process_user(profile: Dict) -> None:
 
     logger.info(f"After filter + dedup: {len(unique)} jobs")
 
+    # ── Determine which jobs are genuinely NEW (not already in the feed) ────
+    # Must run BEFORE upsert. We mirror the same source_job_id fallback that
+    # upsert_jobs() uses (hash of job_url) so the keys line up exactly.
+    import hashlib
+
+    def _effective_key(job: Dict):
+        sjid = job.get("source_job_id")
+        if not sjid:
+            sjid = hashlib.md5(job.get("job_url", "").encode()).hexdigest()[:20]
+        return (job.get("source"), sjid)
+
+    existing_keys = sb.get_existing_job_keys(user_id)
+    new_jobs_for_digest = [j for j in unique if _effective_key(j) not in existing_keys]
+    logger.info(f"Genuinely new (not seen before): {len(new_jobs_for_digest)}")
+
     # ── Upsert to Supabase ─────────────────────────────────────────────────
     new_count = sb.upsert_jobs(user_id, unique)
     logger.info(f"New jobs inserted: {new_count}")
-
-    # ── Get jobs for digest (only the new ones) ────────────────────────────
-    new_jobs_for_digest = [j for j in unique if True]  # all newly scraped, dedup handles seen
 
     # ── Get follow-up reminders ────────────────────────────────────────────
     follow_ups = sb.get_follow_up_due(user_id)
@@ -191,11 +163,27 @@ def main():
         logger.info("No active users. Exiting.")
         return
 
-    # Process each user sequentially (polite to external services)
+    # ── Fetch the shared ATS/aggregator pool ONCE for the whole run ─────────
+    logger.info("Fetching shared job pool (ATS + aggregator APIs)...")
+    try:
+        shared_pool = collect_jobs()
+    except Exception as e:
+        logger.error(f"Ingestion engine failed: {e}")
+        shared_pool = []
+    logger.info(f"Shared pool: {len(shared_pool)} jobs from {dict(SOURCE_SUMMARY)}")
+
+    # Record per-source health once (the pool is global, not per-user)
+    for source, count in SOURCE_SUMMARY.items():
+        try:
+            sb.update_scraper_health(source, count, None if count > 0 else "0 jobs returned")
+        except Exception as e:
+            logger.warning(f"[health] {source}: {e}")
+
+    # Process each user sequentially against the shared pool
     for i, profile in enumerate(users, 1):
         logger.info(f"\n[User {i}/{len(users)}]")
         try:
-            process_user(profile)
+            process_user(profile, shared_pool)
         except Exception as e:
             logger.error(f"FATAL error for user {profile.get('user_id', '?')[:8]}: {e}")
             logger.debug(traceback.format_exc())

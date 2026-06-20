@@ -79,12 +79,19 @@ def main():
 
     sb = get_client()
 
-    # Only select users who have naukri_email set
-    result = sb.table("user_profiles") \
-        .select("user_id, naukri_email, naukri_password") \
-        .eq("is_active", True) \
-        .not_.is_("naukri_email", "null") \
-        .execute()
+    # Only select users who have naukri_email set.
+    # The naukri_email / naukri_password columns are optional — if the schema
+    # migration that adds them hasn't been applied, this query raises. Guard it
+    # so this non-critical step degrades gracefully instead of crashing.
+    try:
+        result = sb.table("user_profiles") \
+            .select("user_id, naukri_email, naukri_password") \
+            .eq("is_active", True) \
+            .not_.is_("naukri_email", "null") \
+            .execute()
+    except Exception as e:
+        logger.warning(f"[Naukri] Could not read credentials (columns may not exist): {e}")
+        return
 
     users = result.data or []
 

@@ -8,17 +8,18 @@ export default async function ReferralsPage() {
 
   if (!user) redirect('/')
 
-  const { data: referrals } = await supabase
-    .from('referral_pipeline')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  const { data: templates } = await supabase
-    .from('message_templates')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('template_type', 'linkedin_referral')
+  const [{ data: referrals }, { data: templates }] = await Promise.all([
+    supabase
+      .from('referral_pipeline')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('message_templates')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('template_type', 'linkedin_referral'),
+  ])
 
   return (
     <ReferralsClient

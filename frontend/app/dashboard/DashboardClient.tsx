@@ -6,6 +6,7 @@ import JobCard from '@/components/JobCard'
 import { Job, ScraperHealth } from '@/lib/types'
 import { Search, Filter, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import clsx from 'clsx'
+import RefreshButton from '@/components/RefreshButton'
 
 const SOURCES = [
   'All', 'workday', 'greenhouse', 'lever', 'iimjobs',
@@ -61,11 +62,14 @@ export default function DashboardClient({
 
       <main className="flex-1 p-6 max-w-4xl">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-slate-900">Job Feed</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            Welcome back, {userName.split(' ')[0]}. {newCount > 0 ? `${newCount} new jobs since last visit.` : 'All caught up!'}
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Job Feed</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+              Welcome back, {userName.split(' ')[0]}. {newCount > 0 ? `${newCount} new jobs since last visit.` : 'All caught up!'}
+            </p>
+          </div>
+          <RefreshButton />
         </div>
 
         {/* Stats row */}
@@ -75,9 +79,9 @@ export default function DashboardClient({
             { label: 'Applied',    value: appliedCount, color: 'text-green-600'  },
             { label: 'In Feed',    value: filtered.length, color: 'text-slate-700' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white border border-slate-200 rounded-xl p-4">
+            <div key={label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
               <div className={clsx('text-2xl font-bold', color)}>{value}</div>
-              <div className="text-slate-500 text-xs mt-0.5">{label}</div>
+              <div className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{label}</div>
             </div>
           ))}
         </div>
@@ -106,7 +110,8 @@ export default function DashboardClient({
               placeholder="Search title, company, location..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm
+              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                         text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
@@ -119,7 +124,7 @@ export default function DashboardClient({
                 'px-3 py-2 rounded-lg text-xs font-medium border transition-colors',
                 showNew
                   ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
               )}
             >
               New Only
@@ -130,7 +135,7 @@ export default function DashboardClient({
                 'px-3 py-2 rounded-lg text-xs font-medium border transition-colors',
                 showSaved
                   ? 'bg-amber-500 text-white border-amber-500'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-300'
               )}
             >
               Saved
@@ -148,7 +153,7 @@ export default function DashboardClient({
                 'px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
                 sourceFilter === src
                   ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
               )}
             >
               {src === 'All' ? 'All Sources' : src}
@@ -158,10 +163,10 @@ export default function DashboardClient({
 
         {/* Job list */}
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-slate-400">
+          <div className="text-center py-16 text-slate-400 dark:text-slate-500">
             <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
             <p className="font-medium">No jobs match your filters</p>
-            <p className="text-sm mt-1">The scraper runs daily at 6am IST</p>
+            <p className="text-sm mt-1">Runs daily at 6am IST — or hit “Refresh Now” above</p>
           </div>
         ) : (
           <div className="space-y-3">

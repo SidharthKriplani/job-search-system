@@ -167,7 +167,9 @@ def send_daily_digest(
         """
 
     # ── Full email ──
-    app_url = os.getenv("NEXT_PUBLIC_APP_URL", "https://yourapp.vercel.app")
+    # NOTE: also fix the NEXT_PUBLIC_APP_URL GitHub Actions secret — it is set to
+    # the non-existent `job-search-system.vercel.app`. The live URL has a `-zeta`.
+    app_url = os.getenv("NEXT_PUBLIC_APP_URL", "https://job-search-system-zeta.vercel.app")
 
     html = f"""
     <!DOCTYPE html>

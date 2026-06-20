@@ -82,8 +82,8 @@ export default function ReferralsClient({ initialReferrals, templates, userId }:
       <main className="flex-1 p-6 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Referral Pipeline</h1>
-            <p className="text-slate-500 text-sm mt-0.5">{referrals.length} contacts · track outreach from identification to referral</p>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Referral Pipeline</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{referrals.length} contacts · track outreach from identification to referral</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
@@ -97,11 +97,11 @@ export default function ReferralsClient({ initialReferrals, templates, userId }:
         {/* Pipeline stages */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {['identified', 'message_sent', 'responded', 'referred'].map(status => (
-            <div key={status} className="bg-white border border-slate-200 rounded-xl p-3">
+            <div key={status} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
               <div className={clsx('inline-flex px-2 py-0.5 rounded-full text-xs font-medium mb-1.5', STATUS_COLORS[status])}>
                 {STATUS_LABELS[status]}
               </div>
-              <p className="text-2xl font-bold text-slate-900">{byStatus(status).length}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{byStatus(status).length}</p>
             </div>
           ))}
         </div>
@@ -109,15 +109,15 @@ export default function ReferralsClient({ initialReferrals, templates, userId }:
         {/* Contact cards */}
         <div className="space-y-2">
           {referrals.map(contact => (
-            <div key={contact.id} className="bg-white border border-slate-200 rounded-xl p-4">
+            <div key={contact.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-900 text-sm">{contact.contact_name}</span>
-                    <span className="text-slate-400 text-xs">at</span>
-                    <span className="font-medium text-slate-700 text-sm">{contact.company}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{contact.contact_name}</span>
+                    <span className="text-slate-400 dark:text-slate-500 text-xs">at</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300 text-sm">{contact.company}</span>
                     {contact.contact_role && (
-                      <span className="text-slate-500 text-xs">· {contact.contact_role}</span>
+                      <span className="text-slate-500 dark:text-slate-400 text-xs">· {contact.contact_role}</span>
                     )}
                   </div>
 
@@ -174,14 +174,14 @@ export default function ReferralsClient({ initialReferrals, templates, userId }:
               </div>
 
               {contact.notes && (
-                <p className="text-slate-500 text-xs mt-2 border-t border-slate-100 pt-2">{contact.notes}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-2 border-t border-slate-100 dark:border-slate-800 pt-2">{contact.notes}</p>
               )}
             </div>
           ))}
         </div>
 
         {referrals.length === 0 && (
-          <div className="text-center py-16 text-slate-400">
+          <div className="text-center py-16 text-slate-400 dark:text-slate-500">
             <p className="font-medium">No referral contacts yet</p>
             <p className="text-sm mt-1">Add connections you're planning to reach out to for referrals</p>
           </div>
@@ -191,8 +191,8 @@ export default function ReferralsClient({ initialReferrals, templates, userId }:
       {/* Add Contact Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h2 className="font-bold text-lg text-slate-900 mb-4">Add Referral Contact</h2>
+          <div className="bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100 mb-4">Add Referral Contact</h2>
             <div className="space-y-3">
               {[
                 { key: 'contact_name',     label: 'Name', required: true },
@@ -203,14 +203,14 @@ export default function ReferralsClient({ initialReferrals, templates, userId }:
                 { key: 'notes',            label: 'Notes / How you know them' },
               ].map(({ key, label, required }) => (
                 <div key={key}>
-                  <label className="text-xs font-medium text-slate-600 mb-1 block">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">
                     {label}{required && ' *'}
                   </label>
                   <input
                     type="text"
                     value={(newContact as any)[key] || ''}
                     onChange={e => setNewContact(p => ({ ...p, [key]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm
                                focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -218,7 +218,7 @@ export default function ReferralsClient({ initialReferrals, templates, userId }:
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowModal(false)}
-                className="flex-1 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+                className="flex-1 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
                 Cancel
               </button>
               <button onClick={addContact} disabled={saving || !newContact.contact_name || !newContact.company}

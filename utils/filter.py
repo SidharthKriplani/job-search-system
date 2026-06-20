@@ -27,11 +27,13 @@ def _extract_salary_lpa(salary_str: str) -> float:
 
     vals = [float(n) for n in nums]
 
-    # Detect if values are in monthly (likely if > 500 — currency amount)
+    # Detect monthly / raw-currency amounts (e.g. "AED 25000/month").
+    # We can't reliably convert these to INR LPA without an FX rate, and the
+    # old code inflated them (25000 -> 275 "LPA"), which broke salary scoring
+    # and made every GCC job falsely clear the salary floor. Treat as
+    # "salary unknown" (0.0) so the salary filter is skipped rather than wrong.
     if any(v > 500 for v in vals):
-        # Convert approximate monthly to LPA (×12 / 100000 * exchange estimate)
-        # AED: 1 AED ≈ 0.022 LPA roughly; just flag as high if monthly > 5000
-        return sum(vals) / len(vals) / 100  # rough normalisation
+        return 0.0
 
     if len(vals) >= 2:
         return (vals[0] + vals[1]) / 2
