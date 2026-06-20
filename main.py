@@ -155,8 +155,14 @@ def main():
         logger.error(f"Missing required environment variables: {missing}")
         raise SystemExit(1)
 
-    # Fetch all active users
-    users = sb.get_active_users()
+    # Fetch all active users (clear, actionable message if the schema is missing)
+    try:
+        users = sb.get_active_users()
+    except Exception as e:
+        logger.error(f"Could not read user_profiles: {e}")
+        logger.error("If this mentions a missing relation/table, run supabase/schema.sql "
+                     "in the Supabase SQL editor first, then re-run.")
+        raise SystemExit(1)
     logger.info(f"Active users: {len(users)}")
 
     if not users:
