@@ -13,15 +13,20 @@ Dated log of meaningful changes, newest first. Format: what + why.
 - _Why:_ the button was fire-and-forget — an idle screen with "wait and reload".
   Now the user sees each step and gets self-service failure diagnosis.
 
-### Fixed CI dependency crash
-- Pinned the full Supabase dependency stack in `requirements.txt`
-  (`httpx==0.25.2`, `gotrue==2.9.1`, `postgrest`, `storage3`, `supafunc`,
-  `realtime`). Hardened `main.py` to give a clear message if `user_profiles`
-  can't be read.
-- _Why:_ the GitHub run crashed with `TypeError: Client.__init__() got an
-  unexpected keyword argument 'proxy'` — `supabase==2.3.4` left sub-deps
-  unpinned, so CI resolved an incompatible httpx. Verified the pinned combo
-  installs + constructs the client.
+### Fixed CI dependency crash (`httpx 'proxy'` TypeError)
+- **Upgraded** the Supabase stack to a verified-consistent set:
+  `supabase==2.31.0`, `supabase-auth==2.31.0`, `supabase-functions==2.31.0`,
+  `postgrest/storage3/realtime==2.31.0`, `httpx==0.28.1`, `websockets==15.0.1`.
+  Hardened `main.py` to give a clear message if `user_profiles` can't be read.
+- _Why:_ `supabase==2.3.4` was internally inconsistent — its sub-package calls
+  `httpx(proxy=...)` but constrained httpx below 0.26 (which lacks `proxy`), so
+  CI crashed with `TypeError: ... unexpected keyword argument 'proxy'`.
+- _Correction:_ a first attempt pinned `httpx==0.25.2` — that was **backwards**
+  (0.25 lacks `proxy`, so it kept crashing). The real fix is to *upgrade*, not
+  pin down. Verified by constructing the client with a JWT-shaped key (a plain
+  fake key short-circuits on "Invalid API key" before the httpx init, which is
+  why the first verification was misleading) and by exercising every query the
+  code builds against 2.31.0.
 
 ### Manual scrape trigger
 - Added `POST /api/scrape` (GitHub `workflow_dispatch`) + the "Refresh Now"

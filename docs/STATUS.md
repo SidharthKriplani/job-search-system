@@ -32,8 +32,9 @@ after every meaningful change.
 The scraper run must succeed AND have somewhere to write AND a profile to match.
 Resolved and outstanding:
 
-- ✅ **Dependency crash** (`httpx 'proxy'` TypeError) — fixed by pinning the full
-  Supabase stack in `requirements.txt`.
+- ✅ **Dependency crash** (`httpx 'proxy'` TypeError) — fixed by **upgrading** the
+  Supabase stack to `supabase==2.31.0` (verified: client constructs + all our
+  queries work). _(An earlier pin to httpx 0.25.2 was backwards and is corrected.)_
 - ⬜ **Schema not confirmed applied.** `supabase/schema.sql` is now idempotent and
   creates/backfills `user_profiles`. **Must be re-run once** in the Supabase SQL
   editor. Until then the run likely reports `Active users: 0`.

@@ -1,15 +1,20 @@
-# ── Supabase stack — pinned together (DO NOT loosen) ───────────────────────────
-# supabase 2.3.4 leaves its sub-dependencies unpinned, so a fresh CI install can
-# resolve a newer httpx/gotrue that crashes with:
+# ── Supabase stack — pinned to a verified-consistent set (DO NOT loosen) ───────
+# The old supabase 2.3.4 had internally-inconsistent transitive constraints: its
+# sub-package called httpx(proxy=...) but constrained httpx too low to accept it,
+# so a fresh CI install crashed with:
 #   TypeError: Client.__init__() got an unexpected keyword argument 'proxy'
-# Pinning the whole transitive stack to a verified-good combo prevents that drift.
-supabase==2.3.4
-gotrue==2.9.1
-postgrest==0.15.1
-storage3==0.7.7
-supafunc==0.3.3
-realtime==1.0.6
-httpx==0.25.2
+# Fix = upgrade to a modern, self-consistent release (gotrue→supabase-auth,
+# supafunc→supabase-functions). Verified: this set installs cleanly and
+# create_client() constructs without the proxy crash. Our code only uses the
+# stable create_client / table().select/upsert/maybe_single API.
+supabase==2.31.0
+supabase-auth==2.31.0
+supabase-functions==2.31.0
+postgrest==2.31.0
+storage3==2.31.0
+realtime==2.31.0
+httpx==0.28.1
+websockets==15.0.1
 
 # ── Scraping / HTTP ────────────────────────────────────────────────────────────
 requests==2.31.0

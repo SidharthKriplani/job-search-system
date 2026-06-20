@@ -50,8 +50,11 @@ Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 ## Troubleshooting (things we've hit)
 
 **Run crashes: `TypeError: Client.__init__() got an unexpected keyword 'proxy'`**
-→ Supabase dependency drift. Fixed by the pins in `requirements.txt`. Don't loosen
-them. If upgrading `supabase`, re-verify the whole stack installs + constructs.
+→ Supabase dependency inconsistency. Fixed by upgrading to `supabase==2.31.0` +
+matching deps in `requirements.txt`. Do NOT downgrade or pin httpx below 0.26
+(older httpx lacks the `proxy` param that supabase-auth passes — that's what
+causes this exact error). To re-verify any change, construct `create_client` with
+a JWT-shaped key (a plain fake key short-circuits before the httpx init).
 
 **Run logs `Active users: 0` (and 0 jobs)**
 → No `user_profiles` row. Run `supabase/schema.sql` (it backfills existing
