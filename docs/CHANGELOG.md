@@ -6,6 +6,18 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### M2 + M3: India coverage + JD-aware, profile-driven scoring
+- **Registry:** added verified India-company boards — Postman, Groww, Druva
+  (Greenhouse); Meesho, Zeta, Mindtickle, CRED (Lever). Real India breadth still
+  wants Adzuna-India (free keys).
+- **Scoring rewrite (`filter_and_score`):** the hard role filter now matches the
+  title **or** the JD; the score is a weighted blend — title role-fit 0.30, **JD
+  role-fit 0.25 (reads the description)**, industry-in-text 0.15, location 0.15
+  (with India boost), salary 0.08, recency 0.07 — scored against the best-matching
+  single target role, with human-readable reasons. Scores now spread and reflect
+  the JD. Verified on a finance profile: 91/82/53/23 with the sales role filtered
+  out (previously every job was a flat ~40%).
+
 ### Fixed: jobs never reached the DB (green-but-empty runs) ★
 - The ingestion engine put a `remote` field on every job, but `job_feed` has no
   such column — so Supabase rejected every insert, `upsert_jobs` caught it and

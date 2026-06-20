@@ -9,7 +9,8 @@ Called after scrapers return raw jobs, before upsert.
 
 import re
 import logging
-from typing import List, Dict, Tuple
+from datetime import datetime, date
+from typing import List, Dict, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,99 +41,141 @@ def _extract_salary_lpa(salary_str: str) -> float:
     return vals[0]
 
 
-# ─── Main filter + scorer ─────────────────────────────────────────────────────
+# ─── Recency helper ───────────────────────────────────────────────────────────
+
+def _recency_score(posted_date: Optional[str]) -> Tuple[float, str]:
+    """0..1 by how recently the job was posted, plus a human label."""
+    if not posted_date:
+        return 0.5, ""
+    try:
+        d = datetime.fromisoformat(str(posted_date)[:10]).date()
+        days = (date.today() - d).days
+    except Exception:
+        return 0.5, ""
+    if days <= 3:  return 1.0, "Posted in last 3 days"
+    if days <= 7:  return 0.9, "Posted this week"
+    if days <= 14: return 0.7, "Posted recently"
+    if days <= 30: return 0.5, ""
+    return 0.25, ""
+
+
+# ─── Main filter + scorer (profile-driven, JD-aware) ──────────────────────────
+
+# Score weights (sum to 1.0). Title + JD role fit dominate; the rest differentiate.
+_W_TITLE, _W_JD, _W_IND, _W_LOC, _W_SAL, _W_REC = 0.30, 0.25, 0.15, 0.15, 0.08, 0.07
+
 
 def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     """
-    Filter jobs against user profile and compute match_score.
-    Returns only jobs that pass all hard filters, sorted by match_score desc.
-    """
-    target_roles    = [r.lower() for r in profile.get("target_roles", [])]
-    salary_floor    = profile.get("salary_floor", 0)           # LPA
-    locations       = [l.lower() for l in profile.get("locations", [])]
-    exclude_companies = [c.lower() for c in profile.get("exclude_companies", [])]
-    industries      = [i.lower() for i in profile.get("industries", [])]
+    Filter jobs against the user's profile and compute a JD-aware match_score.
 
-    results = []
+    Hard filters drop jobs that can't be relevant; the score (0..1) then ranks
+    what's left. The score reads the job DESCRIPTION, not just the title — a role
+    keyword in the JD counts, and industry/skill terms in the JD raise the score.
+    Returns jobs sorted by match_score desc.
+    """
+    target_roles      = [r.lower() for r in profile.get("target_roles", [])]
+    # Per-role word lists (for best-match scoring) + a flat set (for the hard filter).
+    roles_words       = [[w for w in r.split() if len(w) > 2] for r in target_roles]
+    roles_words       = [rw for rw in roles_words if rw]
+    role_words        = sorted({w for rw in roles_words for w in rw})
+    locations         = [l.lower() for l in profile.get("locations", [])]
+    industries        = [i.lower() for i in profile.get("industries", [])]
+    exclude_companies = [c.lower() for c in profile.get("exclude_companies", [])]
+    salary_floor      = profile.get("salary_floor", 0) or 0
+
+    results: List[Dict] = []
 
     for job in jobs:
-        title_lower    = job.get("job_title", "").lower()
-        company_lower  = job.get("company", "").lower()
-        location_lower = job.get("location", "").lower()
-        salary_str     = job.get("salary_range") or ""
+        title    = job.get("job_title", "").lower()
+        company  = job.get("company", "").lower()
+        location = job.get("location", "").lower()
+        jd       = (job.get("description_snippet") or "").lower()
+        salary_str = job.get("salary_range") or ""
+        text     = f"{title} {jd}"  # title + JD, for JD-aware matching
 
         # ── Hard filters ──
-
-        # 1. Excluded companies
-        if any(ex in company_lower for ex in exclude_companies):
+        if any(ex in company for ex in exclude_companies):
             continue
-
-        # 2. Role keyword match (at least one target role keyword must appear)
-        if target_roles:
-            role_match = any(
-                kw in title_lower
-                for role in target_roles
-                for kw in role.split()
-                if len(kw) > 2  # skip short words like "of", "in"
-            )
-            if not role_match:
-                continue
-
-        # 3. Salary floor (only if salary is disclosed and non-zero)
+        # Role must appear in the title OR the JD (JD-aware — not title-only).
+        if role_words and not any(w in text for w in role_words):
+            continue
         salary_lpa = _extract_salary_lpa(salary_str)
         if salary_lpa > 0 and salary_floor > 0 and salary_lpa < salary_floor * 0.8:
-            # 20% tolerance below floor (some listings show base not total)
             continue
 
-        # ── Scoring ──
-        score = 0.0
-        reasons = []
+        reasons: List[str] = []
 
-        # Role match score (0–0.4)
-        best_role_score = 0.0
-        for role in target_roles:
-            role_words = [w for w in role.split() if len(w) > 2]
-            matched = sum(1 for w in role_words if w in title_lower)
-            ratio = matched / len(role_words) if role_words else 0
-            if ratio > best_role_score:
-                best_role_score = ratio
-        score += best_role_score * 0.4
-        if best_role_score > 0.5:
-            reasons.append("Strong role match")
+        # Best fraction of any ONE target role's words present in `s`.
+        def best_role_fit(s: str) -> float:
+            best = 0.0
+            for rw in roles_words:
+                best = max(best, sum(1 for w in rw if w in s) / len(rw))
+            return best
 
-        # Location match (0–0.3)
-        if locations:
-            loc_match = any(loc in location_lower for loc in locations) or \
-                        "remote" in location_lower or "wfh" in location_lower or \
-                        "anywhere" in location_lower
-            if loc_match:
-                score += 0.3
-                reasons.append("Location match")
+        # 1. Title role fit (0..1) — against the best-matching single role
+        if roles_words:
+            title_score = best_role_fit(title)
+            if title_score >= 0.5:
+                reasons.append("Title matches your roles")
         else:
-            score += 0.3  # no location filter = full score
+            title_score = 0.5  # no roles set → can't assess, stay neutral
 
-        # Salary match (0–0.2)
+        # 2. JD role fit (0..1) — M3: depends on the job description
+        if roles_words and jd:
+            jd_score = best_role_fit(jd)
+            if jd_score >= 0.5:
+                reasons.append("Description aligns with your roles")
+        else:
+            jd_score = 0.5
+
+        # 3. Industry / domain terms in title+JD (0..1) — M3
+        if industries:
+            ind_hits = sum(1 for i in industries if i in text)
+            ind_score = min(ind_hits / len(industries), 1.0)
+            if ind_hits:
+                reasons.append("Matches your industry")
+        else:
+            ind_score = 1.0  # not specified → don't penalise
+
+        # 4. Location fit (0..1)
+        if locations:
+            if any(loc in location for loc in locations):
+                loc_score = 1.0; reasons.append("Preferred location")
+            elif any(k in location for k in ("remote", "wfh", "anywhere")):
+                loc_score = 0.9; reasons.append("Remote")
+            elif "india" in location:
+                loc_score = 0.6
+            else:
+                loc_score = 0.15
+        else:
+            loc_score = 1.0
+
+        # 5. Salary fit (0..1)
         if salary_lpa > 0 and salary_floor > 0:
-            ratio = min(salary_lpa / salary_floor, 1.5)
-            score += min(ratio * 0.2, 0.2)
+            sal_score = min(salary_lpa / salary_floor, 1.0)
             if salary_lpa >= salary_floor:
-                reasons.append(f"Salary {salary_lpa:.0f}L meets floor")
+                reasons.append(f"Salary ~{salary_lpa:.0f}L meets floor")
+        else:
+            sal_score = 0.6  # undisclosed → neutral
 
-        # Source signal (0–0.1)
-        # iimjobs and ATS sources are higher signal
-        high_signal_sources = {"iimjobs", "workday", "greenhouse", "lever"}
-        if job.get("source") in high_signal_sources:
-            score += 0.1
-            reasons.append("High-signal source")
+        # 6. Recency (0..1)
+        rec_score, rec_label = _recency_score(job.get("posted_date"))
+        if rec_label:
+            reasons.append(rec_label)
+
+        score = (
+            _W_TITLE * title_score + _W_JD * jd_score + _W_IND * ind_score +
+            _W_LOC * loc_score + _W_SAL * sal_score + _W_REC * rec_score
+        )
 
         job["match_score"]   = round(score, 3)
-        job["match_reasons"] = reasons
+        job["match_reasons"] = reasons[:4]
         results.append(job)
 
-    # Sort by match_score descending
     results.sort(key=lambda j: j["match_score"], reverse=True)
-
-    logger.info(f"[Filter] {len(results)}/{len(jobs)} jobs passed filters")
+    top = results[0]["match_score"] if results else 0
+    logger.info(f"[Filter] {len(results)}/{len(jobs)} passed | top score {top}")
     return results
 
 

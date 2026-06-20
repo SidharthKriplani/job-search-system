@@ -17,6 +17,11 @@ How to find a slug:
 
 # (slug, display_name)
 GREENHOUSE = [
+    # India companies (verified live)
+    ("postman", "Postman"),
+    ("groww", "Groww"),
+    ("druva", "Druva"),
+    # Global tech
     ("stripe", "Stripe"),
     ("databricks", "Databricks"),
     ("airbnb", "Airbnb"),
@@ -42,6 +47,12 @@ GREENHOUSE = [
 ]
 
 LEVER = [
+    # India companies (verified live)
+    ("meesho", "Meesho"),
+    ("zeta", "Zeta"),
+    ("mindtickle", "Mindtickle"),
+    ("cred", "CRED"),
+    # Global
     ("netflix", "Netflix"),
     ("spotify", "Spotify"),
     ("kpler", "Kpler"),
