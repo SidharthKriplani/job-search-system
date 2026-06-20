@@ -95,7 +95,7 @@ def resync_user(profile: Dict) -> None:
             if r.get("id") not in matched_ids
             and not (r.get("is_applied") or r.get("is_saved"))
         ]
-        removed = sb.delete_jobs(stale_ids)
+        removed = sb.delete_jobs(stale_ids, user_id=user_id)
         if matched:
             sb.upsert_jobs(user_id, matched)  # refresh scores/reasons
         logger.info(f"Re-sync {user_id[:8]}: {len(matched)} match, removed {removed} stale")
@@ -120,9 +120,14 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
     logger.info(f"Target roles: {profile.get('target_roles', [])}")
     logger.info(f"Locations:    {profile.get('locations', [])}")
 
-    # Shared ATS pool + this user's Gmail jobs
+    # Shared ATS pool + this user's Gmail jobs.
+    # IMPORTANT: deep-copy each shared dict. filter_and_score / embeddings.rerank
+    # mutate job["match_score"] and job["match_reasons"] IN PLACE. `list(shared_pool)`
+    # is only a shallow copy (same dict objects), so without this every user would
+    # overwrite the previous user's per-profile scores/reasons on the shared dicts —
+    # a multi-tenant data-contamination bug.
     gmail_jobs = fetch_gmail_jobs(profile)
-    all_raw_jobs: List[Dict] = list(shared_pool) + gmail_jobs
+    all_raw_jobs: List[Dict] = [dict(j) for j in shared_pool] + gmail_jobs
     logger.info(f"Pool: {len(shared_pool)} shared + {len(gmail_jobs)} gmail = {len(all_raw_jobs)} raw")
 
     # ── Filter, score, and dedup ───────────────────────────────────────────
@@ -154,8 +159,9 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
     logger.info(f"Genuinely new (not seen before): {len(new_jobs_for_digest)}")
 
     # ── Upsert to Supabase ─────────────────────────────────────────────────
-    new_count = sb.upsert_jobs(user_id, unique)
-    logger.info(f"New jobs inserted: {new_count}")
+    sb.upsert_jobs(user_id, unique)
+    # Report the genuinely-new count (the upsert return mixes inserts + updates).
+    logger.info(f"Upserted {len(unique)} jobs ({len(new_jobs_for_digest)} genuinely new)")
 
     # ── Re-sync the STORED feed to the CURRENT profile ─────────────────────
     resync_user(profile)

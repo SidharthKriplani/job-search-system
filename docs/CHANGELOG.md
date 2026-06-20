@@ -4,6 +4,26 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-21 (d) — deep multi-pass bug audit + fixes
+
+Three parallel deep audits (frontend, Python pipeline, schema/RLS/contracts).
+Critical + High + cheap Medium fixed. See `docs/AUDITS.md` (v2) for the full list.
+Highlights:
+- **Critical:** fixed cross-user score contamination (shared job dicts mutated
+  across users) and a latent total-batch-loss (`experience_required` whitelisted
+  but absent from `job_feed`).
+- **High:** salary parser now keeps Adzuna India absolute-INR salaries; location
+  matching is token-based (no "Indianapolis"=India, no dropping Bangalore jobs
+  that mention foreign teams); `delete_jobs` is user-scoped; all optimistic
+  mutations check errors + roll back; dashboard counts refresh after mutations;
+  `job_feed` INSERT RLS tightened; `scraper_health` no longer world-readable.
+- **Medium:** referral template `.replaceAll`; unique index stops duplicate
+  applications; overdue-date compare normalized; React key + badge fallbacks.
+- Schema gained an idempotent `DO $$` block to retrofit unique constraints
+  (re-run `supabase/schema.sql` to apply the new RLS + indexes).
+
+---
+
 ## 2026-06-21 (c) — fast resync on profile change + LinkedIn referral import
 
 ### Profile changes now re-match the feed in ~1 min (not 3-min scrape)

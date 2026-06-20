@@ -27,13 +27,19 @@ def _extract_salary_lpa(salary_str: str) -> float:
         return 0.0
 
     vals = [float(n) for n in nums]
+    mx = max(vals)
 
-    # Detect monthly / raw-currency amounts (e.g. "AED 25000/month").
-    # We can't reliably convert these to INR LPA without an FX rate, and the
-    # old code inflated them (25000 -> 275 "LPA"), which broke salary scoring
-    # and made every GCC job falsely clear the salary floor. Treat as
-    # "salary unknown" (0.0) so the salary filter is skipped rather than wrong.
-    if any(v > 500 for v in vals):
+    # Disambiguate units by magnitude:
+    #  • >= 1,00,000  → absolute annual INR (e.g. Adzuna India "1200000-1800000")
+    #                   → convert to LPA by /100000. (Previously these were ALL
+    #                     discarded by a `v > 500` guard, so every Adzuna India
+    #                     salary was silently dropped from scoring.)
+    #  • 500–99,999   → ambiguous monthly / foreign-currency (e.g. "AED 25000/mo");
+    #                   we can't convert without an FX rate → treat as unknown.
+    #  • < 500        → already in LPA units (e.g. "30-40 LPA").
+    if mx >= 100000:
+        vals = [v / 100000 for v in vals]
+    elif mx > 500:
         return 0.0
 
     if len(vals) >= 2:
@@ -85,6 +91,26 @@ def _stem(w: str) -> str:
 
 def _stems(text: str) -> set:
     return {_stem(w) for w in _tokens(text)}
+
+
+# India detection by TOKEN (not substring) so "Indianapolis" ≠ India and a job
+# that merely mentions a foreign city in a hybrid location isn't misread.
+_INDIA_TOKENS = {
+    "india", "bharat", "bangalore", "bengaluru", "mumbai", "delhi", "ncr",
+    "hyderabad", "chennai", "pune", "kolkata", "gurgaon", "gurugram", "noida",
+    "ahmedabad", "jaipur", "kochi", "chandigarh", "indore", "nashik",
+    "coimbatore", "thiruvananthapuram", "vadodara", "nagpur", "surat",
+}
+
+def _is_india(location: str) -> bool:
+    loc = (location or "").lower()
+    toks = set(re.split(r"[^a-z0-9]+", loc))
+    if toks & _INDIA_TOKENS:
+        return True
+    # Indeed India formats state rows as "<STATE>, IN" (e.g. "KA, IN", "MH, IN").
+    if re.search(r",\s*in\b", loc):
+        return True
+    return False
 
 
 # ─── Role-matching tokens (keep short, meaningful terms like "ai", "ml", "qa") ──
@@ -192,11 +218,13 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
                 continue
         # Location: when the user sets preferences, drop clearly-overseas,
         # non-remote roles (keeps India + remote + anything we can't classify).
+        # India/remote/preferred always win, so a Bangalore job that merely
+        # mentions an overseas team isn't dropped as "foreign".
         if locations:
             matched_loc = any(loc in location for loc in locations)
             is_remote   = any(k in location for k in ("remote", "wfh", "anywhere"))
             is_foreign  = any(h in location for h in _FOREIGN_HINTS)
-            if is_foreign and not (matched_loc or is_remote):
+            if is_foreign and not (matched_loc or is_remote or _is_india(location)):
                 continue
         salary_lpa = _extract_salary_lpa(salary_str)
         if salary_lpa > 0 and salary_floor > 0 and salary_lpa < salary_floor * 0.8:
@@ -236,7 +264,7 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
                 loc_score = 1.0; reasons.append("Preferred location")
             elif any(k in location for k in ("remote", "wfh", "anywhere")):
                 loc_score = 0.9; reasons.append("Remote")
-            elif "india" in location:
+            elif _is_india(location):
                 loc_score = 0.6
             else:
                 loc_score = 0.15

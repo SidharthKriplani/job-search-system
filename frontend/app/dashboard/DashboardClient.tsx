@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import JobCard from '@/components/JobCard'
 import { Job, ScraperHealth } from '@/lib/types'
@@ -26,6 +27,7 @@ interface Props {
 export default function DashboardClient({
   initialJobs, newCount, totalCount, feedLimit, appliedCount, scraperHealth, userName
 }: Props) {
+  const router = useRouter()
   const [jobs, setJobs]           = useState<Job[]>(initialJobs)
   const [search, setSearch]       = useState('')
   const [sourceFilter, setSource] = useState('All')
@@ -34,6 +36,9 @@ export default function DashboardClient({
 
   const handleUpdate = (id: string, updates: Partial<Job>) => {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...updates } : j))
+    // When a job leaves the feed (applied/dismissed), refresh server counts so
+    // the stat tiles ("In Feed", "Applied", "New") stop showing stale numbers.
+    if (updates.is_applied || updates.is_dismissed) router.refresh()
   }
 
   const filtered = jobs.filter(job => {

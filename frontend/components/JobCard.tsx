@@ -52,9 +52,9 @@ export default function JobCard({ job, onUpdate }: Props) {
   }
 
   // Mark applied: flag the feed row AND create a tracker row so the job flows
-  // into the application tracker. Idempotent-ish: skip the insert if one already
-  // exists for this feed row.
+  // into the application tracker. Guarded against double-fire + duplicate rows.
   const markApplied = async () => {
+    if (saving || job.is_applied) return  // ignore repeat clicks / already applied
     await update({ is_applied: true, is_new: false })
     try {
       const { data: existing } = await supabase
@@ -153,8 +153,8 @@ export default function JobCard({ job, onUpdate }: Props) {
           {/* Match reasons */}
           {job.match_reasons?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {job.match_reasons.map(r => (
-                <span key={r} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs rounded">
+              {job.match_reasons.map((r, i) => (
+                <span key={`${r}-${i}`} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs rounded">
                   {r}
                 </span>
               ))}

@@ -210,26 +210,33 @@ export default function ReferralsClient({ initialReferrals, templates, userId, f
   const addContact = async () => {
     if (!newContact.contact_name || !newContact.company) return
     setSaving(true)
-    const { data } = await supabase.from('referral_pipeline').insert({
+    const { data, error } = await supabase.from('referral_pipeline').insert({
       ...newContact,
       user_id: userId,
     }).select().single()
+    setSaving(false)
+    if (error) { alert('Could not add contact: ' + error.message); return }
     if (data) setReferrals(prev => [data, ...prev])
     setNewContact({ status: 'identified' })
     setShowModal(false)
-    setSaving(false)
   }
 
   const updateStatus = async (id: string, status: string) => {
-    await supabase.from('referral_pipeline').update({ status }).eq('id', id)
+    const prevStatus = referrals.find(r => r.id === id)?.status
     setReferrals(prev => prev.map(r => r.id === id ? { ...r, status: status as any } : r))
+    const { error } = await supabase.from('referral_pipeline').update({ status }).eq('id', id)
+    if (error) {
+      // Roll back so the UI never shows a status that didn't persist.
+      setReferrals(prev => prev.map(r => r.id === id ? { ...r, status: prevStatus as any } : r))
+      alert('Could not update status: ' + error.message)
+    }
   }
 
   const copyMessage = (contact: ReferralContact) => {
     const msg = defaultTemplate
-      .replace('{name}', contact.contact_name)
-      .replace('{role}', 'the relevant role')
-      .replace('{company}', contact.company)
+      .replaceAll('{name}', contact.contact_name)
+      .replaceAll('{role}', 'the relevant role')
+      .replaceAll('{company}', contact.company)
     navigator.clipboard.writeText(msg)
     setCopiedId(contact.id)
     setTimeout(() => setCopiedId(null), 2000)
@@ -335,7 +342,7 @@ export default function ReferralsClient({ initialReferrals, templates, userId, f
                     onChange={e => updateStatus(contact.id, e.target.value)}
                     className={clsx(
                       'text-xs font-medium px-2 py-1 rounded-full border-0 focus:ring-2 focus:ring-indigo-500',
-                      STATUS_COLORS[contact.status]
+                      STATUS_COLORS[contact.status] || 'bg-slate-100 text-slate-600'
                     )}
                   >
                     {Object.entries(STATUS_LABELS).map(([value, label]) => (

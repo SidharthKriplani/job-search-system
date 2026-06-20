@@ -47,26 +47,43 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
   const [newApp, setNewApp]       = useState<Partial<Application>>({ stage: 'Not Applied', priority: 'medium' })
   const [saving, setSaving]       = useState(false)
 
+  // Optimistic update with rollback — never let the UI show a change the DB
+  // rejected (RLS/network), which previously vanished silently on reload.
   const updateStage = async (id: string, stage: ApplicationStage) => {
+    const prev = apps.find(a => a.id === id)
     const date_stage_updated = new Date().toISOString().split('T')[0]
-    setApps(prev => prev.map(a => a.id === id ? { ...a, stage, date_stage_updated } : a))
-    await supabase.from('applications').update({ stage, date_stage_updated }).eq('id', id)
+    setApps(p => p.map(a => a.id === id ? { ...a, stage, date_stage_updated } : a))
+    const { error } = await supabase.from('applications').update({ stage, date_stage_updated }).eq('id', id)
+    if (error && prev) {
+      setApps(p => p.map(a => a.id === id ? prev : a))
+      alert('Could not move stage: ' + error.message)
+    }
   }
 
   const updateApp = async (id: string, patch: Partial<Application>) => {
-    setApps(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))
-    await supabase.from('applications').update(patch).eq('id', id)
+    const prev = apps.find(a => a.id === id)
+    setApps(p => p.map(a => a.id === id ? { ...a, ...patch } : a))
+    const { error } = await supabase.from('applications').update(patch).eq('id', id)
+    if (error && prev) {
+      setApps(p => p.map(a => a.id === id ? prev : a))
+      alert('Could not save changes: ' + error.message)
+    }
   }
 
   const deleteApp = async (id: string) => {
-    setApps(prev => prev.filter(a => a.id !== id))
-    await supabase.from('applications').delete().eq('id', id)
+    const prev = apps
+    setApps(p => p.filter(a => a.id !== id))
+    const { error } = await supabase.from('applications').delete().eq('id', id)
+    if (error) {
+      setApps(prev)
+      alert('Could not delete: ' + error.message)
+    }
   }
 
   const addApplication = async () => {
     if (!newApp.company || !newApp.job_title) return
     setSaving(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('applications')
       .insert({
         ...newApp,
@@ -75,10 +92,11 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
       })
       .select()
       .single()
+    setSaving(false)
+    if (error) { alert('Could not add application: ' + error.message); return }
     if (data) setApps(prev => [data as Application, ...prev])
     setNewApp({ stage: 'Not Applied', priority: 'medium' })
     setShowAddModal(false)
-    setSaving(false)
   }
 
   return (
@@ -220,7 +238,10 @@ function AppCard({
   }
   const save = () => { onUpdate(app.id, draft); setEdit(false) }
 
-  const overdue = app.follow_up_date && app.follow_up_date <= new Date().toISOString().split('T')[0]
+  // Normalise both sides to YYYY-MM-DD — follow_up_date may arrive as a full
+  // timestamp, in which case a raw string compare against a date never matches.
+  const overdue = app.follow_up_date &&
+    app.follow_up_date.slice(0, 10) <= new Date().toISOString().slice(0, 10)
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 hover:shadow-sm transition-shadow">
@@ -231,7 +252,7 @@ function AppCard({
         </div>
         <span className={clsx(
           'text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 whitespace-nowrap',
-          STAGE_COLORS[app.stage]
+          STAGE_COLORS[app.stage] || 'bg-slate-100 text-slate-600'
         )}>
           {app.stage}
         </span>

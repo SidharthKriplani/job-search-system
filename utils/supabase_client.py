@@ -60,9 +60,13 @@ def update_gmail_token(user_id: str, access_token: str, token_expiry: Optional[s
 JOB_FEED_COLUMNS = {
     "user_id", "job_title", "company", "location", "salary_range", "job_url",
     "description_snippet", "posted_date", "source", "source_job_id", "job_type",
-    "experience_required", "seniority", "is_new", "is_applied", "is_saved",
+    "seniority", "is_new", "is_applied", "is_saved",
     "is_dismissed", "match_score", "match_reasons",
 }
+# NOTE: "experience_required" was removed — there is NO such column in job_feed
+# (see supabase/schema.sql). Whitelisting a non-existent column is a landmine:
+# if any connector ever emits it, Supabase rejects the ENTIRE batch and the rows
+# are silently lost.
 
 
 def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
@@ -138,8 +142,12 @@ def get_user_feed_rows(user_id: str) -> List[Dict]:
         return []
 
 
-def delete_jobs(job_ids: List[str]) -> int:
-    """Delete job_feed rows by id (batched)."""
+def delete_jobs(job_ids: List[str], user_id: Optional[str] = None) -> int:
+    """Delete job_feed rows by id (batched).
+
+    Pass `user_id` to scope the delete to that user — defense-in-depth so a stray
+    id can never delete another user's rows (the service-role key bypasses RLS).
+    """
     if not job_ids:
         return 0
     sb = get_client()
@@ -147,7 +155,10 @@ def delete_jobs(job_ids: List[str]) -> int:
     for i in range(0, len(job_ids), 100):
         batch = job_ids[i:i+100]
         try:
-            sb.table("job_feed").delete().in_("id", batch).execute()
+            q = sb.table("job_feed").delete().in_("id", batch)
+            if user_id:
+                q = q.eq("user_id", user_id)
+            q.execute()
             deleted += len(batch)
         except Exception as e:
             logger.error(f"[Supabase] delete_jobs failed: {e}")

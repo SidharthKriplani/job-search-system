@@ -139,13 +139,18 @@ ALTER TABLE job_feed ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own jobs"      ON job_feed;
 DROP POLICY IF EXISTS "Service role can insert jobs" ON job_feed;
+DROP POLICY IF EXISTS "Users can insert own jobs"    ON job_feed;
 DROP POLICY IF EXISTS "Users can update own jobs"    ON job_feed;
 DROP POLICY IF EXISTS "Users can delete own jobs"    ON job_feed;
 
 CREATE POLICY "Users can view own jobs"
     ON job_feed FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Service role can insert jobs"
-    ON job_feed FOR INSERT WITH CHECK (TRUE);  -- scrapers use service key
+-- The scraper uses the service-role key (bypasses RLS), so this INSERT policy
+-- only governs the anon/authenticated client. It must NOT be WITH CHECK (TRUE) —
+-- that let any signed-in user insert rows into ANOTHER user's feed. Restrict to
+-- the user's own rows; the service role is unaffected.
+CREATE POLICY "Users can insert own jobs"
+    ON job_feed FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own jobs"
     ON job_feed FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own jobs"
@@ -356,8 +361,10 @@ DROP POLICY IF EXISTS "Service role manages health" ON scraper_health;
 DROP POLICY IF EXISTS "Users can read health"       ON scraper_health;
 CREATE POLICY "Service role manages health"
     ON scraper_health FOR ALL USING (auth.role() = 'service_role');
+-- Authenticated users only — last_error can contain stack traces / internal
+-- URLs, so it must not be world-readable via the anon key.
 CREATE POLICY "Users can read health"
-    ON scraper_health FOR SELECT USING (TRUE);
+    ON scraper_health FOR SELECT USING (auth.role() = 'authenticated');
 
 -- ============================================================
 -- FUNCTION: auto-update updated_at timestamp
@@ -465,3 +472,41 @@ FROM auth.users u
 LEFT JOIN user_profiles p ON p.user_id = u.id
 WHERE p.user_id IS NULL
 ON CONFLICT (user_id) DO NOTHING;
+
+-- ============================================================
+-- CONSTRAINT RETROFITS — idempotent. CREATE TABLE IF NOT EXISTS can't add
+-- constraints to a table that already existed from an older schema version, so
+-- add them defensively here (mirrors the ADD COLUMN IF NOT EXISTS pattern).
+-- ============================================================
+DO $$
+BEGIN
+    -- Stop duplicate tracker rows when "Mark Applied" is clicked twice / in two
+    -- tabs: one application per (user, job_feed job). Clean any existing dupes
+    -- first so the unique index can be created.
+    DELETE FROM applications a USING applications b
+      WHERE a.ctid < b.ctid
+        AND a.user_id = b.user_id
+        AND a.job_feed_id IS NOT NULL
+        AND a.job_feed_id = b.job_feed_id;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'public' AND indexname = 'uq_applications_user_jobfeed'
+    ) THEN
+        CREATE UNIQUE INDEX uq_applications_user_jobfeed
+            ON applications(user_id, job_feed_id)
+            WHERE job_feed_id IS NOT NULL;
+    END IF;
+
+    -- Retrofit the job_feed dedupe key onto pre-existing tables (upsert_jobs
+    -- relies on it via ON CONFLICT user_id,source,source_job_id).
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'job_feed_user_id_source_source_job_id_key'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'public' AND indexname = 'uq_job_feed_dedupe'
+    ) THEN
+        CREATE UNIQUE INDEX uq_job_feed_dedupe
+            ON job_feed(user_id, source, source_job_id);
+    END IF;
+END $$;

@@ -5,6 +5,58 @@ report. Newest first.
 
 ---
 
+## 2026-06-21 — Deep multi-pass audit (v2)
+**Scope:** three parallel deep passes — (1) frontend data-flow/auth/UX,
+(2) Python pipeline (ingest/filter/main/supabase), (3) data contracts + schema +
+RLS + API routes. ~60 findings triaged; Critical/High fixed this round.
+
+**Critical (fixed):**
+- **Cross-user score contamination.** `main.py` reused the shared job pool across
+  users with only `list(shared_pool)` (shallow), while `filter_and_score` /
+  `embeddings.rerank` mutate `match_score`/`match_reasons` in place — so one user's
+  scores leaked onto the shared dicts other users were scored from. → deep-copy
+  per user (`[dict(j) for j in shared_pool]`). Verified isolated.
+- **Latent total-batch-loss.** `JOB_FEED_COLUMNS` whitelisted `experience_required`,
+  a column that doesn't exist in `job_feed`; if ever emitted, Supabase rejects the
+  whole 100-row batch silently. → removed from whitelist.
+
+**High (fixed):**
+- **Salary parser discarded every Adzuna India salary** — the `v>500` guard nuked
+  absolute annual INR (e.g. "1200000-1800000"). → magnitude-aware: ≥1e5 ⇒ /1e5 LPA,
+  500–99,999 ⇒ unknown, <500 ⇒ already LPA. Tested.
+- **Location false positives** — substring matching made "Indianapolis" read as
+  India and dropped Bangalore jobs that merely mention a foreign team. → token-based
+  `_is_india()`; India/remote/preferred override the foreign-drop. Tested.
+- **`delete_jobs` had no user scoping** under the service key (RLS bypassed). →
+  optional `user_id` predicate, passed in resync.
+- **Optimistic mutations swallowed DB errors** across applications, referrals,
+  job feed — a rejected write showed success then vanished on reload. → error
+  checks + rollback + alert on every mutation.
+- **Dashboard stat tiles went stale** after client mutations. → `router.refresh()`
+  when a job leaves the feed.
+- **`job_feed` INSERT policy was `WITH CHECK (TRUE)`** — any signed-in user could
+  insert rows into another user's feed. → `auth.uid() = user_id`.
+- **`scraper_health` was world-readable** (leaked `last_error` traces to anon). →
+  authenticated-only.
+
+**Medium (fixed):**
+- Referral message template used `.replace` (first match only) → `.replaceAll`
+  (was pasting literal `{company}` into real outreach).
+- Duplicate applications on double-click / two tabs → DB unique index
+  `(user_id, job_feed_id)` + client double-fire guard.
+- Overdue follow-up compared a possibly-timestamp string to a date → normalized.
+- `match_reasons` used as React keys (collision) → keyed with index.
+- Unknown stage/status rendered an unstyled badge → fallback colors.
+- Schema couldn't retrofit unique constraints onto pre-existing tables → idempotent
+  `DO $$` block adds them (+ de-dupes existing rows first).
+
+**Known/Deferred (logged, not yet fixed):** feed hard-capped at 200 with no
+pagination (source/search filter only the loaded slice); `_stem` 5-char prefix
+collisions (marketing≈marketplace); Gmail dates non-ISO ⇒ neutral recency;
+Gmail title↔URL pairing by index; source-filter pills are a hardcoded subset.
+
+---
+
 ## 2026-06-20 — Full code audit (v1)
 **Scope:** entire repo read; pipeline run in a sandbox; static + dynamic checks.
 **Detailed report:** root [`AUDIT.md`](../AUDIT.md).
