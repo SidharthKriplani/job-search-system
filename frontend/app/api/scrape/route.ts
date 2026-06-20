@@ -16,6 +16,9 @@ import { createClient } from '@/lib/supabase-server'
  *   GITHUB_REPO_NAME       — default "job-search-system"
  *   GITHUB_WORKFLOW_FILE   — default "daily.yml"
  *   GITHUB_DEFAULT_BRANCH  — default "main"
+ *   ADMIN_EMAILS           — comma list exempt from the cooldown
+ *                            (default "sidharthkriplani@gmail.com")
+ *   REFRESH_COOLDOWN_HOURS — non-admin manual-refresh cooldown (default 12)
  */
 export async function POST() {
   // 1. Require an authenticated user.
@@ -23,6 +26,24 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ ok: false, error: 'Not authenticated' }, { status: 401 })
+  }
+
+  // 1b. Rate-limit manual refresh (repeated scraping is wasteful). Admins exempt.
+  const adminEmails = (process.env.ADMIN_EMAILS || 'sidharthkriplani@gmail.com')
+    .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const isAdmin = !!user.email && adminEmails.includes(user.email.toLowerCase())
+  const cooldownH = Number(process.env.REFRESH_COOLDOWN_HOURS || 12)
+  if (!isAdmin) {
+    const { data: prof } = await supabase
+      .from('user_profiles').select('last_manual_refresh').eq('user_id', user.id).maybeSingle()
+    const lastMs = prof?.last_manual_refresh ? new Date(prof.last_manual_refresh).getTime() : 0
+    if (lastMs && (Date.now() - lastMs) < cooldownH * 3600_000) {
+      const nextAt = new Date(lastMs + cooldownH * 3600_000)
+      return NextResponse.json({
+        ok: false,
+        error: `You've already refreshed recently. Next manual refresh around ${nextAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. The feed also updates automatically overnight.`,
+      }, { status: 429 })
+    }
   }
 
   // 2. Read config.
@@ -56,6 +77,12 @@ export async function POST() {
 
     // GitHub returns 204 No Content on success.
     if (resp.status === 204) {
+      // Stamp the cooldown clock (best-effort; don't fail the request if it errors).
+      try {
+        await supabase.from('user_profiles')
+          .update({ last_manual_refresh: new Date().toISOString() })
+          .eq('user_id', user.id)
+      } catch { /* ignore */ }
       return NextResponse.json({ ok: true, message: 'Scraper started. Jobs usually appear within 2–3 minutes — reload then.' })
     }
 

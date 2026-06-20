@@ -6,6 +6,14 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Refresh rate-limit (admins exempt)
+- `/api/scrape` now rate-limits manual refresh per user: a non-admin gets one
+  refresh, then a cooldown (`REFRESH_COOLDOWN_HOURS`, default 12) before the next;
+  the button shows when the next one is available. Admins (`ADMIN_EMAILS`, default
+  the owner) are exempt. New `last_manual_refresh` column on `user_profiles`.
+- _Why:_ repeated full scrapes are wasteful; the overnight sharded cron covers
+  everyone automatically.
+
 ### Fixed: profile ↔ feed sync (Settings changes had no effect)
 - `upsert_jobs` used `ignore_duplicates=True`, so re-runs never updated existing
   jobs' scores, and nothing pruned jobs that stopped matching a changed profile —

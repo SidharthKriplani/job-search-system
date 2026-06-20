@@ -42,6 +42,8 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_email    TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_password TEXT;
 -- Master resume text — powers resume-aware job matching (M4).
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS resume_text     TEXT;
+-- Last manual "Refresh Now" time — used to rate-limit non-admin refreshes.
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_manual_refresh TIMESTAMPTZ;
 
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
