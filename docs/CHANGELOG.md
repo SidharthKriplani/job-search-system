@@ -4,6 +4,38 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-21 (b) — relevance + feed-honesty fixes (from live testing)
+
+### Relevance: multi-word roles no longer collapse to generic words
+- `utils/filter.py` — the résumé tokenizer dropped <4-char words, so the role
+  **"ai engineer"** silently became just **"engineer"** → every Security/Backend/
+  Service/Automation Engineer matched at 97%. New `_mstems()` keeps 2+ char role
+  words (ai/ml/qa/ux). New `_GENERIC_ROLE_STEMS` guard: a generic word
+  (engineer/manager/analyst…) can no longer qualify a multi-word role on its own —
+  the distinctive word must also be present. Verified: 7-job test now keeps only
+  the real AI/Data roles, drops the generic-Engineer noise.
+- Fixed latent `NameError` in the industry block (`text` was undefined).
+
+### Location now actually filters
+- When the user sets location prefs, clearly-overseas **non-remote** jobs are
+  dropped (`_FOREIGN_HINTS`, conservative full-name list). Bangalore profile no
+  longer shows New York jobs. India + remote + unclassifiable are always kept.
+
+### Feed honesty + applied UX
+- `dashboard/page.tsx` + `DashboardClient.tsx` — "New Today" → "New" (it's
+  since-last-visit, not today); "In Feed" now shows the TRUE total, not the page
+  size; added "Showing top N of M". Feed limit 100 → 200. **Applied jobs are
+  excluded from the feed** (they live in the tracker) — fixes a job showing
+  "Mark Applied" after it was already applied.
+- `settings/SettingsClient.tsx` — "Saved!" persists until the next edit instead
+  of reverting on a 2.5s timer.
+
+_Note:_ existing feed rows were scored by the old loose filter; they get
+re-scored/pruned on the next scrape run (main.py resync). A manual Refresh after
+deploy cleans them up.
+
+---
+
 ## 2026-06-21
 
 ### Application tracker built up (M5 — jobs now flow into the tracker)

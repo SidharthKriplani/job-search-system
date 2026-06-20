@@ -16,13 +16,15 @@ const SOURCES = [
 interface Props {
   initialJobs: Job[]
   newCount: number
+  totalCount: number
+  feedLimit: number
   appliedCount: number
   scraperHealth: ScraperHealth[]
   userName: string
 }
 
 export default function DashboardClient({
-  initialJobs, newCount, appliedCount, scraperHealth, userName
+  initialJobs, newCount, totalCount, feedLimit, appliedCount, scraperHealth, userName
 }: Props) {
   const [jobs, setJobs]           = useState<Job[]>(initialJobs)
   const [search, setSearch]       = useState('')
@@ -36,6 +38,7 @@ export default function DashboardClient({
 
   const filtered = jobs.filter(job => {
     if (job.is_dismissed) return false
+    if (job.is_applied) return false   // applied jobs live in the tracker, not the feed
     if (showNew && !job.is_new) return false
     if (showSaved && !job.is_saved) return false
     if (sourceFilter !== 'All') {
@@ -66,7 +69,7 @@ export default function DashboardClient({
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Job Feed</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
-              Welcome back, {userName.split(' ')[0]}. {newCount > 0 ? `${newCount} new jobs since last visit.` : 'All caught up!'}
+              Welcome back, {userName.split(' ')[0]}. {newCount > 0 ? `${newCount} new since your last visit.` : 'All caught up!'}
             </p>
           </div>
           <RefreshButton />
@@ -75,9 +78,9 @@ export default function DashboardClient({
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'New Today',  value: newCount,     color: 'text-indigo-600' },
-            { label: 'Applied',    value: appliedCount, color: 'text-green-600'  },
-            { label: 'In Feed',    value: filtered.length, color: 'text-slate-700' },
+            { label: 'New',     value: newCount,     color: 'text-indigo-600' },
+            { label: 'Applied', value: appliedCount, color: 'text-green-600'  },
+            { label: 'In Feed', value: totalCount,   color: 'text-slate-700' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
               <div className={clsx('text-2xl font-bold', color)}>{value}</div>
@@ -169,11 +172,18 @@ export default function DashboardClient({
             <p className="text-sm mt-1">Runs daily at 6am IST — or hit “Refresh Now” above</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map(job => (
-              <JobCard key={job.id} job={job} onUpdate={handleUpdate} />
-            ))}
-          </div>
+          <>
+            {totalCount > initialJobs.length && !search && !showNew && !showSaved && sourceFilter === 'All' && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+                Showing top {initialJobs.length} of {totalCount} matches, ranked by fit.
+              </p>
+            )}
+            <div className="space-y-3">
+              {filtered.map(job => (
+                <JobCard key={job.id} job={job} onUpdate={handleUpdate} />
+              ))}
+            </div>
+          </>
         )}
       </main>
     </div>

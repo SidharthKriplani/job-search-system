@@ -87,6 +87,41 @@ def _stems(text: str) -> set:
     return {_stem(w) for w in _tokens(text)}
 
 
+# ─── Role-matching tokens (keep short, meaningful terms like "ai", "ml", "qa") ──
+# The résumé tokenizer above drops <4-char words, which silently turned the role
+# "ai engineer" into just "engineer" — so every Security/Backend/Service Engineer
+# matched. For ROLE matching we keep 2+ char tokens.
+def _mtokens(text: str) -> set:
+    return {w for w in re.findall(r"[a-z][a-z0-9+#.]{1,}", (text or "").lower())
+            if w not in _STOPWORDS}
+
+
+def _mstems(text: str) -> set:
+    return {_stem(w) for w in _mtokens(text)}
+
+
+# Stemmed role words too generic to qualify a match on their own. "Engineer",
+# "manager", "analyst"… appear in thousands of unrelated titles, so a multi-word
+# role like "ai engineer" needs its DISTINCTIVE word ("ai") to also be present.
+_GENERIC_ROLE_STEMS = {
+    "engin", "manag", "analy", "devel", "lead", "senio", "junio", "assoc",
+    "speci", "consu", "offic", "execu", "head", "staff", "princ", "direc",
+    "inter", "train", "exper", "profe", "techn", "suppo", "opera",
+}
+
+# Clearly-foreign locations — used to drop overseas, non-remote jobs when the
+# user has set India/city preferences. Conservative on purpose (full names, not
+# 2-letter codes) so we never accidentally nuke Indian listings. Heuristic, not
+# a real geocoder; proper location normalisation is a later step.
+_FOREIGN_HINTS = (
+    "new york", "san francisco", " seattle", " austin", " boston", " chicago",
+    "los angeles", " denver", " atlanta", "new jersey", " texas", "california",
+    "london", " dublin", " berlin", "amsterdam", " paris", " munich",
+    "toronto", " sydney", "tel aviv", "united states", " usa", " u.s.",
+    "united kingdom", " u.k.", "germany", "singapore", "netherlands",
+)
+
+
 # ─── Main filter + scorer (profile-driven, JD-aware, résumé-aware) ────────────
 
 # Component weights. With a résumé, the résumé drives the score; without, role fit does.
@@ -104,12 +139,13 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     Returns jobs sorted by match_score desc.
     """
     target_roles      = [r.lower() for r in profile.get("target_roles", [])]
-    # Per-role word lists (for best-match scoring) + a flat set (for the hard filter).
-    roles_words       = [[w for w in r.split() if len(w) > 2] for r in target_roles]
+    # Per-role word lists (for best-match scoring). Keep 2+ char words so short,
+    # meaningful terms ("ai", "ml", "qa", "ux") survive — they're often the most
+    # distinctive part of the role.
+    roles_words       = [[w for w in r.split() if len(w) >= 2] for r in target_roles]
     roles_words       = [rw for rw in roles_words if rw]
     # Stemmed role words — so "data science" matches "Data Scientist", etc.
     roles_stems       = [[_stem(w) for w in rw] for rw in roles_words]
-    role_stem_flat    = {s for rs in roles_stems for s in rs}
     locations         = [l.lower() for l in profile.get("locations", [])]
     industries        = [i.lower() for i in profile.get("industries", [])]
     exclude_companies = [c.lower() for c in profile.get("exclude_companies", [])]
@@ -126,32 +162,51 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
         location = job.get("location", "").lower()
         jd       = (job.get("description_snippet") or "").lower()
         salary_str = job.get("salary_range") or ""
-        title_stems = _stems(title)
-        jd_stems    = _stems(jd)
-        text_stems  = title_stems | jd_stems  # stemmed title+JD, for fuzzy matching
+        title_stems = _mstems(title)            # role-matching tokens (keep short words)
+        jd_stems    = _mstems(jd)
+        text_stems  = title_stems | jd_stems    # title+JD, for role/fuzzy matching
+
+        # Best fraction of any ONE role's words present, but only counts as a real
+        # match if a DISTINCTIVE (non-generic) word is present, or the whole role
+        # is present. Returns (fraction, qualifies).
+        def role_fit(stem_set: set):
+            best, ok = 0.0, False
+            for rs in roles_stems:
+                matched = [s for s in rs if s in stem_set]
+                if not matched:
+                    continue
+                distinctive = [s for s in matched if s not in _GENERIC_ROLE_STEMS]
+                full = len(matched) == len(rs)
+                if full or distinctive:          # generic word alone ≠ a match
+                    ok = True
+                    best = max(best, len(matched) / len(rs))
+            return best, ok
 
         # ── Hard filters ──
         if any(ex in company for ex in exclude_companies):
             continue
-        # A target role (stemmed) must appear in the title OR the JD.
-        if role_stem_flat and not (role_stem_flat & text_stems):
-            continue
+        # A target role must really match the title or JD (not just a generic word).
+        if roles_stems:
+            _, role_ok = role_fit(text_stems)
+            if not role_ok:
+                continue
+        # Location: when the user sets preferences, drop clearly-overseas,
+        # non-remote roles (keeps India + remote + anything we can't classify).
+        if locations:
+            matched_loc = any(loc in location for loc in locations)
+            is_remote   = any(k in location for k in ("remote", "wfh", "anywhere"))
+            is_foreign  = any(h in location for h in _FOREIGN_HINTS)
+            if is_foreign and not (matched_loc or is_remote):
+                continue
         salary_lpa = _extract_salary_lpa(salary_str)
         if salary_lpa > 0 and salary_floor > 0 and salary_lpa < salary_floor * 0.8:
             continue
 
         reasons: List[str] = []
 
-        # Best fraction of any ONE target role's (stemmed) words present in `stem_set`.
-        def best_role_fit(stem_set: set) -> float:
-            best = 0.0
-            for rs in roles_stems:
-                best = max(best, sum(1 for s in rs if s in stem_set) / len(rs))
-            return best
-
         # 1. Title role fit (0..1) — against the best-matching single role
         if roles_stems:
-            title_score = best_role_fit(title_stems)
+            title_score, _ = role_fit(title_stems)
             if title_score >= 0.5:
                 reasons.append("Title matches your roles")
         else:
@@ -159,7 +214,7 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
 
         # 2. JD role fit (0..1) — M3: depends on the job description
         if roles_stems and jd:
-            jd_score = best_role_fit(jd_stems)
+            jd_score, _ = role_fit(jd_stems)
             if jd_score >= 0.5:
                 reasons.append("Description aligns with your roles")
         else:
@@ -167,6 +222,7 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
 
         # 3. Industry / domain terms in title+JD (0..1) — M3
         if industries:
+            text = title + " " + jd
             ind_hits = sum(1 for i in industries if i in text)
             ind_score = min(ind_hits / len(industries), 1.0)
             if ind_hits:

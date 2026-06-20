@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Sidebar from '@/components/Sidebar'
 import { UserProfile } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
@@ -77,6 +77,14 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
   const [newIndustry, setNewIndustry] = useState('')
   const [newExclude, setNewExclude]   = useState('')
 
+  // Keep "Saved!" showing until the profile actually changes again (instead of a
+  // timeout that flips it back while nothing has changed). Skip the first render.
+  const firstRender = useRef(true)
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return }
+    setSaved(false)
+  }, [profile])
+
   const saveProfile = async () => {
     setSaving(true)
     setError(null)
@@ -102,8 +110,7 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
       setError(upsertError.message || 'Could not save. Are you signed in?')
       return
     }
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    setSaved(true)   // stays until the next edit (see effect above)
   }
 
   const addTag = (field: keyof UserProfile, value: string, setter: (v: string) => void) => {
