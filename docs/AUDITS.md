@@ -50,10 +50,13 @@ RLS + API routes. ~60 findings triaged; Critical/High fixed this round.
 - Schema couldn't retrofit unique constraints onto pre-existing tables → idempotent
   `DO $$` block adds them (+ de-dupes existing rows first).
 
-**Known/Deferred (logged, not yet fixed):** feed hard-capped at 200 with no
-pagination (source/search filter only the loaded slice); `_stem` 5-char prefix
-collisions (marketing≈marketplace); Gmail dates non-ISO ⇒ neutral recency;
-Gmail title↔URL pairing by index; source-filter pills are a hardcoded subset.
+**Known/Deferred — now mostly cleared (see CHANGELOG 2026-06-21 (e)):**
+- ✅ Feed pagination + server-side search/source/filter (`/api/feed` + Load more).
+- ✅ `_stem` collisions (override table: marketing≠marketplace, product≠production).
+- ✅ Gmail dates parsed to ISO so recency works.
+- ✅ Source pills derived from sources present.
+- ⏳ Still open: Gmail title↔URL pairing by index (parse per-block) — needs a
+  rework of the per-portal parsers; lower priority.
 
 ---
 

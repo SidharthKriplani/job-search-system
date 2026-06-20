@@ -82,10 +82,22 @@ def _tokens(text: str) -> set:
             if w not in _STOPWORDS}
 
 
+# Words that share a 5-char prefix but are DIFFERENT domains — give them distinct
+# stems so they don't false-match (the 5-char prefix is tuned for science↔scientist
+# and can't be lengthened without breaking that, so we override the few offenders).
+_STEM_OVERRIDES = {
+    "marketplace": "mktpl",   # vs marketing → "marke"
+    "production":  "prodn",   # vs product/productivity → "produ"
+}
+
 def _stem(w: str) -> str:
     """Crude prefix stem so word-forms unify: science/scientist/scientific → 'scien',
     analyst/analytics/analysis → 'analy', manager/management → 'manag'. Cheap, no LLM —
-    it won't catch true synonyms (ML eng ≈ data scientist) or typos; that's Stage-2's job."""
+    it won't catch true synonyms (ML eng ≈ data scientist) or typos; that's Stage-2's job.
+    A small override table separates same-prefix-but-different-domain words
+    (marketing vs marketplace, product vs production)."""
+    if w in _STEM_OVERRIDES:
+        return _STEM_OVERRIDES[w]
     return w[:5] if len(w) >= 6 else w
 
 

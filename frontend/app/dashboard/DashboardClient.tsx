@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Sidebar from '@/components/Sidebar'
 import JobCard from '@/components/JobCard'
 import { Job, ScraperHealth } from '@/lib/types'
@@ -9,7 +8,7 @@ import { Search, Filter, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import clsx from 'clsx'
 import RefreshButton from '@/components/RefreshButton'
 
-const SOURCES = [
+const DEFAULT_SOURCES = [
   'All', 'indeed', 'naukri', 'greenhouse', 'lever', 'ashby',
   'adzuna_in', 'remotive', 'gmail'
 ]
@@ -22,42 +21,85 @@ interface Props {
   appliedCount: number
   scraperHealth: ScraperHealth[]
   userName: string
+  availableSources?: string[]
 }
 
 export default function DashboardClient({
-  initialJobs, newCount, totalCount, feedLimit, appliedCount, scraperHealth, userName
+  initialJobs, newCount, totalCount, feedLimit, appliedCount, scraperHealth, userName,
+  availableSources,
 }: Props) {
-  const router = useRouter()
   const [jobs, setJobs]           = useState<Job[]>(initialJobs)
   const [search, setSearch]       = useState('')
   const [sourceFilter, setSource] = useState('All')
   const [showNew, setShowNew]     = useState(false)
   const [showSaved, setShowSaved] = useState(false)
 
+  // Live counters (start from server, adjust as jobs leave the feed) so the stat
+  // tiles stay honest without a full reload.
+  const [nNew, setNNew]         = useState(newCount)
+  const [nApplied, setNApplied] = useState(appliedCount)
+  const [nTotal, setNTotal]     = useState(totalCount)
+
+  // Server-driven query state: search/source/scope hit the DB (not just the
+  // loaded slice), and "Load more" pages through everything.
+  const [queryTotal, setQueryTotal] = useState(totalCount)
+  const [loading, setLoading]       = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  const scope = showNew ? 'new' : showSaved ? 'saved' : 'all'
+  const isFiltered = !!search || sourceFilter !== 'All' || scope !== 'all'
+
+  const SOURCES = availableSources && availableSources.length > 1 ? availableSources : DEFAULT_SOURCES
+
+  const fetchPage = useCallback(async (offset: number): Promise<{ jobs: Job[]; total: number } | null> => {
+    const p = new URLSearchParams({ q: search, source: sourceFilter, scope, offset: String(offset), limit: '50' })
+    try {
+      const r = await fetch(`/api/feed?${p.toString()}`, { cache: 'no-store' })
+      const d = await r.json()
+      if (!d.ok) return null
+      return { jobs: d.jobs as Job[], total: d.total as number }
+    } catch { return null }
+  }, [search, sourceFilter, scope])
+
+  // Re-query when search (debounced) / source / scope changes. Skip the very
+  // first render — initialJobs already covers the default view.
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) { first.current = false; return }
+    setLoading(true)
+    const t = setTimeout(async () => {
+      const res = await fetchPage(0)
+      if (res) { setJobs(res.jobs); setQueryTotal(res.total) }
+      setLoading(false)
+    }, search ? 300 : 0)   // debounce typing; instant for pill toggles
+    return () => clearTimeout(t)
+  }, [fetchPage, search])
+
+  const loadMore = async () => {
+    setLoadingMore(true)
+    const res = await fetchPage(jobs.length)
+    if (res) {
+      setJobs(prev => [...prev, ...res.jobs])
+      setQueryTotal(res.total)
+    }
+    setLoadingMore(false)
+  }
+
   const handleUpdate = (id: string, updates: Partial<Job>) => {
+    const job = jobs.find(j => j.id === id)
     setJobs(prev => prev.map(j => j.id === id ? { ...j, ...updates } : j))
-    // When a job leaves the feed (applied/dismissed), refresh server counts so
-    // the stat tiles ("In Feed", "Applied", "New") stop showing stale numbers.
-    if (updates.is_applied || updates.is_dismissed) router.refresh()
+    // Adjust counters as a job leaves the feed (applied/dismissed).
+    if (updates.is_applied || updates.is_dismissed) {
+      setNTotal(t => Math.max(0, t - 1))
+      setQueryTotal(t => Math.max(0, t - 1))
+      if (job?.is_new) setNNew(n => Math.max(0, n - 1))
+      if (updates.is_applied) setNApplied(n => n + 1)
+    }
   }
 
   const filtered = jobs.filter(job => {
     if (job.is_dismissed) return false
     if (job.is_applied) return false   // applied jobs live in the tracker, not the feed
-    if (showNew && !job.is_new) return false
-    if (showSaved && !job.is_saved) return false
-    if (sourceFilter !== 'All') {
-      const src = job.source.startsWith('gmail') ? 'gmail' : job.source
-      if (src !== sourceFilter) return false
-    }
-    if (search) {
-      const q = search.toLowerCase()
-      return (
-        job.job_title.toLowerCase().includes(q) ||
-        job.company.toLowerCase().includes(q) ||
-        (job.location || '').toLowerCase().includes(q)
-      )
-    }
     return true
   })
 
@@ -74,7 +116,7 @@ export default function DashboardClient({
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Job Feed</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
-              Welcome back, {userName.split(' ')[0]}. {newCount > 0 ? `${newCount} new since your last visit.` : 'All caught up!'}
+              Welcome back, {userName.split(' ')[0]}. {nNew > 0 ? `${nNew} new since your last visit.` : 'All caught up!'}
             </p>
           </div>
           <RefreshButton />
@@ -83,9 +125,9 @@ export default function DashboardClient({
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'New',     value: newCount,     color: 'text-indigo-600' },
-            { label: 'Applied', value: appliedCount, color: 'text-green-600'  },
-            { label: 'In Feed', value: totalCount,   color: 'text-slate-700' },
+            { label: 'New',     value: nNew,     color: 'text-indigo-600' },
+            { label: 'Applied', value: nApplied, color: 'text-green-600'  },
+            { label: 'In Feed', value: nTotal,   color: 'text-slate-700' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
               <div className={clsx('text-2xl font-bold', color)}>{value}</div>
@@ -124,10 +166,10 @@ export default function DashboardClient({
             />
           </div>
 
-          {/* Quick filters */}
+          {/* Quick filters (mutually exclusive) */}
           <div className="flex gap-2">
             <button
-              onClick={() => setShowNew(!showNew)}
+              onClick={() => { setShowNew(!showNew); setShowSaved(false) }}
               className={clsx(
                 'px-3 py-2 rounded-lg text-xs font-medium border transition-colors',
                 showNew
@@ -138,7 +180,7 @@ export default function DashboardClient({
               New Only
             </button>
             <button
-              onClick={() => setShowSaved(!showSaved)}
+              onClick={() => { setShowSaved(!showSaved); setShowNew(false) }}
               className={clsx(
                 'px-3 py-2 rounded-lg text-xs font-medium border transition-colors',
                 showSaved
@@ -170,24 +212,41 @@ export default function DashboardClient({
         </div>
 
         {/* Job list */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16 text-slate-400 dark:text-slate-500">
+            <Clock className="w-8 h-8 mx-auto mb-3 opacity-30 animate-pulse" />
+            <p className="text-sm">Searching your feed…</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-slate-400 dark:text-slate-500">
             <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No jobs match your filters</p>
-            <p className="text-sm mt-1">Runs daily at 6am IST — or hit “Refresh Now” above</p>
+            <p className="font-medium">{isFiltered ? 'No jobs match these filters' : 'No jobs yet'}</p>
+            <p className="text-sm mt-1">
+              {isFiltered ? 'Try clearing the search or source filter.' : 'Runs daily at 6am IST — or hit “Refresh Now” above'}
+            </p>
           </div>
         ) : (
           <>
-            {totalCount > initialJobs.length && !search && !showNew && !showSaved && sourceFilter === 'All' && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-                Showing top {initialJobs.length} of {totalCount} matches, ranked by fit.
-              </p>
-            )}
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+              Showing {filtered.length} of {queryTotal}{isFiltered ? ' matches' : ' matches, ranked by fit'}.
+            </p>
             <div className="space-y-3">
               {filtered.map(job => (
                 <JobCard key={job.id} job={job} onUpdate={handleUpdate} />
               ))}
             </div>
+            {jobs.length < queryTotal && (
+              <div className="text-center mt-5">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-5 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700
+                             text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {loadingMore ? 'Loading…' : `Load more (${queryTotal - jobs.length} left)`}
+                </button>
+              </div>
+            )}
           </>
         )}
       </main>

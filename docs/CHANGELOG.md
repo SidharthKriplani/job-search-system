@@ -4,6 +4,21 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-21 (e) — cleared the deferred audit items
+
+- **Feed pagination + server-side search/filter.** New `frontend/app/api/feed`
+  route; search, source, and New/Saved now query Postgres (not just the loaded
+  200), with a "Load more" button. Stat tiles use live counters; source pills are
+  derived from sources actually present. Fixes the "filter only sees 200" + "can't
+  reach matches beyond 200" gaps.
+- **Stemmer collisions.** Added `_STEM_OVERRIDES` so marketing≠marketplace and
+  product≠production, while science↔scientist still merge (5-char prefix kept).
+- **Gmail recency.** `_iso_date()` parses the RFC-2822 email Date header to
+  YYYY-MM-DD; previously `date_str[:10]` produced "Mon, 02 Ju" so every Gmail job
+  scored neutral recency.
+
+---
+
 ## 2026-06-21 (d) — deep multi-pass bug audit + fixes
 
 Three parallel deep audits (frontend, Python pipeline, schema/RLS/contracts).

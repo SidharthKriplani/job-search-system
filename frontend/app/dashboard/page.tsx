@@ -54,6 +54,12 @@ export default async function DashboardPage() {
       .order('source'),
   ])
 
+  // Source pills reflect what's actually in the feed (gmail_* collapses to gmail).
+  const presentSources = Array.from(new Set(
+    (jobs || []).map(j => (j.source || '').startsWith('gmail') ? 'gmail' : j.source).filter(Boolean)
+  )).sort()
+  const availableSources = ['All', ...presentSources]
+
   return (
     <DashboardClient
       initialJobs={jobs || []}
@@ -63,6 +69,7 @@ export default async function DashboardPage() {
       appliedCount={appliedCount || 0}
       scraperHealth={scraperHealth || []}
       userName={user.user_metadata?.full_name || user.email || 'there'}
+      availableSources={availableSources}
     />
   )
 }

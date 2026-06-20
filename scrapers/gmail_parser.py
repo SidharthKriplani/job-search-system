@@ -26,6 +26,19 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from email import message_from_bytes
 from email.header import decode_header
+from email.utils import parsedate_to_datetime
+
+
+def _iso_date(date_header: Optional[str]) -> Optional[str]:
+    """Convert an RFC-2822 email Date header ("Mon, 02 Jun 2026 14:30 +0530") to
+    a YYYY-MM-DD string. Previously the code did `date_str[:10]` which produced
+    "Mon, 02 Ju" — unparseable, so every Gmail job scored neutral recency."""
+    if not date_header:
+        return None
+    try:
+        return parsedate_to_datetime(date_header).date().isoformat()
+    except Exception:
+        return None
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -408,7 +421,7 @@ def scrape(profile: Dict, token_row: Dict, client_id: str, client_secret: str,
 
         if parser_fn:
             try:
-                jobs = parser_fn(body, date_str[:10] if date_str else None)
+                jobs = parser_fn(body, _iso_date(date_str))
                 all_jobs.extend(jobs)
                 processed_ids.append(msg_id)
             except Exception as e:
