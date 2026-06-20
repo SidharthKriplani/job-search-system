@@ -23,10 +23,10 @@ export async function GET(req: Request) {
   const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0)
   const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || String(PAGE), 10) || PAGE)
 
-  // Current target roles → read-time role guard (kills stale off-role rows).
+  // Current target roles + industries → graph-aware read-time guard.
   const { data: prof } = await supabase
-    .from('user_profiles').select('target_roles').eq('user_id', user.id).maybeSingle()
-  const roleFilter = roleOrFilter(prof?.target_roles)
+    .from('user_profiles').select('target_roles, industries').eq('user_id', user.id).maybeSingle()
+  const roleFilter = roleOrFilter(prof?.target_roles, prof?.industries)
 
   let query = supabase
     .from('job_feed')

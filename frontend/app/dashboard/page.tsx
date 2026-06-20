@@ -14,8 +14,8 @@ export default async function DashboardPage() {
   // Read-time role guard so the feed always reflects the CURRENT target role,
   // even before a backend re-filter prunes stale rows.
   const { data: prof } = await supabase
-    .from('user_profiles').select('target_roles').eq('user_id', user.id).maybeSingle()
-  const roleFilter = roleOrFilter(prof?.target_roles)
+    .from('user_profiles').select('target_roles, industries').eq('user_id', user.id).maybeSingle()
+  const roleFilter = roleOrFilter(prof?.target_roles, prof?.industries)
 
   const feedQ    = () => {
     let q = supabase.from('job_feed').select('*')

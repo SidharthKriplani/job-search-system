@@ -1,31 +1,32 @@
+import { expandRoleKeywords } from './roleGraph'
+
 /**
  * Read-time role guard for the feed.
  *
  * match_score is computed by the backend against whatever profile was active at
  * scrape time. When you change your target role, those stored rows are stale
  * until a backend re-filter runs (async, not guaranteed instantly). To make the
- * feed ALWAYS reflect the current role, we additionally require each shown job's
- * title or description to contain at least one significant word from a target
- * role. This deterministically drops gross mismatches (e.g. Engineers when your
- * role is "investment banker") without waiting on any backend job.
+ * feed ALWAYS reflect the current role, we require each shown job's title /
+ * description / company to contain a keyword from the role's NEIGHBOURHOOD (via
+ * the role graph) or its sector — so adjacent roles (ML Engineer for a Data
+ * Scientist target) are kept while gross mismatches (Engineers for an Investment
+ * Banker target) are dropped, with no wait on any backend job.
  *
- * Returns a PostgREST `.or()` filter string, or null when there are no roles
- * (then no guard is applied).
+ * Returns a PostgREST `.or()` filter string, or null when there's nothing to
+ * guard on (then no guard is applied).
  */
-export function roleOrFilter(roles: string[] | null | undefined): string | null {
-  if (!roles || roles.length === 0) return null
-  const words = new Set<string>()
-  for (const r of roles) {
-    for (const w of (r || '').toLowerCase().split(/\s+/)) {
-      const clean = w.replace(/[^a-z0-9]/g, '')
-      if (clean.length >= 3) words.add(clean)   // skip "ai"/"of" etc.; backend handles nuance
-    }
-  }
-  if (words.size === 0) return null
+export function roleOrFilter(
+  roles: string[] | null | undefined,
+  industries?: string[] | null,
+): string | null {
+  const keywords = expandRoleKeywords(roles, industries)
+  if (keywords.length === 0) return null
   const parts: string[] = []
-  for (const w of Array.from(words).slice(0, 12)) {
-    parts.push(`job_title.ilike.%${w}%`)
-    parts.push(`description_snippet.ilike.%${w}%`)
+  for (const w of keywords.slice(0, 30)) {
+    const safe = w.replace(/[,()]/g, ' ')
+    parts.push(`job_title.ilike.%${safe}%`)
+    parts.push(`description_snippet.ilike.%${safe}%`)
+    parts.push(`company.ilike.%${safe}%`)
   }
   return parts.join(',')
 }

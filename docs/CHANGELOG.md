@@ -4,6 +4,31 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 — role-family graph + sector layer (relevance neighbourhood)
+
+A target role is now a weighted NEIGHBOURHOOD, not a point, plus a domain/sector
+search axis. This is also the seed of the competence map (role→role edges).
+
+- `utils/role_graph.py` — curated families (data/ml, software, product, design,
+  finance_ib [dense + aliases], marketing, sales, consulting), alias resolution
+  (ib→investment banker, ds→data scientist…), and sector keyword sets. `expand_roles`
+  returns {role: weight} (target 1.0, neighbours decayed); `sectors_for` /
+  `sector_keywords` power the domain net. Field-dependent by design: finance/etc.
+  auto-activate the sector keyword net (non-standard titles), tech does NOT (titles
+  are standardised — the title graph carries it).
+- `utils/filter.py` — scoring now expands the role into its neighbourhood and
+  ranks by weighted closeness; exact role ranks highest, adjacent roles show a
+  "Related role: …" reason. Sector match (`Finance sector`) is its own signal and
+  lets "any finance role" work with no title set. Verified: Data Scientist surfaces
+  ML/Analytics; Investment Banker surfaces IB/M&A/PE/equity-research; unrelated
+  Engineers dropped.
+- `frontend/lib/roleGraph.ts` + `feedFilter.ts` — the read-time guard is now
+  graph-aware (expands to neighbour + sector keywords across title/desc/company),
+  so adjacent roles aren't excluded at read-time while gross mismatches still are.
+  (Mirror of the Python graph — keep roughly in sync.)
+
+---
+
 ## 2026-06-21 (g) — feed auto-populates the moment Refresh finishes
 
 - User complaint: after Refresh completes, the feed didn't change until a manual

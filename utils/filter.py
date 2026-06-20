@@ -12,7 +12,14 @@ import logging
 from datetime import datetime, date
 from typing import List, Dict, Tuple, Optional
 
+from . import role_graph
+
 logger = logging.getLogger(__name__)
+
+# A weighted role match must clear this to count as relevant. A close neighbour
+# (e.g. ML Engineer ≈ Data Scientist, weight ~0.6–0.9) clears it; a generic-only
+# or very distant match does not.
+ROLE_PASS = 0.33
 
 # ─── Salary parsing ──────────────────────────────────────────────────────────
 
@@ -177,15 +184,26 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     Returns jobs sorted by match_score desc.
     """
     target_roles      = [r.lower() for r in profile.get("target_roles", [])]
-    # Per-role word lists (for best-match scoring). Keep 2+ char words so short,
-    # meaningful terms ("ai", "ml", "qa", "ux") survive — they're often the most
-    # distinctive part of the role.
-    roles_words       = [[w for w in r.split() if len(w) >= 2] for r in target_roles]
-    roles_words       = [rw for rw in roles_words if rw]
-    # Stemmed role words — so "data science" matches "Data Scientist", etc.
-    roles_stems       = [[_stem(w) for w in rw] for rw in roles_words]
-    locations         = [l.lower() for l in profile.get("locations", [])]
     industries        = [i.lower() for i in profile.get("industries", [])]
+
+    # ── Role-family expansion (the neighbourhood graph) ──
+    # Each target role activates a weighted neighbourhood: target = 1.0, adjacent
+    # roles < 1.0. We pre-stem every expanded role once. Unknown roles still work
+    # (they expand to just themselves at weight 1.0).
+    expanded = role_graph.expand_roles(target_roles)   # {role_phrase: weight}
+    expanded_stems = []                                # [(phrase, weight, [stems])]
+    for phrase, weight in expanded.items():
+        stems = [_stem(w) for w in phrase.split() if len(w) >= 2]
+        if stems:
+            expanded_stems.append((phrase, weight, stems))
+    target_canon = {role_graph.normalize_role(r) for r in target_roles}
+
+    # ── Sector / domain layer ──
+    sectors        = role_graph.sectors_for(target_roles, industries)
+    sect_kw        = role_graph.sector_keywords(sectors)
+    industries_set = bool(industries)
+
+    locations         = [l.lower() for l in profile.get("locations", [])]
     exclude_companies = [c.lower() for c in profile.get("exclude_companies", [])]
     salary_floor      = profile.get("salary_floor", 0) or 0
     resume_stems      = _stems(profile.get("resume_text") or "")
@@ -204,29 +222,37 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
         jd_stems    = _mstems(jd)
         text_stems  = title_stems | jd_stems    # title+JD, for role/fuzzy matching
 
-        # Best fraction of any ONE role's words present, but only counts as a real
-        # match if a DISTINCTIVE (non-generic) word is present, or the whole role
-        # is present. Returns (fraction, qualifies).
+        blob = title + " " + jd + " " + company
+
+        # Best WEIGHTED role fit over the expanded neighbourhood. Returns
+        # (effective_score, best_role_phrase). A generic word alone never counts.
         def role_fit(stem_set: set):
-            best, ok = 0.0, False
-            for rs in roles_stems:
+            best_eff, best_role = 0.0, None
+            for phrase, weight, rs in expanded_stems:
                 matched = [s for s in rs if s in stem_set]
                 if not matched:
                     continue
                 distinctive = [s for s in matched if s not in _GENERIC_ROLE_STEMS]
                 full = len(matched) == len(rs)
                 if full or distinctive:          # generic word alone ≠ a match
-                    ok = True
-                    best = max(best, len(matched) / len(rs))
-            return best, ok
+                    eff = (len(matched) / len(rs)) * weight
+                    if eff > best_eff:
+                        best_eff, best_role = eff, phrase
+            return best_eff, best_role
 
         # ── Hard filters ──
         if any(ex in company for ex in exclude_companies):
             continue
-        # A target role must really match the title or JD (not just a generic word).
-        if roles_stems:
-            _, role_ok = role_fit(text_stems)
-            if not role_ok:
+
+        sector_hit = bool(sect_kw) and any(kw in blob for kw in sect_kw)
+
+        # A job qualifies if it matches the role neighbourhood OR (when the user
+        # set industries) the sector net. This is what lets "any finance role"
+        # work and lets a Data Scientist target surface ML/Analytics jobs.
+        if expanded_stems or sect_kw:
+            text_eff, _ = role_fit(text_stems)
+            role_pass = text_eff >= ROLE_PASS
+            if not (role_pass or (industries_set and sector_hit)):
                 continue
         # Location: when the user sets preferences, drop clearly-overseas,
         # non-remote roles (keeps India + remote + anything we can't classify).
@@ -244,31 +270,36 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
 
         reasons: List[str] = []
 
-        # 1. Title role fit (0..1) — against the best-matching single role
-        if roles_stems:
-            title_score, _ = role_fit(title_stems)
-            if title_score >= 0.5:
-                reasons.append("Title matches your roles")
+        # 1. Title role fit (0..1, weighted by neighbourhood closeness)
+        if expanded_stems:
+            title_score, title_role = role_fit(title_stems)
+            if title_score >= ROLE_PASS:
+                if title_role and role_graph.normalize_role(title_role) not in target_canon:
+                    reasons.append(f"Related role: {title_role.title()}")
+                else:
+                    reasons.append("Title matches your roles")
         else:
-            title_score = 0.5  # no roles set → can't assess, stay neutral
+            title_score, title_role = 0.5, None  # no roles set → neutral
 
-        # 2. JD role fit (0..1) — M3: depends on the job description
-        if roles_stems and jd:
+        # 2. JD role fit (0..1)
+        if expanded_stems and jd:
             jd_score, _ = role_fit(jd_stems)
-            if jd_score >= 0.5:
+            if jd_score >= ROLE_PASS and "Related role" not in " ".join(reasons) \
+               and "Title matches your roles" not in reasons:
                 reasons.append("Description aligns with your roles")
         else:
             jd_score = 0.5
 
-        # 3. Industry / domain terms in title+JD (0..1) — M3
-        if industries:
-            text = title + " " + jd
-            ind_hits = sum(1 for i in industries if i in text)
-            ind_score = min(ind_hits / len(industries), 1.0)
-            if ind_hits:
-                reasons.append("Matches your industry")
+        # 3. Sector / domain fit (0..1) — the keyword net (esp. for finance)
+        if sect_kw:
+            ind_score = 1.0 if sector_hit else 0.3
+            if sector_hit:
+                for s in sectors:
+                    if any(kw in blob for kw in role_graph.SECTORS.get(s, set())):
+                        reasons.append(f"{s.title()} sector")
+                        break
         else:
-            ind_score = 1.0  # not specified → don't penalise
+            ind_score = 1.0  # no sector specified → don't penalise
 
         # 4. Location fit (0..1)
         if locations:
