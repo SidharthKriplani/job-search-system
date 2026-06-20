@@ -60,6 +60,15 @@ GREENHOUSE = [
     ("calendly", "Calendly"), ("starburst", "Starburst"), ("circleci", "CircleCI"),
     ("labelbox", "Labelbox"), ("lattice", "Lattice"), ("planetscale", "PlanetScale"),
     ("dremio", "Dremio"),
+    # Batch 2 (2026-06-20)
+    ("dataiku", "Dataiku"), ("vonage", "Vonage"), ("contentful", "Contentful"),
+    ("webflow", "Webflow"), ("gocardless", "GoCardless"), ("sendbird", "Sendbird"),
+    ("descript", "Descript"), ("assemblyai", "AssemblyAI"),
+    # Batch 3 (2026-06-20)
+    ("anthropic", "Anthropic"), ("adyen", "Adyen"), ("workato", "Workato"),
+    ("jetbrains", "JetBrains"), ("qualtrics", "Qualtrics"), ("marqeta", "Marqeta"),
+    ("sumologic", "Sumo Logic"), ("yugabyte", "Yugabyte"), ("typeform", "Typeform"),
+    ("buildkite", "Buildkite"), ("comet", "Comet"), ("lithic", "Lithic"),
 ]
 
 LEVER = [
@@ -75,6 +84,9 @@ LEVER = [
     ("mux", "Mux"),
     ("voiceflow", "Voiceflow"),
     ("romerolabs", "Romero Labs"),
+    ("nium", "Nium"),
+    ("mistral", "Mistral AI"),
+    ("porter", "Porter"),
 ]
 
 ASHBY = [
@@ -102,6 +114,16 @@ ASHBY = [
     ("sentry", "Sentry"), ("modal", "Modal"), ("render", "Render"),
     ("character", "Character.AI"), ("atlan", "Atlan"), ("neon", "Neon"),
     ("materialize", "Materialize"),
+    # Batch 2 (2026-06-20)
+    ("airwallex", "Airwallex"), ("elevenlabs", "ElevenLabs"), ("replit", "Replit"),
+    ("deepgram", "Deepgram"), ("sanity", "Sanity"), ("livekit", "LiveKit"),
+    ("zapier", "Zapier"), ("railway", "Railway"),
+    # Batch 3 (2026-06-20)
+    ("harvey", "Harvey"), ("sierra", "Sierra"), ("cresta", "Cresta"),
+    ("synthesia", "Synthesia"), ("redis", "Redis"), ("camunda", "Camunda"),
+    ("pleo", "Pleo"), ("anyscale", "Anyscale"), ("statsig", "Statsig"),
+    ("unit", "Unit"), ("moderntreasury", "Modern Treasury"), ("fullstory", "FullStory"),
+    ("stream", "Stream"), ("scaler", "Scaler"),
 ]
 
 # Workday tenants: (tenant, wd_number, site, display_name). Each VERIFIED to

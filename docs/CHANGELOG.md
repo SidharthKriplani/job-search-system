@@ -6,6 +6,20 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Coverage batch 3 → 151 verified boards
+- +28 (Anthropic 373, Harvey 287, Adyen 201, Mistral 170, Workato 161, Sierra,
+  Cresta, JetBrains, Qualtrics, Marqeta, Redis, Synthesia, Camunda…).
+- **Learning:** Indian *consumer* startups are mostly NOT on Greenhouse/Lever/
+  Ashby (they use Naukri / own ATS) — near-zero hit rate when probed. India-native
+  breadth must come from **JobSpy (Indeed/Naukri) + Adzuna India**, not the ATS
+  registry. ATS registry's value = global SaaS/AI/fintech with India GCCs.
+
+### Coverage batch 2 → 123 verified boards
+- +17 live-verified boards (Airwallex, ElevenLabs, Replit, Deepgram, Dataiku,
+  Nium, Vonage, Contentful, Zapier, LiveKit, Sanity, Railway, GoCardless,
+  Sendbird, Webflow, Descript, AssemblyAI). Registry: GH 66 · Ashby 41 · Lever 11
+  · Workday 5 = 123 boards (concurrent fetch keeps run time flat as this grows).
+
 ### Scaling Stage 1: concurrent + sharded ingestion
 - Rewrote `ingest/run.py` around flat "fetch units" (one per board/tenant) run
   **concurrently** in a thread pool (verified: a shard of ~10 boards = 1,328 jobs
