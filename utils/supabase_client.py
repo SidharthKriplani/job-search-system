@@ -91,10 +91,14 @@ def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
     for i in range(0, len(rows), 100):
         batch = rows[i:i+100]
         try:
+            # ignore_duplicates=False → on conflict, UPDATE the row's columns
+            # (match_score, match_reasons, title, …). Only payload columns are
+            # touched, so is_applied / is_saved / is_dismissed are preserved.
+            # This lets a changed profile re-score existing jobs.
             result = sb.table("job_feed").upsert(
                 batch,
                 on_conflict="user_id,source,source_job_id",
-                ignore_duplicates=True,
+                ignore_duplicates=False,
             ).execute()
             total_new += len(result.data or [])
         except Exception as e:
@@ -117,6 +121,37 @@ def get_seen_job_ids(user_id: str, source: str) -> set:
         .eq("source", source) \
         .execute()
     return {row["source_job_id"] for row in (result.data or [])}
+
+
+def get_user_feed_rows(user_id: str) -> List[Dict]:
+    """Return the user's stored job_feed rows (fields needed to re-filter + prune)."""
+    sb = get_client()
+    try:
+        result = sb.table("job_feed").select(
+            "id, job_title, company, location, salary_range, job_url, "
+            "description_snippet, posted_date, source, source_job_id, seniority, "
+            "job_type, is_applied, is_saved"
+        ).eq("user_id", user_id).execute()
+        return result.data or []
+    except Exception as e:
+        logger.error(f"[Supabase] get_user_feed_rows failed: {e}")
+        return []
+
+
+def delete_jobs(job_ids: List[str]) -> int:
+    """Delete job_feed rows by id (batched)."""
+    if not job_ids:
+        return 0
+    sb = get_client()
+    deleted = 0
+    for i in range(0, len(job_ids), 100):
+        batch = job_ids[i:i+100]
+        try:
+            sb.table("job_feed").delete().in_("id", batch).execute()
+            deleted += len(batch)
+        except Exception as e:
+            logger.error(f"[Supabase] delete_jobs failed: {e}")
+    return deleted
 
 
 def get_existing_job_keys(user_id: str) -> set:

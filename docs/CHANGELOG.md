@@ -6,6 +6,16 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ## 2026-06-20
 
+### Fixed: profile ↔ feed sync (Settings changes had no effect)
+- `upsert_jobs` used `ignore_duplicates=True`, so re-runs never updated existing
+  jobs' scores, and nothing pruned jobs that stopped matching a changed profile —
+  the feed stayed frozen to the first scrape's profile.
+- Fix: (1) upsert now UPDATES on conflict (re-scores; preserves is_applied/saved/
+  dismissed since they're not in the payload); (2) a **re-sync pass** re-filters the
+  *stored* feed against the current profile each run — drops jobs that no longer
+  match (unless applied/saved), re-scores the rest. Works under sharding (operates
+  on stored data, not the fetch). Verified: non-matching dropped, applied preserved.
+
 ### Coverage batch 3 → 151 verified boards
 - +28 (Anthropic 373, Harvey 287, Adyen 201, Mistral 170, Workato 161, Sierra,
   Cresta, JetBrains, Qualtrics, Marqeta, Redis, Synthesia, Camunda…).

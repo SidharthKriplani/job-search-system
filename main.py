@@ -119,6 +119,29 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
     new_count = sb.upsert_jobs(user_id, unique)
     logger.info(f"New jobs inserted: {new_count}")
 
+    # ── Re-sync the STORED feed to the CURRENT profile ─────────────────────
+    # Without this, changing Settings has no effect on jobs already in the feed
+    # (they were filtered/scored against the old profile). Re-filter everything
+    # stored against the live profile: drop jobs that no longer match (unless the
+    # user applied to / saved them), and re-score the rest. Works regardless of
+    # sharding because it operates on what's stored, not on this run's fetch.
+    try:
+        stored = sb.get_user_feed_rows(user_id)
+        if stored:
+            matched = filter_and_score(stored, profile)
+            matched_ids = {r.get("id") for r in matched}
+            stale_ids = [
+                r["id"] for r in stored
+                if r.get("id") not in matched_ids
+                and not (r.get("is_applied") or r.get("is_saved"))
+            ]
+            removed = sb.delete_jobs(stale_ids)
+            if matched:
+                sb.upsert_jobs(user_id, matched)  # refresh scores/reasons
+            logger.info(f"Re-sync: {len(matched)} match profile, removed {removed} stale")
+    except Exception as e:
+        logger.error(f"[resync] failed for {user_id[:8]}: {e}")
+
     # ── Get follow-up reminders ────────────────────────────────────────────
     follow_ups = sb.get_follow_up_due(user_id)
     stale      = sb.get_stale_applications(user_id, days=7)
