@@ -1,0 +1,45 @@
+name: Resync Feed
+
+# Fast, scrape-free re-match: re-filters a user's STORED feed against their
+# CURRENT profile. Triggered from the app when a user saves their Settings, so
+# changing your target role updates the feed in ~30–60s instead of waiting for
+# the full daily scrape.
+
+on:
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: 'User id to resync (blank = all users)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  # Don't pile up resyncs for the same user; keep only the latest.
+  group: resync-${{ github.event.inputs.user_id }}
+  cancel-in-progress: true
+
+jobs:
+  resync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Resync (no scraping)
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESYNC_ONLY: '1'
+          TARGET_USER_ID: ${{ github.event.inputs.user_id }}
+        run: python main.py

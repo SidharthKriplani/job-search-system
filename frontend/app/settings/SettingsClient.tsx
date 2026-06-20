@@ -111,6 +111,10 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
       return
     }
     setSaved(true)   // stays until the next edit (see effect above)
+    // Kick off a fast, scrape-free resync so the feed re-matches the new profile
+    // (e.g. switching target role) within ~1 min instead of waiting for a scrape.
+    // Best-effort: if it isn't configured, the next scrape reconciles anyway.
+    try { await fetch('/api/resync', { method: 'POST' }) } catch { /* ignore */ }
   }
 
   const addTag = (field: keyof UserProfile, value: string, setter: (v: string) => void) => {
@@ -276,7 +280,7 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
           )}
           {saved && (
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              Saved to your profile. The next scrape run will use these.
+              Saved. Re-matching your feed in the background (~1 min) — reload the Job Feed shortly.
             </p>
           )}
         </div>

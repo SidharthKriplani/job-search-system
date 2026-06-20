@@ -4,6 +4,33 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-21 (c) — fast resync on profile change + LinkedIn referral import
+
+### Profile changes now re-match the feed in ~1 min (not 3-min scrape)
+- The stale-feed problem ("investment banker" still showed Engineers) was because
+  the resync only ran INSIDE a full scrape. Extracted `resync_user()` in `main.py`
+  and added a **RESYNC_ONLY** fast path (`TARGET_USER_ID` scopes to one user) that
+  re-filters the STORED feed against the current profile with **no scraping**.
+- New `.github/workflows/resync.yml` (workflow_dispatch, user_id input) + new
+  `frontend/app/api/resync/route.ts`. Saving Settings now calls `/api/resync`, so
+  changing your target role prunes/re-scores the existing feed within ~30–60s.
+- Requires the new `filter.py` to be deployed for the prune to be correct.
+
+### Referral import from LinkedIn Connections.csv (the compliant path)
+- `referrals/ReferralsClient.tsx` — "Import from LinkedIn" button + modal:
+  in-browser CSV parse (handles LinkedIn's preamble lines, quoted commas, missing
+  emails), matches each connection's company against the user's feed/tracker
+  companies (legal-suffix-stripping fuzzy match), pre-selects "in your feed"
+  matches, and bulk-inserts into `referral_pipeline` (connection_type
+  linkedin_1st). De-dupes against existing contacts.
+- `referrals/page.tsx` passes `feedCompanies` (distinct job_feed + applications
+  companies). No schema change (referral_pipeline already exists).
+- _Why this design:_ per deep research, no compliant API exposes a user's
+  connection graph worldwide; the user's own data export is the only consented
+  path, and email is opt-in (~70% blank) so we match on name + company.
+
+---
+
 ## 2026-06-21 (b) — relevance + feed-honesty fixes (from live testing)
 
 ### Relevance: multi-word roles no longer collapse to generic words

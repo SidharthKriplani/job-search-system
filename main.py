@@ -73,6 +73,36 @@ def fetch_gmail_jobs(profile: Dict) -> List[Dict]:
         return []
 
 
+def resync_user(profile: Dict) -> None:
+    """Re-filter the user's STORED feed against their CURRENT profile.
+
+    Without this, changing Settings (roles/locations/salary) has no effect on
+    jobs already in the feed — they were scored against the OLD profile, so the
+    feed shows stale matches (e.g. Engineers after you switch to "investment
+    banker"). This re-scores everything stored and drops what no longer matches
+    (unless the user applied to / saved it). It does NO scraping, so it's cheap
+    and can run on its own the moment the profile changes.
+    """
+    user_id = profile["user_id"]
+    try:
+        stored = sb.get_user_feed_rows(user_id)
+        if not stored:
+            return
+        matched = filter_and_score(stored, profile)
+        matched_ids = {r.get("id") for r in matched}
+        stale_ids = [
+            r["id"] for r in stored
+            if r.get("id") not in matched_ids
+            and not (r.get("is_applied") or r.get("is_saved"))
+        ]
+        removed = sb.delete_jobs(stale_ids)
+        if matched:
+            sb.upsert_jobs(user_id, matched)  # refresh scores/reasons
+        logger.info(f"Re-sync {user_id[:8]}: {len(matched)} match, removed {removed} stale")
+    except Exception as e:
+        logger.error(f"[resync] failed for {user_id[:8]}: {e}")
+
+
 def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
     """
     Run the full pipeline for one user against the shared ATS job pool.
@@ -128,27 +158,7 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
     logger.info(f"New jobs inserted: {new_count}")
 
     # ── Re-sync the STORED feed to the CURRENT profile ─────────────────────
-    # Without this, changing Settings has no effect on jobs already in the feed
-    # (they were filtered/scored against the old profile). Re-filter everything
-    # stored against the live profile: drop jobs that no longer match (unless the
-    # user applied to / saved them), and re-score the rest. Works regardless of
-    # sharding because it operates on what's stored, not on this run's fetch.
-    try:
-        stored = sb.get_user_feed_rows(user_id)
-        if stored:
-            matched = filter_and_score(stored, profile)
-            matched_ids = {r.get("id") for r in matched}
-            stale_ids = [
-                r["id"] for r in stored
-                if r.get("id") not in matched_ids
-                and not (r.get("is_applied") or r.get("is_saved"))
-            ]
-            removed = sb.delete_jobs(stale_ids)
-            if matched:
-                sb.upsert_jobs(user_id, matched)  # refresh scores/reasons
-            logger.info(f"Re-sync: {len(matched)} match profile, removed {removed} stale")
-    except Exception as e:
-        logger.error(f"[resync] failed for {user_id[:8]}: {e}")
+    resync_user(profile)
 
     # ── Get follow-up reminders ────────────────────────────────────────────
     follow_ups = sb.get_follow_up_due(user_id)
@@ -198,6 +208,20 @@ def main():
 
     if not users:
         logger.info("No active users. Exiting.")
+        return
+
+    # ── Re-sync-only fast path (no scraping) ───────────────────────────────────
+    # Triggered when a user saves their profile: re-filter the stored feed to the
+    # new profile in seconds, instead of waiting for the full scrape. Scope to one
+    # user with TARGET_USER_ID; otherwise resync everyone.
+    if os.environ.get("RESYNC_ONLY") == "1":
+        target = os.environ.get("TARGET_USER_ID", "").strip()
+        if target:
+            users = [u for u in users if u.get("user_id") == target]
+        logger.info(f"RESYNC-ONLY mode: re-matching {len(users)} user(s), no scraping.")
+        for profile in users:
+            resync_user(profile)
+        logger.info("✓ Resync complete.")
         return
 
     # ── Fetch the shared ATS/aggregator pool (concurrent; optionally sharded) ──
