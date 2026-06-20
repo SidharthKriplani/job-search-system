@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
@@ -18,9 +18,9 @@ export async function GET(request: Request) {
     {
       cookies: {
         getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
+            cookieStore.set(name, value, options)
           )
         },
       },
@@ -48,7 +48,6 @@ export async function GET(request: Request) {
         scope: 'https://www.googleapis.com/auth/gmail.modify',
       }, { onConflict: 'user_id' })
 
-      // Create or update user profile
       await supabase.from('user_profiles').upsert({
         user_id:         user.id,
         full_name:       user.user_metadata?.full_name || user.email?.split('@')[0] || '',
@@ -57,7 +56,6 @@ export async function GET(request: Request) {
       }, { onConflict: 'user_id', ignoreDuplicates: false })
     } catch (err) {
       console.error('Failed to store Gmail tokens:', err)
-      // Don't block the redirect — user can reconnect from settings
     }
   }
 
