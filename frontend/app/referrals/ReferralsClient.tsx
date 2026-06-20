@@ -177,7 +177,7 @@ export default function ReferralsClient({ initialReferrals, templates, userId, f
     setImportError(null)
     // Skip people we already have (same name + company).
     const existingKeys = new Set(referrals.map(r => `${r.contact_name}|${normCompany(r.company)}`.toLowerCase()))
-    const rows = [...selected]
+    const rows = Array.from(selected)
       .map(i => parsed[i])
       .filter(c => !existingKeys.has(`${c.contact_name}|${normCompany(c.company)}`.toLowerCase()))
       .map(c => ({
