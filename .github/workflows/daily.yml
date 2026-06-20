@@ -1,0 +1,63 @@
+name: Daily Job Scraper
+
+on:
+  schedule:
+    # 00:30 UTC = 06:00 IST daily
+    - cron: '30 0 * * *'
+
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+
+jobs:
+  scrape:
+    name: Run Job Scrapers
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright (for Naukri refresh)
+        run: |
+          pip install playwright==1.42.0
+          playwright install chromium --with-deps
+        continue-on-error: true   # non-critical if it fails
+
+      - name: Run job scrapers
+        env:
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GOOGLE_CLIENT_ID:      ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET:  ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
+          NEXT_PUBLIC_APP_URL:   ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          LOG_LEVEL:             ${{ github.event.inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
+        run: python main.py
+
+      - name: Run Naukri profile refresh (optional)
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python naukri_refresh.py
+        continue-on-error: true  # non-critical — failure doesn't break the run
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "Run completed at $(date -u)"
+          echo "Status: ${{ job.status }}"
