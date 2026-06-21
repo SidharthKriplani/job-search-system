@@ -139,27 +139,24 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
     setParsing(true); setParseMsg(null); setDetected([])
     try {
       const text = await parseResumeFile(file)
-      // Detect roles + seniority and merge into the profile.
       const found = rolesFromText(text)
       const sen = seniorityFromText(text)
-      setProfile(p => {
-        const existing = ((p.target_roles as string[]) || [])
-        const lower = new Set(existing.map(r => r.toLowerCase()))
-        const added = found.filter(r => !lower.has(r.toLowerCase()))
-        return {
-          ...p,
-          resume_text: text as any,
-          target_roles: [...existing, ...added] as any,
-          ...(sen.level ? { seniority_level: sen.level as any } : {}),
-          ...(sen.years != null ? { experience_years: sen.years as any } : {}),
-        }
-      })
+      // Save the résumé text + detected level. The résumé DRIVES the feed on its
+      // own (effectiveRoles / Python resume_roles) — we deliberately do NOT inject
+      // detected roles into target_roles, so a noisy detection can't permanently
+      // corrupt the user's stated targets. Detected roles are shown as info below.
+      setProfile(p => ({
+        ...p,
+        resume_text: text as any,
+        ...(sen.level ? { seniority_level: sen.level as any } : {}),
+        ...(sen.years != null ? { experience_years: sen.years as any } : {}),
+      }))
       setDetected(found)
       setSeniorityLabel(sen.label || null)
       const bits = [`Parsed ${text.length.toLocaleString()} chars`]
-      if (found.length) bits.push(`added ${found.length} role${found.length > 1 ? 's' : ''}`)
-      if (sen.label) bits.push(`detected ${sen.label}`)
-      setParseMsg(bits.join(' · ') + (found.length ? '.' : ' — add your target roles manually.'))
+      if (found.length) bits.push(`detected ${found.length} role${found.length > 1 ? 's' : ''}`)
+      if (sen.label) bits.push(sen.label)
+      setParseMsg(bits.join(' · ') + (found.length ? ' — these now drive your feed.' : ' — add target roles manually.'))
     } catch (e: any) {
       setParseMsg(e?.message || 'Could not parse that file.')
     } finally {

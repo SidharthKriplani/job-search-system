@@ -130,3 +130,17 @@ def test_back_office_family():
     assert "Fund Accountant" in out
     assert "AML Analyst" in out
     assert "Investment Banking Analyst" not in out   # front office stays separate
+
+
+def test_front_office_target_excludes_back_office_without_industries():
+    # A role-only IB target (no industries set) must NOT pull back-office finance —
+    # the sector net is gated behind industries_set. (Locks the TS/Python alignment.)
+    jobs = [
+        {"job_title": "Investment Banking Analyst", "company": "A", "location": "Mumbai", "description_snippet": "M&A comps"},
+        {"job_title": "Fund Accountant", "company": "State Street", "location": "Hyderabad, India", "description_snippet": "nav reconciliations custody"},
+        {"job_title": "KYC Analyst", "company": "DB", "location": "Bangalore, India", "description_snippet": "kyc aml onboarding"},
+    ]
+    out = _titles(filter_and_score([dict(j) for j in jobs], {"target_roles": ["investment banker"]}))
+    assert "Investment Banking Analyst" in out
+    assert "Fund Accountant" not in out
+    assert "KYC Analyst" not in out

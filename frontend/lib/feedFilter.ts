@@ -39,14 +39,16 @@ export function roleOrFilter(
   const clean = (w: string) => w.replace(/[,()]/g, ' ')
   const parts: string[] = []
   // Phrases are high-precision → match across title, description, company.
-  for (const p of phrases.slice(0, 22)) {
+  // Cap is generous: a single finance family is ~27 phrases; truncating silently
+  // dropped neighbours the matcher kept. PostgREST handles many OR terms fine.
+  for (const p of phrases.slice(0, 50)) {
     const s = clean(p)
     parts.push(`job_title.ilike.%${s}%`)
     parts.push(`description_snippet.ilike.%${s}%`)
     parts.push(`company.ilike.%${s}%`)
   }
   // Singles are noisier → restrict to title + company (skip descriptions).
-  for (const w of singles.slice(0, 8)) {
+  for (const w of singles.slice(0, 12)) {
     const s = clean(w)
     parts.push(`job_title.ilike.%${s}%`)
     parts.push(`company.ilike.%${s}%`)

@@ -188,7 +188,11 @@ export function expandRoleKeywords(
     }
   }
 
-  // Sector net only when the user EXPLICITLY set industries (domain-search mode).
+  // Sector net only when the user EXPLICITLY set industries — this MIRRORS the
+  // Python matcher, whose hard filter only uses the sector net when
+  // `industries_set` is true (`role_pass or (industries_set and sector_hit)`).
+  // Adding it for a role alone would make the read-guard broader than the matcher
+  // (showing back-office finance the matcher drops for a role-only IB user).
   for (const ind of industries || []) {
     const key = (ind || '').trim().toLowerCase()
     if (SECTORS[key]) sectors.add(key)
@@ -197,8 +201,7 @@ export function expandRoleKeywords(
     else if (key.includes('health') || key.includes('pharma')) sectors.add('healthcare')
     else if (key.includes('commerce') || key.includes('retail')) sectors.add('ecommerce')
   }
-  const industriesSet = (industries || []).length > 0
-  if (industriesSet) {
+  if ((industries || []).length > 0) {
     Array.from(sectors).forEach(s => (SECTORS[s] || []).forEach(kw => {
       if (kw.includes(' ')) phrases.add(kw)
       else if (!AMBIGUOUS.has(kw)) singles.add(kw)

@@ -120,6 +120,11 @@ export default function DashboardClient({
       if (job?.is_new) setNNew(n => Math.max(0, n - 1))
       if (updates.is_applied) setNApplied(n => n + 1)
     }
+    // In the Saved view, un-saving a job should drop it from the list + count.
+    if (scope === 'saved' && updates.is_saved === false) {
+      setJobs(prev => prev.filter(j => j.id !== id))
+      setQueryTotal(t => Math.max(0, t - 1))
+    }
   }
 
   const filtered = jobs.filter(job => {

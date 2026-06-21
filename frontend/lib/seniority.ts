@@ -36,26 +36,45 @@ function levelFromYears(years: number | null): Level | null {
 }
 
 export function seniorityFromText(text: string): { years: number | null; level: Level | null; label: string } {
-  const low = ` ${(text || '').toLowerCase().replace(/\s+/g, ' ')} `
+  const full = ` ${(text || '').toLowerCase().replace(/\s+/g, ' ')} `
+  // Title/level cues only from the HEADER region (top ~500 chars) — that's where
+  // the candidate's own current title lives. Scanning the whole doc fires on
+  // "reported to the MD", "senior stakeholders", etc. and inflates the level.
+  const head = full.slice(0, 520)
 
-  // Years: take the largest "<n> years" / "<n>+ years" mention.
+  // Years: prefer an explicit experience phrase ("8+ years of experience",
+  // "7 years in investment banking"). Only fall back to a bare "N years" if no
+  // experience phrase exists — and cap it, since résumé prose is full of stray
+  // durations ("over 3 years", "10-year initiative").
   let years: number | null = null
-  for (const m of low.matchAll(/(\d{1,2})\s*\+?\s*years?/g)) {
+  for (const m of full.matchAll(/(\d{1,2})\s*\+?\s*years?(?:\s+of)?\s+(?:experience|exp\b|in\s)/g)) {
     const n = parseInt(m[1], 10)
     if (!isNaN(n) && (years == null || n > years)) years = n
   }
+  if (years == null) {
+    // No clear experience phrase — take the largest bare "N years" but cap at 10
+    // so a stray big number can't push someone to director.
+    for (const m of head.matchAll(/(\d{1,2})\s*\+?\s*years?/g)) {
+      const n = Math.min(parseInt(m[1], 10), 10)
+      if (!isNaN(n) && (years == null || n > years)) years = n
+    }
+  }
 
-  // Title cue: highest rung present.
   let titleLevel: Level | null = null
   for (const [lvl, cues] of TITLE_CUES) {
-    if (cues.some(c => low.includes(c))) { titleLevel = lvl; break }
+    if (cues.some(c => head.includes(c))) { titleLevel = lvl; break }
   }
 
   const yearLevel = levelFromYears(years)
-  // Take the more senior of the two signals.
-  let level: Level | null = null
-  for (const cand of [titleLevel, yearLevel]) {
-    if (cand && (!level || RANK[cand] > RANK[level])) level = cand
+  // Reconcile: if the title cue and the years disagree by MORE than one rung,
+  // trust the years (a single stray title word shouldn't override). Otherwise
+  // take the more senior of the two.
+  let level: Level | null = titleLevel
+  if (titleLevel && yearLevel) {
+    if (Math.abs(RANK[titleLevel] - RANK[yearLevel]) > 1) level = yearLevel
+    else level = RANK[titleLevel] >= RANK[yearLevel] ? titleLevel : yearLevel
+  } else {
+    level = titleLevel || yearLevel
   }
 
   const label = level

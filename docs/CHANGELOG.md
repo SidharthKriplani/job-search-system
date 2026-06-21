@@ -4,6 +4,31 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (k) — audit fixes (résumé/seniority/guard)
+
+Ran a deep audit of the recent résumé/seniority/finance/guard changes. Fixed the
+real ones; one flagged "critical" was a false alarm (verified against the code).
+- **H1 — résumé no longer corrupts target_roles.** Upload used to inject detected
+  roles into `target_roles` (full-weight, sticky, append-only). Now it only saves
+  `resume_text` + level; the résumé drives the feed via `effectiveRoles` /
+  Python `resume_roles` (down-weighted, as designed). Detected roles shown as info.
+- **H2/H3 — seniority detection hardened.** Was inflated by stray words anywhere
+  ("supported the MD" → director; "12 years of company history" → senior). Now:
+  title cues only from the résumé HEADER (~first 520 chars), years prefer an
+  "N years of experience/in …" phrase, and when title & years disagree by >1 rung
+  we trust years. Verified: Shivali → Lead; junior-who-mentions-MD → Mid.
+- **C2 — read-guard phrase cap 22 → 50.** A single finance family is ~27 phrases;
+  the old cap silently truncated real neighbours.
+- **M1 — un-saving from the Saved view** now removes the card + decrements the count.
+- **C1 (false alarm, NOT changed):** the audit claimed the TS guard hides back-office
+  finance the Python matcher keeps. Checked `filter.py:277` — Python's hard filter
+  gates the sector net behind `industries_set` too, so it ALSO drops back-office for
+  a role-only IB target. TS and Python already agree; left as-is + added a test that
+  locks the front/back-office separation.
+- Tests: 18 pytest green, `tsc` clean.
+
+---
+
 ## 2026-06-22 (j) — no-profile firehose fix
 
 A profile with no target roles + no industries used to dump the entire ~40k-job
