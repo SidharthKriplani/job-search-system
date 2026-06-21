@@ -5,6 +5,48 @@ decision is reversed, add a new entry that supersedes it).
 
 ---
 
+### D15 — `tsconfig` target es2017 to kill the build-error class (2026-06-22)
+The frontend `tsconfig.json` had no `target` → defaulted to ES5, so the
+type-checker rejected every Set/Map iteration. We patched call sites twice
+(`Array.from`) before fixing the root cause: set `target: es2017` +
+`downlevelIteration`. **Lesson:** fix the config, not the symptom. Verified with a
+real `tsc --noEmit` run (0 errors) — brace-counting is not a build check.
+
+### D14 — Enforce the role at feed READ time, not just at scrape time (2026-06-22)
+`match_score` is computed by the async backend; the feed page reads stored rows,
+so a profile change shows stale jobs until a re-filter runs. We added a read-time
+guard (`frontend/lib/feedFilter.ts` + `roleGraph.ts`) that filters the feed query
+itself to the role's neighbourhood/sector keywords. **Why:** correctness must not
+depend on backend timing. **Precision:** distinctive SINGLE words match
+title+company only; full PHRASES match title+desc+company; ambiguous words
+(equity/capital/trading…) only count inside a phrase — so "Trading Systems
+Engineer" can't slip into a finance feed.
+
+### D13 — Curated role-family graph + sector layer; field-dependent (2026-06-22)
+Roles are a weighted NEIGHBOURHOOD, not a point (`utils/role_graph.py`). Curated
+(not LLM) because it's transparent and doubles as the seed of the competence-engine
+moat. **Field-dependent:** finance auto-activates a sector keyword net (titles are
+non-standard); tech does not (titles are standardised → the title graph carries it).
+Sector is its own axis (Industries field) so "any finance role" works. LLM expansion
+is the eventual upgrade (D9 lineage). The TS read-guard mirrors the Python graph —
+kept roughly in sync by hand (acceptable: guard is a coarse net, backend is truth).
+
+### D12 — LinkedIn connection graph: user CSV import only, no API/scraping (2026-06-21)
+Deep research verdict: no worldwide compliant API exposes a member's connection
+graph (DMA API is EU-only; Connections API is Partner-locked). OSS scrapers
+(tomquirk/linkedin-api, StaffSpy) violate LinkedIn §8.2 and risk bans; Proxycurl was
+sued shut (2025). **Decision:** the user's own `Connections.csv` export is the only
+consented path. Email is opt-in (~70% blank) → match on name + company. This is
+also how every legit relationship-intelligence vendor does it.
+
+### D11 — India-default location filtering (2026-06-22)
+This is an India-focused product, so the overseas-drop applies even when the user
+hasn't set a location (previously it only applied with locations set, so the feed
+filled with US/Mexico/London jobs). India / remote / any preferred location always
+win. Heuristic foreign-hint list (full names, not 2-letter codes) to avoid nuking
+Indian listings. Trade-off: surfaces India coverage scarcity honestly rather than
+masking it with foreign noise.
+
 ### D10 — Own the layer; OSS only as commodity plumbing (2026-06-20)
 Build the product (the automation, the competence engine, the integration fabric,
 the data, the UX) **ourselves, in our own repos** — do NOT depend on third-party

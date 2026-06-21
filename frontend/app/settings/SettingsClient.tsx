@@ -131,7 +131,7 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
     <div className="flex min-h-screen">
       <Sidebar />
 
-      <main className="flex-1 p-6 max-w-2xl">
+      <main className="flex-1 max-w-2xl w-full px-4 pt-20 pb-24 md:p-6">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Configure your search profile — scrapers use these daily.</p>

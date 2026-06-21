@@ -5,6 +5,22 @@ report. Newest first.
 
 ---
 
+## 2026-06-22 — Real-toolchain verification pass
+**Scope:** stopped trusting brace-counts; installed deps in the sandbox and ran the
+actual compilers/imports + filter edge-cases.
+**Findings:**
+- `tsc --noEmit` over the whole frontend → **0 errors** (the exact check Vercel was
+  failing on; green after the `tsconfig` target fix, D15).
+- All 18 Python modules import cleanly (3 initial failures were sandbox-missing libs).
+- **2 real crash bugs fixed:** `filter_and_score` / `deduplicate_across_sources`
+  threw on NULL job fields and on NULL profile fields (`target_roles`/`industries`/
+  `locations`) — the real state for new-signup rows from the DB trigger — silently
+  giving new users an empty feed. Null-guarded; 8 nasty-input cases now pass clean.
+**Can't verify from sandbox (need live data/secrets):** real Supabase queries/RLS,
+Gmail parser on real emails, end-to-end GitHub Action (the non-fatal exit-code-1).
+
+---
+
 ## 2026-06-21 — Deep multi-pass audit (v2)
 **Scope:** three parallel deep passes — (1) frontend data-flow/auth/UX,
 (2) Python pipeline (ingest/filter/main/supabase), (3) data contracts + schema +

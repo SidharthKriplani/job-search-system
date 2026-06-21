@@ -2,24 +2,37 @@
 
 How to deploy, run, and fix the things we've already hit.
 
+**Local repo path:** `~/Documents/Professional/BreakLabs/career-os/job-search-system`
+_(moved 2026-06-22 from `…/GitHub/upskill platforms (4)/job-search-system`)._
+
 ## Architecture (one diagram)
 
 ```
-GitHub Actions (daily 6am IST / 00:30 UTC, or manual / "Refresh Now")
-  └─ python main.py
-       ├─ ingest.collect_jobs()      ← ATS APIs (Greenhouse/Lever/Ashby) + aggregators   [once per run]
-       ├─ per user: + Gmail parse → filter_and_score → dedup → upsert_jobs → digest
+GitHub Actions
+  ├─ daily.yml   (cron window / manual / "Refresh Now")  → python main.py  [full scrape]
+  ├─ resync.yml  (on profile save via /api/resync)        → python main.py [RESYNC_ONLY=1, no scrape]
+  └─ harvest.yml (weekly)                                  → ingest.harvester  [refresh company lists]
+  main.py:
+       ├─ ingest.collect_jobs()      ← ATS APIs (Greenhouse/Lever/Ashby/Workday) + aggregators  [once]
+       ├─ per user: deep-copy pool + Gmail → filter_and_score (role graph + sector) → dedup → upsert → resync → digest
        └─ writes scraper_health
 Supabase (Postgres + Auth + RLS): user_profiles, gmail_tokens, job_feed,
   applications, referral_pipeline, message_templates, contacts, scraper_health
-Vercel (Next.js): /dashboard /applications /referrals /settings  + /api/scrape[/status]
+Vercel (Next.js): /dashboard /applications /referrals /settings
+  + /api/scrape[/status]  /api/resync  /api/feed (server-side search/pagination)
+Relevance: utils/role_graph.py (Python, source of truth) ↔ frontend/lib/roleGraph.ts
+  (read-guard mirror — keep roughly in sync).
 ```
 
 ## Run the scraper
 
 - **Manual (UI):** dashboard → **Refresh Now** (needs `GITHUB_DISPATCH_TOKEN`).
+  On completion the feed auto-reloads (no manual refresh).
 - **Manual (GitHub):** repo → Actions → Daily Job Scraper → Run workflow.
 - **Local:** set env vars, then `python main.py`.
+- **Resync only (no scrape):** `RESYNC_ONLY=1 TARGET_USER_ID=<uuid> python main.py`
+  — re-filters a user's stored feed to their current profile. Fired automatically
+  on profile save via `/api/resync` → `resync.yml`.
 - **Engine only (no DB):** `python -m ingest.run` — prints source counts + samples.
 
 ## Deploy
@@ -41,7 +54,8 @@ Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 
 1. Push the latest code.
 2. Run `supabase/schema.sql` in the Supabase SQL editor (idempotent; creates +
-   backfills `user_profiles`).
+   backfills `user_profiles`, tightens RLS, adds unique indexes). **Re-run it
+   whenever you pull schema changes** — it de-dupes existing rows first.
 3. Disable email confirmation: Supabase → Auth → Providers → Email (so signups
    don't get stuck).
 4. Fill in Settings (roles, locations, salary floor).
@@ -61,10 +75,23 @@ a JWT-shaped key (a plain fake key short-circuits before the httpx init).
 auth users), and make sure the user's profile `is_active = true`.
 
 **Run succeeds but very few / no jobs in the feed**
-→ Coverage gap, not a bug. The registry is US-tech-heavy; `filter_and_score`
-drops jobs that don't match the profile's target roles. Fix: add relevant
-companies to `ingest/registry.py` and/or enable Adzuna for India + broaden the
-profile.
+→ Usually coverage, not a bug. `filter_and_score` drops jobs that don't match the
+role neighbourhood, and now also drops clearly-foreign non-remote jobs by default
+(India-focused, D11). So e.g. "investment banker" can be honestly near-empty until
+India finance sources are added. Fix: add companies to `ingest/registry.py`,
+enable Adzuna India, and add India finance feeds. To see whether it's coverage vs
+a filter bug, run `python -m ingest.run` (raw counts, no filter).
+
+**Vercel build fails: "Type 'Set' can only be iterated … target 'es2015' or higher"**
+→ `frontend/tsconfig.json` must have `"target": "es2017"` + `"downlevelIteration": true`
+(D15). Without a target it defaults to ES5 and rejects Set/Map iteration. To catch
+this BEFORE pushing: `cd frontend && npm install && npx tsc --noEmit`.
+
+**A specific user sees an empty feed while others are fine**
+→ Was a crash on NULL profile fields (`target_roles`/`industries`/`locations`) for
+users whose row was created by the signup trigger (those columns NULL). Fixed with
+`or []` guards in `filter_and_score` (CHANGELOG 06-22 (c)). If it recurs, check the
+run log for a per-user exception (main.py catches and continues).
 
 **"Refresh Now" says "Scrape trigger not configured"**
 → Add `GITHUB_DISPATCH_TOKEN` in Vercel and **redeploy**.

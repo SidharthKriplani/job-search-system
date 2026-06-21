@@ -130,7 +130,7 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
   const remaining = Math.max(0, EXPECTED_SEC - elapsed)
 
   return (
-    <div className="flex flex-col items-end gap-1.5 w-60">
+    <div className="flex flex-col items-end gap-1.5 w-full sm:w-60">
       <button
         onClick={trigger}
         disabled={state === 'running'}

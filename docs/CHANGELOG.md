@@ -4,6 +4,20 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (d) — mobile-responsive
+
+- **Navigation:** the fixed 224px sidebar is now `hidden md:flex`. On mobile:
+  a fixed top bar (logo + theme toggle + sign out) and a fixed bottom tab nav
+  (4 items, icon+label). `ThemeToggle` gained a `compact` icon-only mode.
+- **Layout:** every page `<main>` → `px-4 pt-20 pb-24 md:p-6` so content clears the
+  mobile top bar + bottom nav; added `w-full`. Bottom nav respects
+  `safe-area-inset-bottom` (notch phones).
+- **Headers:** dashboard + referrals headers stack on mobile; RefreshButton is
+  `w-full sm:w-60`; referral action buttons shrink their labels on small screens.
+- Verified with a real `tsc --noEmit` (0 errors).
+
+---
+
 ## 2026-06-22 (c) — real verification pass (ran the actual toolchain)
 
 Stopped relying on brace-counts; installed deps in the sandbox and ran the real

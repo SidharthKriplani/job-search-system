@@ -103,7 +103,7 @@ export default function ApplicationsClient({ initialApplications, userId }: Prop
     <div className="flex min-h-screen">
       <Sidebar />
 
-      <main className="flex-1 p-6">
+      <main className="flex-1 w-full px-4 pt-20 pb-24 md:p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
