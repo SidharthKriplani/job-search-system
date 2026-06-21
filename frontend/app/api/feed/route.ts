@@ -28,6 +28,11 @@ export async function GET(req: Request) {
     .from('user_profiles').select('target_roles, industries').eq('user_id', user.id).maybeSingle()
   const roleFilter = roleOrFilter(prof?.target_roles, prof?.industries)
 
+  // No profile → no firehose. Return empty + a flag the UI uses to prompt setup.
+  if (!(prof?.target_roles?.length || prof?.industries?.length)) {
+    return NextResponse.json({ ok: true, jobs: [], total: 0, needsProfile: true })
+  }
+
   let query = supabase
     .from('job_feed')
     .select('*', { count: 'exact' })

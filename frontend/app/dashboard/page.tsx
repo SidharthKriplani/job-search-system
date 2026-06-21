@@ -17,6 +17,20 @@ export default async function DashboardPage() {
     .from('user_profiles').select('target_roles, industries').eq('user_id', user.id).maybeSingle()
   const roleFilter = roleOrFilter(prof?.target_roles, prof?.industries)
 
+  // If the user hasn't told us ANYTHING (no roles, no industries), do NOT dump
+  // the whole 40k-job firehose. Show a "set up your profile" state instead.
+  const needsProfile = !(prof?.target_roles?.length || prof?.industries?.length)
+  if (needsProfile) {
+    return (
+      <DashboardClient
+        initialJobs={[]} newCount={0} totalCount={0} feedLimit={FEED_LIMIT}
+        appliedCount={0} scraperHealth={[]}
+        userName={user.user_metadata?.full_name || user.email || 'there'}
+        availableSources={['All']} needsProfile
+      />
+    )
+  }
+
   const feedQ    = () => {
     let q = supabase.from('job_feed').select('*')
       .eq('user_id', user.id).eq('is_dismissed', false).eq('is_applied', false)

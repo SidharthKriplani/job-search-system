@@ -22,11 +22,12 @@ interface Props {
   scraperHealth: ScraperHealth[]
   userName: string
   availableSources?: string[]
+  needsProfile?: boolean
 }
 
 export default function DashboardClient({
   initialJobs, newCount, totalCount, feedLimit, appliedCount, scraperHealth, userName,
-  availableSources,
+  availableSources, needsProfile,
 }: Props) {
   const [jobs, setJobs]           = useState<Job[]>(initialJobs)
   const [search, setSearch]       = useState('')
@@ -129,6 +130,30 @@ export default function DashboardClient({
 
   const errorCount = scraperHealth.filter(h => h.status === 'error').length
   const warnCount  = scraperHealth.filter(h => h.status === 'warning').length
+
+  // No profile yet → guide setup instead of dumping the whole job database.
+  if (needsProfile) {
+    return (
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <main className="flex-1 max-w-4xl w-full px-4 pt-20 pb-24 md:p-6">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6">Job Feed</h1>
+          <div className="text-center py-20 px-6 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+            <Search className="w-10 h-10 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+            <p className="font-semibold text-slate-800 dark:text-slate-100">Tell us what you're looking for</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-md mx-auto">
+              Your feed is personalised to your roles — so we don't flood you with everything.
+              Upload your résumé (we'll detect your roles &amp; level), or add target roles in Settings.
+            </p>
+            <a href="/settings"
+               className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
+              Go to Settings →
+            </a>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen">

@@ -4,6 +4,17 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (j) — no-profile firehose fix
+
+A profile with no target roles + no industries used to dump the entire ~40k-job
+database (the "investment-banker shows 39k engineers" rage moment — root cause was
+an empty profile, not bad matching). Now: `page.tsx` + `/api/feed` detect an empty
+profile and return nothing + a `needsProfile` flag; the dashboard shows a clean
+"Tell us what you're looking for — upload your résumé or add roles in Settings"
+state with a CTA. The feed can never show the unfiltered firehose again.
+
+---
+
 ## 2026-06-22 (i) — safety net: test suite + CI gate + staging discipline
 
 The regression net that should have existed all along.
