@@ -4,6 +4,25 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (c) — real verification pass (ran the actual toolchain)
+
+Stopped relying on brace-counts; installed deps in the sandbox and ran the real
+compilers. Found + fixed 2 genuine runtime crashes.
+
+- Ran `tsc --noEmit` over the whole frontend → 0 errors (this is the exact check
+  that kept failing on Vercel; green now with the tsconfig target fix).
+- Imported all 18 Python modules → clean (the 3 that failed were sandbox-missing
+  libs only).
+- **Filter crash bugs (fixed):** `filter_and_score` / `deduplicate_across_sources`
+  threw on (a) a job with a NULL `job_title`/`company`/`location`, and (b) a
+  profile whose `target_roles`/`locations`/`industries` is NULL — which is the
+  real state for a freshly-signed-up user (the DB trigger inserts only
+  id/email/name, leaving those columns NULL). `main.py` catches per-user errors
+  and continues, so this silently gave new users an empty feed. Guarded every
+  field with `or []` / `or ""`. Verified: 8 nasty-input cases, 0 crashes.
+
+---
+
 ## 2026-06-22 (b) — precision pass: India-default + tighter read-guard + tsconfig
 
 - **Root-cause fix for the repeated build failures:** `frontend/tsconfig.json` had

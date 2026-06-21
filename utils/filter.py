@@ -191,8 +191,12 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     keyword in the JD counts, and industry/skill terms in the JD raise the score.
     Returns jobs sorted by match_score desc.
     """
-    target_roles      = [r.lower() for r in profile.get("target_roles", [])]
-    industries        = [i.lower() for i in profile.get("industries", [])]
+    # NOTE: `.get(k, [])` returns None when the column exists but is NULL (the case
+    # for freshly-signed-up users whose profile row was created by the DB trigger
+    # without these fields). Use `or []` so a NULL never crashes the whole user's
+    # run (which would silently leave them with no feed).
+    target_roles      = [r.lower() for r in (profile.get("target_roles") or [])]
+    industries        = [i.lower() for i in (profile.get("industries") or [])]
 
     # ── Role-family expansion (the neighbourhood graph) ──
     # Each target role activates a weighted neighbourhood: target = 1.0, adjacent
@@ -211,8 +215,8 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     sect_kw        = role_graph.sector_keywords(sectors)
     industries_set = bool(industries)
 
-    locations         = [l.lower() for l in profile.get("locations", [])]
-    exclude_companies = [c.lower() for c in profile.get("exclude_companies", [])]
+    locations         = [l.lower() for l in (profile.get("locations") or [])]
+    exclude_companies = [c.lower() for c in (profile.get("exclude_companies") or [])]
     salary_floor      = profile.get("salary_floor", 0) or 0
     resume_stems      = _stems(profile.get("resume_text") or "")
     has_resume        = len(resume_stems) >= 12
@@ -221,9 +225,9 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     results: List[Dict] = []
 
     for job in jobs:
-        title    = job.get("job_title", "").lower()
-        company  = job.get("company", "").lower()
-        location = job.get("location", "").lower()
+        title    = (job.get("job_title") or "").lower()
+        company  = (job.get("company") or "").lower()
+        location = (job.get("location") or "").lower()
         jd       = (job.get("description_snippet") or "").lower()
         salary_str = job.get("salary_range") or ""
         title_stems = _mstems(title)            # role-matching tokens (keep short words)
@@ -370,8 +374,8 @@ def deduplicate_across_sources(jobs: List[Dict]) -> List[Dict]:
 
     for job in jobs:
         key = (
-            re.sub(r'[^a-z0-9 ]', '', job.get("job_title", "").lower()).strip(),
-            re.sub(r'[^a-z0-9 ]', '', job.get("company", "").lower()).strip(),
+            re.sub(r'[^a-z0-9 ]', '', (job.get("job_title") or "").lower()).strip(),
+            re.sub(r'[^a-z0-9 ]', '', (job.get("company") or "").lower()).strip(),
         )
         if key not in seen:
             seen[key] = job
