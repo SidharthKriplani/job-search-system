@@ -342,6 +342,16 @@ def _edge_weight(fam: str, a: str, b: str) -> float:
     return spec.get("default", _DEFAULT_W)
 
 
+# Finance is ONE connected labour market for a candidate — front office (IB/M&A),
+# middle office (risk/control) and back office (ops/fund accounting) are adjacent
+# career moves, not separate worlds. So a finance role also activates the OTHER
+# finance families at a reduced cross-weight: within-family neighbours still rank
+# highest, but the whole finance-analytics space is reachable (an IB-research
+# résumé surfaces credit research / FP&A / ops analyst, not an empty feed).
+_FINANCE_FAMILIES = {"finance_ib", "finance_ops", "finance_risk"}
+_CROSS_FINANCE_WEIGHT = 0.45   # > ROLE_PASS, so they appear but ranked below own family
+
+
 def expand_roles(roles: Iterable[str]) -> Dict[str, float]:
     """Expand target roles into a weighted neighbourhood. Target = 1.0; neighbours
     decay by edge weight. Unknown roles map to themselves at 1.0 (caller falls back
@@ -358,6 +368,11 @@ def expand_roles(roles: Iterable[str]) -> Dict[str, float]:
                 continue
             w = _edge_weight(fam, canon, member)
             out[member] = max(out.get(member, 0.0), w)
+        # Cross-link the finance families (front/middle/back office are connected).
+        if fam in _FINANCE_FAMILIES:
+            for other in _FINANCE_FAMILIES - {fam}:
+                for member in _FAMILIES[other]["members"]:
+                    out[member] = max(out.get(member, 0.0), _CROSS_FINANCE_WEIGHT)
     return out
 
 
