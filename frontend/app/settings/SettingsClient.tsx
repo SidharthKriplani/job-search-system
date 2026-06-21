@@ -8,6 +8,7 @@ import { CheckCircle, Mail, Save, Plus, X, Upload, Sparkles } from 'lucide-react
 import clsx from 'clsx'
 import { parseResumeFile } from '@/lib/parseResume'
 import { rolesFromText } from '@/lib/roleGraph'
+import { seniorityFromText } from '@/lib/seniority'
 
 const titleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase())
 
@@ -104,6 +105,7 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
       salary_floor:      profile.salary_floor || 0,
       experience_years:  profile.experience_years || 0,
       resume_text:       (profile as any).resume_text || null,
+      seniority_level:   (profile as any).seniority_level || null,
       is_active:         true,
     }
     const { error: upsertError } = await supabase
@@ -131,13 +133,15 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
   const [parsing, setParsing]   = useState(false)
   const [parseMsg, setParseMsg] = useState<string | null>(null)
   const [detected, setDetected] = useState<string[]>([])
+  const [seniorityLabel, setSeniorityLabel] = useState<string | null>(null)
 
   const onResumeFile = async (file: File) => {
     setParsing(true); setParseMsg(null); setDetected([])
     try {
       const text = await parseResumeFile(file)
-      // Detect roles and merge into Target Roles (deduped, case-insensitive).
+      // Detect roles + seniority and merge into the profile.
       const found = rolesFromText(text)
+      const sen = seniorityFromText(text)
       setProfile(p => {
         const existing = ((p.target_roles as string[]) || [])
         const lower = new Set(existing.map(r => r.toLowerCase()))
@@ -146,14 +150,16 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
           ...p,
           resume_text: text as any,
           target_roles: [...existing, ...added] as any,
+          ...(sen.level ? { seniority_level: sen.level as any } : {}),
+          ...(sen.years != null ? { experience_years: sen.years as any } : {}),
         }
       })
       setDetected(found)
-      setParseMsg(
-        found.length
-          ? `Parsed ${text.length.toLocaleString()} chars · added ${found.length} role${found.length > 1 ? 's' : ''} from your résumé.`
-          : `Parsed ${text.length.toLocaleString()} chars · no clear roles detected — add your target roles manually.`
-      )
+      setSeniorityLabel(sen.label || null)
+      const bits = [`Parsed ${text.length.toLocaleString()} chars`]
+      if (found.length) bits.push(`added ${found.length} role${found.length > 1 ? 's' : ''}`)
+      if (sen.label) bits.push(`detected ${sen.label}`)
+      setParseMsg(bits.join(' · ') + (found.length ? '.' : ' — add your target roles manually.'))
     } catch (e: any) {
       setParseMsg(e?.message || 'Could not parse that file.')
     } finally {
@@ -305,8 +311,13 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
                 <Sparkles className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" /> {parseMsg}
               </p>
             )}
-            {detected.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
+            {(detected.length > 0 || seniorityLabel) && (
+              <div className="flex flex-wrap gap-1.5 mb-2 items-center">
+                {seniorityLabel && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    🎯 {seniorityLabel}
+                  </span>
+                )}
                 {detected.map(r => (
                   <span key={r} className="px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
                     {titleCase(r)}

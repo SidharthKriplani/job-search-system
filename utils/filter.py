@@ -178,8 +178,9 @@ _FOREIGN_HINTS = (
 # ─── Main filter + scorer (profile-driven, JD-aware, résumé-aware) ────────────
 
 # Component weights. With a résumé, the résumé drives the score; without, role fit does.
-_WEIGHTS_RESUME    = dict(title=0.20, jd=0.15, ind=0.10, loc=0.15, sal=0.08, rec=0.07, resume=0.25)
-_WEIGHTS_NO_RESUME = dict(title=0.30, jd=0.25, ind=0.15, loc=0.15, sal=0.08, rec=0.07, resume=0.0)
+# `lvl` = seniority-fit (rank the job to the user's level).
+_WEIGHTS_RESUME    = dict(title=0.18, jd=0.13, ind=0.09, loc=0.13, sal=0.06, rec=0.06, resume=0.23, lvl=0.12)
+_WEIGHTS_NO_RESUME = dict(title=0.28, jd=0.22, ind=0.13, loc=0.13, sal=0.06, rec=0.06, resume=0.0, lvl=0.12)
 
 
 def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
@@ -228,6 +229,7 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     salary_floor      = profile.get("salary_floor", 0) or 0
     resume_stems      = _stems(profile.get("resume_text") or "")
     has_resume        = len(resume_stems) >= 12
+    user_rank         = role_graph.user_level(profile)   # seniority rank (1–5) or None
     W                 = _WEIGHTS_RESUME if has_resume else _WEIGHTS_NO_RESUME
 
     results: List[Dict] = []
@@ -356,10 +358,20 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
                 top3 = sorted(matched, key=len, reverse=True)[:3]
                 reasons.insert(0, "Résumé match: " + ", ".join(top3))
 
+        # 8. Seniority fit (0..1) — rank the job to the user's level. Overqualified
+        # roles (e.g. a Team Lead seeing Analyst postings) get pushed down.
+        job_rank = role_graph.job_level(title)
+        lvl_score = role_graph.level_fit(user_rank, job_rank)
+        if user_rank and job_rank:
+            if abs(job_rank - user_rank) <= 1:
+                reasons.append("Right seniority")
+            elif job_rank < user_rank - 1:
+                reasons.append("Below your level")
+
         score = (
             W["title"] * title_score + W["jd"] * jd_score + W["ind"] * ind_score +
             W["loc"] * loc_score + W["sal"] * sal_score + W["rec"] * rec_score +
-            W["resume"] * resume_score
+            W["resume"] * resume_score + W["lvl"] * lvl_score
         )
 
         job["match_score"]   = round(score, 3)

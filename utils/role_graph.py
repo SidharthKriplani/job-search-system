@@ -20,7 +20,7 @@ Public API:
   sector_keywords(sectors)       -> set[str]                   (keywords to match)
 """
 import re
-from typing import Dict, List, Set, Iterable
+from typing import Dict, List, Set, Iterable, Optional
 
 # ── Sector keyword sets (domain layer) ───────────────────────────────────────
 SECTORS: Dict[str, Set[str]] = {
@@ -392,6 +392,59 @@ def sector_keywords(sectors: Iterable[str]) -> Set[str]:
     for s in sectors or []:
         kw |= SECTORS.get(s, set())
     return kw
+
+
+# ── Seniority / rung ─────────────────────────────────────────────────────────
+# Normalised level ranks. Finance-aware: in finance "Analyst" is junior and "VP"
+# is mid-senior IC (not exec), which this mapping respects.
+LEVEL_RANK = {"entry": 1, "mid": 2, "senior": 3, "lead": 4, "director": 5}
+
+# Job-title cues → rank. Checked high→low; first match wins. Padded with spaces.
+_JOB_LEVEL_CUES = [
+    (5, ("managing director", " md ", " md,", "chief ", " cxo", "head of", "partner", "executive director", " ed ")),
+    (4, ("vice president", " vp ", " vp,", " avp", " svp", "principal", " staff ", "team lead", " lead ", "lead ", " manager", "manager ", "director")),
+    (3, ("senior", " sr ", " sr.", "specialist iii")),
+    (2, ("associate",)),
+    (1, ("analyst", "junior", " jr ", "graduate", "trainee", "intern", "entry", "fresher")),
+]
+
+def job_level(title: str) -> Optional[int]:
+    """Infer a job's seniority rank (1–5) from its title, or None if unclear."""
+    t = f" {(title or '').lower()} "
+    for rank, cues in _JOB_LEVEL_CUES:
+        if any(c in t for c in cues):
+            return rank
+    return None
+
+
+def user_level(profile: Dict) -> Optional[int]:
+    """The user's level rank from their profile: explicit `seniority_level` wins,
+    else inferred from years of experience."""
+    lvl = (profile.get("seniority_level") or "").strip().lower()
+    if lvl in LEVEL_RANK:
+        return LEVEL_RANK[lvl]
+    yrs = profile.get("experience_years")
+    try:
+        yrs = float(yrs)
+    except (TypeError, ValueError):
+        return None
+    if yrs <= 1:  return 1
+    if yrs <= 4:  return 2
+    if yrs <= 8:  return 3
+    if yrs <= 12: return 4
+    return 5
+
+
+def level_fit(user_rank: Optional[int], job_rank: Optional[int]) -> float:
+    """0..1 how well a job's level fits the user. Overqualified (job below user)
+    is penalised harder than a stretch (job above) — a Team Lead seeing Analyst
+    roles is the annoying case. Neutral (0.7) when either level is unknown."""
+    if not user_rank or not job_rank:
+        return 0.7
+    diff = job_rank - user_rank
+    if diff >= 0:
+        return max(0.5, 1.0 - 0.15 * diff)   # stretch up: mild
+    return max(0.15, 1.0 + 0.30 * diff)      # over-qualified: steep
 
 
 def roles_from_text(text: str, limit: int = 6) -> List[str]:

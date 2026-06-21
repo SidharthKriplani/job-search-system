@@ -4,6 +4,22 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (h) — seniority / rung awareness (explicit in the résumé-upload flow)
+
+Résumé upload now detects your LEVEL, shows it, and ranks the feed to it.
+- `frontend/lib/seniority.ts` `seniorityFromText` — pulls years + the highest
+  title rung (Analyst→Associate→Senior→Lead/VP→Director/MD) from the résumé. On
+  upload, Settings shows a "🎯 Lead / VP · ~8 yrs" chip and stores `seniority_level`
+  + `experience_years`.
+- `utils/role_graph.py` — `job_level(title)`, `user_level(profile)`, `level_fit()`
+  (over-qualified penalised harder than a stretch). `filter.py` adds a `lvl`
+  scoring component (weight 0.12) + reasons "Right seniority" / "Below your level".
+- Schema: `seniority_level TEXT` (idempotent ADD COLUMN — re-run schema.sql).
+- Verified on a real IB résumé (Shivali, Team Lead/8 yrs → level Lead): VP-level
+  M&A role tops the feed; Analyst role pushed below VP/MD. `tsc` clean.
+
+---
+
 ## 2026-06-22 (g) — back-office + middle-office finance role families
 
 The 18 Workday boards added are India-GCC-heavy → mostly MIDDLE + BACK office.

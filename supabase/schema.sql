@@ -44,6 +44,9 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_password TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS resume_text     TEXT;
 -- Last manual "Refresh Now" time — used to rate-limit non-admin refreshes.
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_manual_refresh TIMESTAMPTZ;
+-- Seniority level (entry|mid|senior|lead|director) — detected from the résumé,
+-- used to rank jobs to the user's rung (a Team Lead shouldn't see Analyst roles).
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS seniority_level TEXT;
 
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 

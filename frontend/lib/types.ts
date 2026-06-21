@@ -35,6 +35,7 @@ export interface UserProfile {
   is_active: boolean
   gmail_connected: boolean
   resume_text: string | null
+  seniority_level: string | null
   created_at: string
   updated_at: string
 }
