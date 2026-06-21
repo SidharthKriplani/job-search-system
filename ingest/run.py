@@ -23,7 +23,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Tuple
 
-from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday
+from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters
 from .dedup import deduplicate
 from . import registry
 
@@ -51,6 +51,15 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]]]]:
     for tenant, wd, site, disp in registry.WORKDAY:
         units.append(("workday", tenant,
                       lambda t=tenant, w=wd, st=site, d=disp: workday.fetch_company(t, w, st, d, cap)))
+
+    # Oracle Recruiting Cloud (banks/finance) + SmartRecruiters — one unit each.
+    ocap = int(os.environ.get("ORACLE_MAX_PER_COMPANY", "200"))
+    for host, site, disp in registry.ORACLE:
+        units.append(("oracle", host,
+                      lambda h=host, st=site, d=disp: oracle.fetch_company(h, st, d, ocap)))
+    for cid, disp in registry.SMARTRECRUITERS:
+        units.append(("smartrecruiters", cid,
+                      lambda c=cid, d=disp: smartrecruiters.fetch_company(c, d)))
 
     # Broad engines run as single units (they internally cover many terms/sources).
     units.append(("jobspy", "jobspy", jobspy.fetch))

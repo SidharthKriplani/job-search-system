@@ -4,6 +4,25 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-23 (b) — two new ATS-platform connectors: Oracle + SmartRecruiters
+
+Per-PLATFORM connectors (not per-company scrapers) — each adds many finance firms.
+- **Oracle Recruiting Cloud** (`ingest/connectors/oracle.py`): public JSON,
+  `keyword=India`. Registry: EXL (124 India roles!), JPMorgan (Wholesale Credit
+  Risk Analyst, FP&A, Valuation Controller — Mumbai), Jefferies. Verified live
+  through our connector; working apply URLs.
+- **SmartRecruiters** (`ingest/connectors/smartrecruiters.py`): public API,
+  `country=in`. Registry: WNS (Credit/Market-Research analysts), NielsenIQ
+  (Analyst-Banking, data science). Verified live.
+- Wired into `ingest/run.py` as concurrent units; `SOURCE_LABELS` updated.
+- Probe verdict logged: the Darwinbox IB-research KPOs (Evalueserve/Acuity/CRISIL)
+  are behind a Cloudflare captcha — NOT HTTP-pullable; Naukri/Gmail is their only
+  route. Moody's/EY (SuccessFactors), MSCI (iCIMS), BNP (Taleo) also not cleanly
+  pullable.
+- Tests: 22 green (added registry-shape guards for the new connectors).
+
+---
+
 ## 2026-06-23 — India-targeted Workday fetch + bank IB-research GCCs
 
 The real coverage fix for Shivali's niche (offshore IB-research/analytics support).

@@ -143,6 +143,8 @@ export const STAGE_COLORS: Record<ApplicationStage, string> = {
 
 export const SOURCE_LABELS: Record<string, string> = {
   workday:          'Workday',
+  oracle:           'Oracle',
+  smartrecruiters:  'SmartRecruiters',
   greenhouse:       'Greenhouse',
   lever:            'Lever',
   iimjobs:          'iimjobs',

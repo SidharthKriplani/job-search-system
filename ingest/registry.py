@@ -187,6 +187,23 @@ WORKDAY = [
 ]
 
 
+# ── Oracle Recruiting Cloud tenants: (host, site_number, display) ──────────────
+# Banks/finance on Oracle ORC (verified India roles incl. equity research, FP&A,
+# valuation control). One connector, public JSON, keyword=India.
+ORACLE = [
+    ("fa-ewjt-saasfaprod1.fa.ocs.oraclecloud.com", "CX_2",    "EXL"),        # ~147 India analysts
+    ("jpmc.fa.oraclecloud.com",                    "CX_1001", "JPMorgan"),   # FP&A, Valuation Controller (Mumbai)
+    ("hdid.fa.us2.oraclecloud.com",                "CX_1",    "Jefferies"),  # Equity Research Associate (Mumbai)
+]
+
+
+# ── SmartRecruiters companies: (company_id, display) ──────────────────────────
+SMARTRECRUITERS = [
+    ("WNSGlobalServices144", "WNS"),         # credit/market-research analysts, India
+    ("NielsenIQ",            "NielsenIQ"),    # Analyst-Banking, data science, India
+]
+
+
 # ── Harvested lists (our own, from ingest/harvester.py via Common Crawl) ───────
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Cap how many harvested boards the daily run uses (sorted by job count), so the

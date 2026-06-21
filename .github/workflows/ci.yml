@@ -22,7 +22,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install test deps
-        run: pip install pytest
+        run: pip install pytest requests
       - name: Run tests
         run: python -m pytest -q
 
