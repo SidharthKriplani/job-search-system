@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 
 # A weighted role match must clear this to count as relevant. A close neighbour
 # (e.g. ML Engineer ≈ Data Scientist, weight ~0.6–0.9) clears it; a generic-only
-# or very distant match does not.
-ROLE_PASS = 0.33
+# or very distant match does not. At 0.4, a single shared word out of a 3-word
+# role (1/3 ≈ 0.33) no longer qualifies — so "Premium Banking" stops matching
+# "investment banking analyst" on the word "banking" alone.
+ROLE_PASS = 0.40
 
 # ─── Salary parsing ──────────────────────────────────────────────────────────
 

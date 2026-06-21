@@ -175,6 +175,15 @@ WORKDAY = [
     ("fmr",               "wd1",  "FidelityCareers",              "Fidelity"),        # ~27
     ("capitalone",        "wd12", "Capital_One",                  "Capital One"),     # ~20
     ("fis",               "wd5",  "SearchJobs",                   "FIS"),             # ~3
+
+    # ── Bank IB-research / markets-analytics GCCs in India (verified 2026-06-22).
+    # These hire the offshore IB-research / capital-markets / risk-analytics roles
+    # (the KPO/GCC support function). Indian-HQ KPOs (Evalueserve, Acuity, CRISIL,
+    # SG Analytics) are on Darwinbox/custom with NO public API → Naukri/Gmail route.
+    ("citi",  "wd5",  "2",                    "Citi"),                 # ~33 India/page, strong analytics
+    ("ms",    "wd5",  "External",             "Morgan Stanley"),       # ~37 India/page, QR/capital markets
+    ("ghr",   "wd1",  "lateral-ba_continuum", "Bank of America"),      # Continuum India GCC
+    ("factset","wd108","FactSetCareers",      "FactSet"),              # financial-data India (Hyderabad)
 ]
 
 

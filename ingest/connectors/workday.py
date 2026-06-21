@@ -22,6 +22,12 @@ from ..registry import WORKDAY
 logger = logging.getLogger(__name__)
 SOURCE = "workday"
 PAGE = 20
+# India-focused product: search the board for India directly instead of fetching
+# the first N GLOBAL jobs and discarding the rest. On a huge board (e.g. Citi has
+# thousands of global jobs, ~170 in India), the global-first approach never
+# reached the India roles. `searchText` is a loose ranker, so India jobs come back
+# first; the downstream location filter still drops any stray non-India result.
+SEARCH_TEXT = os.environ.get("WORKDAY_SEARCH_TEXT", "India")
 
 
 def fetch_company(tenant: str, wd: str, site: str, display: str, cap: int) -> List[Dict]:
@@ -31,7 +37,7 @@ def fetch_company(tenant: str, wd: str, site: str, display: str, cap: int) -> Li
     offset = 0
     while offset < cap:
         data = http_json(api, method="POST",
-                         json_body={"appliedFacets": {}, "limit": PAGE, "offset": offset, "searchText": ""})
+                         json_body={"appliedFacets": {}, "limit": PAGE, "offset": offset, "searchText": SEARCH_TEXT})
         if not data:
             break
         postings = data.get("jobPostings", [])

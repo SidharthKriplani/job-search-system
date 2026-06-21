@@ -272,12 +272,27 @@ export default function DashboardClient({
             <p className="text-sm">Searching your feed…</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-slate-400 dark:text-slate-500">
+          <div className="text-center py-16 px-6 text-slate-400 dark:text-slate-500">
             <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">{isFiltered ? 'No jobs match these filters' : 'No jobs yet'}</p>
-            <p className="text-sm mt-1">
-              {isFiltered ? 'Try clearing the search or source filter.' : 'Runs daily at 6am IST — or hit “Refresh Now” above'}
-            </p>
+            {isFiltered ? (
+              <>
+                <p className="font-medium text-slate-600 dark:text-slate-300">No jobs match these filters</p>
+                <p className="text-sm mt-1">Try clearing the search or source filter.</p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium text-slate-600 dark:text-slate-300">No jobs match your roles yet</p>
+                <p className="text-sm mt-1.5 max-w-md mx-auto">
+                  We haven't found roles matching your profile in our current sources.
+                  Niche / front-office roles (e.g. investment banking, consulting) mostly come from
+                  <strong> Naukri &amp; iimjobs</strong> — connect Gmail in Settings to pull those alerts.
+                  Or broaden your target roles.
+                </p>
+                <a href="/settings" className="inline-block mt-4 text-indigo-600 dark:text-indigo-400 text-sm hover:underline">
+                  Adjust roles / connect Gmail →
+                </a>
+              </>
+            )}
           </div>
         ) : (
           <>

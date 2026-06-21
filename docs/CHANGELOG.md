@@ -4,6 +4,42 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-23 — India-targeted Workday fetch + bank IB-research GCCs
+
+The real coverage fix for Shivali's niche (offshore IB-research/analytics support).
+- **Workday connector now searches India directly** (`searchText="India"` instead
+  of `""`). It was fetching the first ~40 GLOBAL jobs and discarding non-India, so
+  on huge boards the India roles were never reached (Citi returned 0 India). After
+  the fix: Citi 0→33 India/page, Morgan Stanley 8→37, State Street 15 — multiplies
+  India yield across EVERY Workday tenant. Configurable via `WORKDAY_SEARCH_TEXT`.
+- **Added 4 verified bank IB-research/markets-analytics GCCs**: Citi (wd5/2),
+  Morgan Stanley (wd5/External), Bank of America Continuum India (ghr/wd1), FactSet
+  (wd108). Verified through our own connector — Citi/MS return real India
+  capital-markets / risk-analytics / FP&A roles (her market).
+- **Honest limit:** the Indian-HQ IB-research KPOs (Evalueserve, Acuity, CRISIL,
+  SG Analytics, Aranca, TresVista) are on Darwinbox/custom with NO public API —
+  they need the Naukri/Gmail channel, not ATS pulls. Logged for the next lever.
+
+---
+
+## 2026-06-22 (l) — honest empty state + IB precision; coverage finding
+
+- **Coverage finding (the key one):** probed our live finance Workday sources for
+  India — they return retail-banking sales, ops, risk, and tech (Sales Manager–
+  Premium Banking, Credit Risk AVP, Liquidity Ops, Data Scientist-Banking), NOT
+  front-office Investment Banking (M&A/ECM/equity research). So an "investment
+  banking analyst" target correctly returns ~0 — those roles aren't in our ATS/
+  Workday pool at all; they live on iimjobs/Naukri (Gmail channel). This is a
+  DATA gap, not a matching bug.
+- **Empty state rewritten:** when a profiled user has 0 matches, the feed now says
+  why (niche/front-office roles come from Naukri/iimjobs → connect Gmail) with a
+  Settings link, instead of the useless "runs daily at 6am".
+- **Precision:** `ROLE_PASS` 0.33 → 0.40 so a single shared word out of a 3-word
+  role no longer qualifies ("Premium Banking" no longer matches "investment
+  banking analyst"). Verified; 18 tests still green.
+
+---
+
 ## 2026-06-22 (k) — audit fixes (résumé/seniority/guard)
 
 Ran a deep audit of the recent résumé/seniority/finance/guard changes. Fixed the
