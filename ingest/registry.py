@@ -153,6 +153,28 @@ WORKDAY = [
     ("mastercard", "wd1",  "CorporateCareers",         "Mastercard"),
     ("adobe",      "wd5",  "external_experienced",     "Adobe"),
     ("workday",    "wd5",  "Workday",                  "Workday"),
+
+    # ── Finance / banking / consulting (verified 2026-06-22; India counts noted).
+    # Traditional finance doesn't use Greenhouse/Lever/Ashby — it's on Workday +
+    # company portals. These are the GCC / finance-data / bank India pipelines.
+    ("statestreet",       "wd1",  "Global",                       "State Street"),    # ~349 India
+    ("db",                "wd3",  "DBWebsite",                    "Deutsche Bank"),   # ~264
+    ("lseg",              "wd3",  "Careers",                      "LSEG"),            # ~227
+    ("wf",                "wd1",  "WellsFargoJobs",               "Wells Fargo"),     # ~221 (Hyd/Blr/Chn)
+    ("pwc",               "wd3",  "Global_Experienced_Careers",   "PwC"),             # ~210
+    ("visa",              "wd5",  "Visa",                         "Visa"),            # ~160
+    ("ntrs",              "wd1",  "NorthernTrust",                "Northern Trust"),  # ~132
+    ("morningstar",       "wd5",  "Americas",                     "Morningstar"),     # ~77
+    ("blackrock",         "wd1",  "BlackRock_Professional",       "BlackRock"),       # ~48
+    ("nasdaq",            "wd1",  "Global_External_Site",         "Nasdaq"),          # ~42
+    ("spgi",              "wd5",  "SPGI_Careers",                 "S&P Global"),      # ~37
+    ("barclays",          "wd3",  "External_Career_Site_Barclays","Barclays"),        # ~37
+    ("synchronyfinancial","wd5",  "careers",                      "Synchrony"),       # ~37
+    ("broadridge",        "wd5",  "Careers",                      "Broadridge"),      # ~32
+    ("fiserv",            "wd5",  "EXT",                          "Fiserv"),          # ~28
+    ("fmr",               "wd1",  "FidelityCareers",              "Fidelity"),        # ~27
+    ("capitalone",        "wd12", "Capital_One",                  "Capital One"),     # ~20
+    ("fis",               "wd5",  "SearchJobs",                   "FIS"),             # ~3
 ]
 
 

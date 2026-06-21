@@ -4,6 +4,46 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (g) — back-office + middle-office finance role families
+
+The 18 Workday boards added are India-GCC-heavy → mostly MIDDLE + BACK office.
+But the role graph was front-office-only (IB/PE/ER), so those jobs had no role
+neighbourhood to match. Added two families (Python + TS mirror):
+- `finance_ops` (back office): fund accountant/accounting/administration, ops
+  analyst, reconciliations, settlements, securities ops, custody, corporate
+  actions, KYC/AML, transaction monitoring, regulatory/financial reporting, GL.
+- `finance_risk` (middle office): market/credit/operational risk, model
+  validation/risk, product control, valuation control, compliance, financial
+  crime, internal audit, treasury ops.
+Plus back/middle-office sector keywords + aliases (kyc, aml, recon, ops, market
+risk…). Kept SEPARATE from front-office `finance_ib` (no cross edges) so a
+back-office target doesn't pull IB roles and vice-versa.
+Verified: "fund accountant" → fund accounting/AML/settlements (front-office IB +
+engineers dropped). `tsc --noEmit` clean.
+
+---
+
+## 2026-06-22 (f) — finance coverage: verified finance Workday tenants
+
+Finance is a different labour market — traditional finance (banks, finance-data,
+GCC/KPO) doesn't use Greenhouse/Lever/Ashby; it's on Workday + company portals.
+Added **18 research-verified finance Workday boards** to `ingest/registry.WORKDAY`,
+each confirmed live with India roles: State Street (~349 India), Deutsche Bank
+(~264), LSEG (~227), Wells Fargo (~221), PwC (~210), Visa, Northern Trust,
+Morningstar, BlackRock, Nasdaq, S&P Global, Barclays, Synchrony, Broadridge,
+Fiserv, Fidelity, Capital One, FIS. Verified end-to-end through our own connector
+(State Street → 15 India roles in a 40-job sample: Middle Office VP, Compliance…).
+
+Excluded (not on standard Workday CXS — noted for future): Moody's, MSCI, Fitch,
+HSBC (Eightfold), Amex/JPM/BNY (Oracle), KPMG/EY/Deloitte (Oracle/SuccessFactors/
+custom), UBS/Nomura/StanChart/Macquarie (own portals).
+
+_Still open:_ front-office India IB/PE/equity-research (iimjobs/Naukri) — those have
+no ATS API; the path is Gmail alerts (parsers exist) — document for users. Future:
+pass a Workday India location facet to fetch India directly instead of filtering.
+
+---
+
 ## 2026-06-22 (e) — résumé upload + résumé drives the search
 
 - **Upload PDF/DOCX** (`frontend/lib/parseResume.ts`, deps `pdfjs-dist` + `mammoth`):

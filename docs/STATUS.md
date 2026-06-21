@@ -86,10 +86,11 @@ Vercel env: `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY`, `GITHUB_DISPATCH_TOKEN` (pow
 
 ## Known issues / open gaps
 
-- **India finance-role coverage is thin** — most finance postings come from global
-  ATS boards; after the India-default foreign-drop, finance searches may return
-  few results. Next: add India finance sources (Naukri/foundit finance, Indian
-  fintech ATS). _This is the top relevance gap._
+- **India finance coverage — partially fixed.** Added 18 verified finance Workday
+  boards (State Street, Deutsche Bank, LSEG, Wells Fargo, PwC, BlackRock, S&P…) →
+  real India GCC / finance-data / bank roles now flow. **Still open:** front-office
+  IB/PE/equity-research (iimjobs/Naukri) has no ATS API → relies on the user
+  setting Gmail alerts (parsers exist; needs a setup nudge in the UI).
 - **Daily run shows a non-fatal "exit code 1"** annotation while still writing
   jobs — likely a per-source or Resend (unverified domain) error caught in the
   loop. Need the run log to pin down.

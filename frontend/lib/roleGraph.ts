@@ -40,6 +40,21 @@ const FAMILIES: Record<string, string[]> = {
     'quantitative analyst', 'risk analyst', 'transaction advisory', 'private credit',
     'treasury analyst', 'investment associate', 'fund manager',
   ],
+  finance_ops: [
+    'operations analyst', 'investment operations', 'fund accountant', 'fund accounting',
+    'fund administration', 'fund services', 'reconciliations analyst', 'trade support',
+    'settlements analyst', 'securities operations', 'custody operations', 'asset servicing',
+    'corporate actions analyst', 'collateral analyst', 'client onboarding', 'kyc analyst',
+    'aml analyst', 'transaction monitoring analyst', 'regulatory reporting analyst',
+    'financial reporting analyst', 'general ledger accountant', 'accounts payable',
+    'accounts receivable',
+  ],
+  finance_risk: [
+    'market risk analyst', 'credit risk analyst', 'operational risk analyst',
+    'model validation', 'model risk', 'product control', 'valuation control',
+    'liquidity risk', 'compliance analyst', 'regulatory compliance',
+    'financial crime analyst', 'internal audit', 'treasury operations',
+  ],
   marketing: [
     'marketing manager', 'growth manager', 'performance marketing', 'digital marketing',
     'content marketing', 'brand manager', 'product marketing manager', 'seo specialist',
@@ -56,7 +71,8 @@ const FAMILIES: Record<string, string[]> = {
 
 const FAMILY_SECTOR: Record<string, string | null> = {
   data_ml: null, software: null, product: null, design: null,
-  finance_ib: 'finance', marketing: null, sales: null, consulting: null,
+  finance_ib: 'finance', finance_ops: 'finance', finance_risk: 'finance',
+  marketing: null, sales: null, consulting: null,
 }
 
 const SECTORS: Record<string, string[]> = {
@@ -65,6 +81,10 @@ const SECTORS: Record<string, string[]> = {
     'investment', 'fund', 'wealth', 'hedge', 'private equity', 'venture capital',
     'merger', 'credit', 'lending', 'mortgage', 'treasury', 'brokerage', 'trading',
     'underwriting', 'valuation', 'portfolio', 'fintech', 'payments', 'insurance',
+    'reconciliation', 'settlements', 'custody', 'fund administration', 'asset servicing',
+    'aml', 'kyc', 'regulatory reporting', 'financial reporting', 'product control',
+    'model validation', 'corporate actions', 'collateral', 'compliance',
+    'operational risk', 'market risk', 'credit risk', 'middle office', 'back office',
   ],
   fintech: ['fintech', 'payments', 'neobank', 'lending', 'wallet', 'remittance', 'kyc'],
   healthcare: ['healthcare', 'hospital', 'clinical', 'pharma', 'medical', 'biotech', 'healthtech'],
@@ -83,6 +103,11 @@ const ALIASES: Record<string, string> = {
   'm&a': 'mergers and acquisitions', pe: 'private equity associate', vc: 'venture capital analyst',
   er: 'equity research analyst', 'equity research': 'equity research analyst',
   quant: 'quantitative analyst',
+  kyc: 'kyc analyst', aml: 'aml analyst',
+  'fund accounting': 'fund accountant', reconciliation: 'reconciliations analyst',
+  recon: 'reconciliations analyst', operations: 'operations analyst', ops: 'operations analyst',
+  'market risk': 'market risk analyst', 'credit risk': 'credit risk analyst',
+  'operational risk': 'operational risk analyst', compliance: 'compliance analyst',
 }
 
 const GENERIC = new Set([

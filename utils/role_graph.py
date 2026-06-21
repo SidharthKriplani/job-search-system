@@ -32,6 +32,14 @@ SECTORS: Dict[str, Set[str]] = {
         "treasury", "brokerage", "broker", "trading", "trader", "underwriting",
         "valuation", "portfolio", "ipo", "debt", "fixed income", "derivatives",
         "actuarial", "audit", "taxation", "accounting", "fund accounting",
+        # back / middle office (the bulk of India GCC/KPO finance)
+        "reconciliation", "settlements", "settlement", "custody", "custodian",
+        "fund administration", "fund services", "asset servicing", "aml",
+        "anti-money laundering", "transaction monitoring", "regulatory reporting",
+        "financial reporting", "product control", "model validation", "model risk",
+        "corporate actions", "collateral", "trade support", "client onboarding",
+        "compliance", "operational risk", "market risk", "credit risk", "kyc",
+        "middle office", "back office", "general ledger",
     },
     "fintech": {
         "fintech", "payments", "payment", "neobank", "lending", "upi", "wallet",
@@ -185,6 +193,56 @@ _FAMILIES = {
             ("quantitative analyst", "risk analyst", 0.7),
         ],
     },
+    # FINANCE — BACK OFFICE / operations. The bulk of India GCC/KPO finance hiring
+    # (State Street, Northern Trust, BNY-type custodians, Broadridge, FIS…).
+    "finance_ops": {
+        "sector": "finance",
+        "default": 0.55,
+        "members": [
+            "operations analyst", "investment operations", "fund accountant",
+            "fund accounting", "fund administration", "fund services",
+            "reconciliations analyst", "trade support", "settlements analyst",
+            "securities operations", "custody operations", "asset servicing",
+            "corporate actions analyst", "collateral analyst", "client onboarding",
+            "kyc analyst", "aml analyst", "transaction monitoring analyst",
+            "regulatory reporting analyst", "financial reporting analyst",
+            "general ledger accountant", "accounts payable", "accounts receivable",
+        ],
+        "strong": [
+            ("fund accountant", "fund accounting", 0.95),
+            ("fund accounting", "fund administration", 0.9),
+            ("fund accounting", "asset servicing", 0.85),
+            ("operations analyst", "investment operations", 0.9),
+            ("operations analyst", "settlements analyst", 0.8),
+            ("settlements analyst", "trade support", 0.85),
+            ("settlements analyst", "securities operations", 0.85),
+            ("securities operations", "corporate actions analyst", 0.82),
+            ("kyc analyst", "aml analyst", 0.92),
+            ("aml analyst", "transaction monitoring analyst", 0.9),
+            ("kyc analyst", "client onboarding", 0.8),
+            ("regulatory reporting analyst", "financial reporting analyst", 0.8),
+        ],
+    },
+    # FINANCE — MIDDLE OFFICE / risk & control.
+    "finance_risk": {
+        "sector": "finance",
+        "default": 0.55,
+        "members": [
+            "market risk analyst", "credit risk analyst", "operational risk analyst",
+            "model validation", "model risk", "product control", "valuation control",
+            "liquidity risk", "compliance analyst", "regulatory compliance",
+            "financial crime analyst", "internal audit", "treasury operations",
+        ],
+        "strong": [
+            ("market risk analyst", "credit risk analyst", 0.85),
+            ("market risk analyst", "operational risk analyst", 0.8),
+            ("model validation", "model risk", 0.92),
+            ("product control", "valuation control", 0.85),
+            ("compliance analyst", "regulatory compliance", 0.9),
+            ("compliance analyst", "financial crime analyst", 0.82),
+            ("financial crime analyst", "internal audit", 0.65),
+        ],
+    },
     "marketing": {
         "sector": None,
         "default": 0.5,
@@ -251,6 +309,14 @@ _ALIASES = {
     "er": "equity research analyst", "equity research": "equity research analyst",
     "fpa": "fp&a analyst", "fp&a": "fp&a analyst",
     "quant": "quantitative analyst", "pms": "portfolio manager",
+    # back / middle office
+    "kyc": "kyc analyst", "aml": "aml analyst",
+    "fund accounting": "fund accountant", "fund accountant": "fund accountant",
+    "reconciliation": "reconciliations analyst", "recon": "reconciliations analyst",
+    "operations": "operations analyst", "ops": "operations analyst",
+    "market risk": "market risk analyst", "credit risk": "credit risk analyst",
+    "operational risk": "operational risk analyst", "compliance": "compliance analyst",
+    "model validation": "model validation", "product control": "product control",
 }
 
 # Reverse index: member role -> family key (built once).
