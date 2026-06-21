@@ -4,6 +4,22 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (i) — safety net: test suite + CI gate + staging discipline
+
+The regression net that should have existed all along.
+- `tests/` — pytest suite locking in every bug we fixed (investment-banker≠engineers,
+  AI-engineer specificity, role neighbourhood, salary INR parsing, India-default +
+  Indianapolis-not-India, null-profile no-crash, résumé-drives-search, seniority
+  ranking, back-office family). 17 tests, all green. Writing them caught one stale
+  test assumption (M&A tokenization).
+- `.github/workflows/ci.yml` — runs `pytest` + `tsc --noEmit` on every push/PR (the
+  two classes that kept breaking: matching regressions + frontend build/type errors).
+- `scripts/check.sh` — one-command local pre-push gate (same checks).
+- `pytest.ini` — pythonpath config so `pytest` just works from root.
+- RUNBOOK: documented the branch → Vercel preview → promote staging flow + tests.
+
+---
+
 ## 2026-06-22 (h) — seniority / rung awareness (explicit in the résumé-upload flow)
 
 Résumé upload now detects your LEVEL, shows it, and ranks the feed to it.

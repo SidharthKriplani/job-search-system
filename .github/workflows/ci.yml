@@ -1,0 +1,46 @@
+name: CI
+
+# The safety gate. Runs on every push and PR. If this is red, the change is
+# broken — don't merge / promote it. Catches the two classes that bit us:
+# Python matching regressions (pytest) and frontend build/type errors (tsc).
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  python-tests:
+    name: Python tests (matching engine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install test deps
+        run: pip install pytest
+      - name: Run tests
+        run: python -m pytest -q
+
+  frontend-typecheck:
+    name: Frontend type-check + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Type-check (the exact gate Vercel fails on)
+        run: npx tsc --noEmit

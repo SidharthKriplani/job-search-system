@@ -35,6 +35,34 @@ Relevance: utils/role_graph.py (Python, source of truth) ↔ frontend/lib/roleGr
   on profile save via `/api/resync` → `resync.yml`.
 - **Engine only (no DB):** `python -m ingest.run` — prints source counts + samples.
 
+## Tests & CI (the safety gate)
+
+The thing that catches regressions before you (or prod) do.
+
+- **Run locally before every push:** `./scripts/check.sh` (pytest + frontend tsc).
+- **CI:** `.github/workflows/ci.yml` runs the same on every push/PR — `pytest`
+  (matching engine) + `tsc --noEmit` (the exact check Vercel fails on). If CI is
+  red, the change is broken — fix it before promoting.
+- **Tests live in `tests/`** and lock in the bugs we already fixed (investment
+  banker ≠ engineers, salary INR parsing, India-default, null-profile crash,
+  résumé-drives-search, seniority ranking, back-office family). Add a test
+  whenever you fix a bug so it can't come back.
+
+## Staging discipline (catch the deploy gap)
+
+Most "works in code, broken on screen" pain is the gap between a correct commit
+and the live app. Close it with branch → preview → promote:
+
+1. Work on a branch (e.g. `dev`), not `main`.
+2. Push it → CI runs, and **Vercel auto-builds a Preview URL** (separate from prod).
+3. Click through the preview; confirm the actual behaviour.
+4. Only then merge `dev` → `main` (which deploys to production).
+
+DB changes: ideally a **separate Supabase project for staging** so migrations are
+tested before prod (recommended, not yet set up). Until then, `schema.sql` is
+idempotent/additive, so re-running on prod is low-risk — but run it on staging
+first once that exists.
+
 ## Deploy
 
 - **Frontend:** push to `main` → Vercel auto-builds. Env-var changes need a manual
