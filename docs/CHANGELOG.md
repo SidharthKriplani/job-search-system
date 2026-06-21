@@ -4,6 +4,23 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-22 (e) — résumé upload + résumé drives the search
+
+- **Upload PDF/DOCX** (`frontend/lib/parseResume.ts`, deps `pdfjs-dist` + `mammoth`):
+  parsed in-browser to text; Settings gets an upload dropzone above the textarea.
+- **Résumé drives WHICH jobs appear, not just ranking:** on upload we detect roles
+  in the résumé (`rolesFromText` in `roleGraph.ts` / `roles_from_text` in
+  `role_graph.py`) and **add them to Target Roles** (shown as chips, removable) so
+  the existing matcher + read-guard use them. Backend `filter_and_score` also
+  augments expansion with résumé-derived roles at 0.9× (so a résumé-only profile
+  still produces a feed). Résumé text continues to boost ranking (résumé overlap).
+- Verified: a résumé with no target roles surfaces Data Scientist/ML/Analyst and
+  drops finance/security; `tsc --noEmit` clean with the new deps.
+- ⚠️ Heads-up: `next@14.2.3` has a flagged security advisory — worth bumping to a
+  patched 14.2.x.
+
+---
+
 ## 2026-06-22 (d) — mobile-responsive
 
 - **Navigation:** the fixed 224px sidebar is now `hidden md:flex`. On mobile:

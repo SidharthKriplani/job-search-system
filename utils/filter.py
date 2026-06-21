@@ -202,7 +202,15 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     # Each target role activates a weighted neighbourhood: target = 1.0, adjacent
     # roles < 1.0. We pre-stem every expanded role once. Unknown roles still work
     # (they expand to just themselves at weight 1.0).
+    resume_text  = profile.get("resume_text") or ""
+    # The résumé DRIVES the search: roles detected in it augment the target roles
+    # (at a slightly lower weight so explicitly-typed roles still dominate). This
+    # also makes the feed work for a user who only uploaded a résumé.
+    resume_roles = role_graph.roles_from_text(resume_text) if resume_text else []
+
     expanded = role_graph.expand_roles(target_roles)   # {role_phrase: weight}
+    for phrase, weight in role_graph.expand_roles(resume_roles).items():
+        expanded[phrase] = max(expanded.get(phrase, 0.0), weight * 0.9)
     expanded_stems = []                                # [(phrase, weight, [stems])]
     for phrase, weight in expanded.items():
         stems = [_stem(w) for w in phrase.split() if len(w) >= 2]
@@ -210,8 +218,8 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
             expanded_stems.append((phrase, weight, stems))
     target_canon = {role_graph.normalize_role(r) for r in target_roles}
 
-    # ── Sector / domain layer ──
-    sectors        = role_graph.sectors_for(target_roles, industries)
+    # ── Sector / domain layer ── (résumé roles count toward sector detection too)
+    sectors        = role_graph.sectors_for(target_roles + resume_roles, industries)
     sect_kw        = role_graph.sector_keywords(sectors)
     industries_set = bool(industries)
 

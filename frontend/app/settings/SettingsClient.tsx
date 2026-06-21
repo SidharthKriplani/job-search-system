@@ -127,6 +127,40 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
     setter('')
   }
 
+  // ── Résumé upload + parse → fill text AND seed Target Roles (resume drives search) ──
+  const [parsing, setParsing]   = useState(false)
+  const [parseMsg, setParseMsg] = useState<string | null>(null)
+  const [detected, setDetected] = useState<string[]>([])
+
+  const onResumeFile = async (file: File) => {
+    setParsing(true); setParseMsg(null); setDetected([])
+    try {
+      const text = await parseResumeFile(file)
+      // Detect roles and merge into Target Roles (deduped, case-insensitive).
+      const found = rolesFromText(text)
+      setProfile(p => {
+        const existing = ((p.target_roles as string[]) || [])
+        const lower = new Set(existing.map(r => r.toLowerCase()))
+        const added = found.filter(r => !lower.has(r.toLowerCase()))
+        return {
+          ...p,
+          resume_text: text as any,
+          target_roles: [...existing, ...added] as any,
+        }
+      })
+      setDetected(found)
+      setParseMsg(
+        found.length
+          ? `Parsed ${text.length.toLocaleString()} chars · added ${found.length} role${found.length > 1 ? 's' : ''} from your résumé.`
+          : `Parsed ${text.length.toLocaleString()} chars · no clear roles detected — add your target roles manually.`
+      )
+    } catch (e: any) {
+      setParseMsg(e?.message || 'Could not parse that file.')
+    } finally {
+      setParsing(false)
+    }
+  }
+
   const removeTag = (field: keyof UserProfile, index: number) => {
     setProfile(p => ({ ...p, [field]: (p[field] as string[]).filter((_, i) => i !== index) }))
   }
@@ -251,8 +285,37 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
 
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">
-              Master Résumé <span className="text-slate-400 font-normal">(paste plain text — powers résumé-based match scores)</span>
+              Master Résumé <span className="text-slate-400 font-normal">(drives which jobs you see + match scores)</span>
             </label>
+
+            {/* Upload + parse (PDF/DOCX) → fills the text below and seeds Target Roles */}
+            <label className={clsx(
+              'flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-4 mb-2 cursor-pointer transition-colors text-sm',
+              parsing ? 'border-indigo-300 text-indigo-500'
+                      : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-400'
+            )}>
+              <Upload className="w-4 h-4" />
+              {parsing ? 'Parsing…' : 'Upload résumé (PDF or DOCX)'}
+              <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                     className="hidden" disabled={parsing}
+                     onChange={e => { const f = e.target.files?.[0]; if (f) onResumeFile(f); e.currentTarget.value = '' }} />
+            </label>
+            {parseMsg && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" /> {parseMsg}
+              </p>
+            )}
+            {detected.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {detected.map(r => (
+                  <span key={r} className="px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
+                    {titleCase(r)}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">…or paste the text manually:</p>
+
             <textarea
               value={(profile.resume_text as string) || ''}
               onChange={e => setProfile(p => ({ ...p, resume_text: e.target.value }))}

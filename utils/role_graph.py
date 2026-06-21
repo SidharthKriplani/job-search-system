@@ -19,6 +19,7 @@ Public API:
   sectors_for(roles, industries) -> set[str]                   (sector names)
   sector_keywords(sectors)       -> set[str]                   (keywords to match)
 """
+import re
 from typing import Dict, List, Set, Iterable
 
 # ── Sector keyword sets (domain layer) ───────────────────────────────────────
@@ -325,3 +326,18 @@ def sector_keywords(sectors: Iterable[str]) -> Set[str]:
     for s in sectors or []:
         kw |= SECTORS.get(s, set())
     return kw
+
+
+def roles_from_text(text: str, limit: int = 6) -> List[str]:
+    """Detect canonical roles mentioned in free text (a résumé) — full member
+    phrases (precise) + whole-word aliases, ranked by hit strength. Lets the
+    résumé seed/drive the search. Mirror of `rolesFromText` in roleGraph.ts."""
+    low = " " + re.sub(r"\s+", " ", re.sub(r"[^a-z0-9&+ ]", " ", (text or "").lower())) + " "
+    score: Dict[str, int] = {}
+    for member in _MEMBER_TO_FAMILY:
+        if f" {member} " in low:
+            score[member] = score.get(member, 0) + 3
+    for alias, canon in _ALIASES.items():
+        if f" {alias} " in low:
+            score[canon] = score.get(canon, 0) + 2
+    return [r for r, _ in sorted(score.items(), key=lambda x: -x[1])][:limit]
