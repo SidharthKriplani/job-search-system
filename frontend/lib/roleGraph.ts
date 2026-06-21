@@ -102,6 +102,26 @@ function normalize(role: string): string {
   return ALIASES[r] || r
 }
 
+/**
+ * Detect canonical roles mentioned in free text (a résumé). Matches full member
+ * phrases (precise) and whole-word aliases, ranked by hit strength. Used to seed
+ * the user's Target Roles from an uploaded résumé so the résumé drives the search.
+ */
+export function rolesFromText(text: string, limit = 6): string[] {
+  const low = ` ${(text || '').toLowerCase().replace(/[^a-z0-9&+ ]/g, ' ').replace(/\s+/g, ' ')} `
+  const score: Record<string, number> = {}
+  for (const member of Object.keys(MEMBER_TO_FAMILY)) {
+    if (low.includes(` ${member} `)) score[member] = (score[member] || 0) + 3
+  }
+  for (const [alias, canon] of Object.entries(ALIASES)) {
+    if (low.includes(` ${alias} `)) score[canon] = (score[canon] || 0) + 2
+  }
+  return Object.entries(score)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([role]) => role)
+}
+
 // Single words that are too noisy as standalone substrings (they appear in
 // unrelated titles/descriptions), so we only allow them inside a full PHRASE.
 const AMBIGUOUS = new Set([

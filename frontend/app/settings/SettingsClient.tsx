@@ -4,8 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import Sidebar from '@/components/Sidebar'
 import { UserProfile } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
-import { CheckCircle, Mail, Save, Plus, X } from 'lucide-react'
+import { CheckCircle, Mail, Save, Plus, X, Upload, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
+import { parseResumeFile } from '@/lib/parseResume'
+import { rolesFromText } from '@/lib/roleGraph'
+
+const titleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase())
 
 interface Props {
   initialProfile: UserProfile | null
