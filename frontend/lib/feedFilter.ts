@@ -1,4 +1,19 @@
-import { expandRoleKeywords } from './roleGraph'
+import { expandRoleKeywords, rolesFromText } from './roleGraph'
+
+/**
+ * The roles that should drive the feed: explicitly-set target roles UNION the
+ * roles detected in the résumé. Keeps the read-guard consistent with the backend
+ * matcher (which also derives roles from the résumé) — so a user who only has a
+ * résumé saved still gets a personalised feed, not the "set up your profile" wall.
+ */
+export function effectiveRoles(
+  targetRoles: string[] | null | undefined,
+  resumeText: string | null | undefined,
+): string[] {
+  const set = new Set((targetRoles || []).map(r => r.toLowerCase()).filter(Boolean))
+  for (const r of rolesFromText(resumeText || '')) set.add(r)
+  return Array.from(set)
+}
 
 /**
  * Read-time role guard for the feed.

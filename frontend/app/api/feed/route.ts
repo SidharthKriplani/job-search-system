@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { roleOrFilter } from '@/lib/feedFilter'
+import { roleOrFilter, effectiveRoles } from '@/lib/feedFilter'
 
 /**
  * Server-side feed query — so search, source filter, and "New/Saved" run against
@@ -23,13 +23,14 @@ export async function GET(req: Request) {
   const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0)
   const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || String(PAGE), 10) || PAGE)
 
-  // Current target roles + industries → graph-aware read-time guard.
+  // Roles = explicit target roles UNION roles detected in the résumé.
   const { data: prof } = await supabase
-    .from('user_profiles').select('target_roles, industries').eq('user_id', user.id).maybeSingle()
-  const roleFilter = roleOrFilter(prof?.target_roles, prof?.industries)
+    .from('user_profiles').select('target_roles, industries, resume_text').eq('user_id', user.id).maybeSingle()
+  const roles = effectiveRoles(prof?.target_roles, prof?.resume_text)
+  const roleFilter = roleOrFilter(roles, prof?.industries)
 
   // No profile → no firehose. Return empty + a flag the UI uses to prompt setup.
-  if (!(prof?.target_roles?.length || prof?.industries?.length)) {
+  if (!(roles.length || prof?.industries?.length)) {
     return NextResponse.json({ ok: true, jobs: [], total: 0, needsProfile: true })
   }
 

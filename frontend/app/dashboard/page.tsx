@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import { roleOrFilter } from '@/lib/feedFilter'
+import { roleOrFilter, effectiveRoles } from '@/lib/feedFilter'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -14,12 +14,13 @@ export default async function DashboardPage() {
   // Read-time role guard so the feed always reflects the CURRENT target role,
   // even before a backend re-filter prunes stale rows.
   const { data: prof } = await supabase
-    .from('user_profiles').select('target_roles, industries').eq('user_id', user.id).maybeSingle()
-  const roleFilter = roleOrFilter(prof?.target_roles, prof?.industries)
+    .from('user_profiles').select('target_roles, industries, resume_text').eq('user_id', user.id).maybeSingle()
+  // Roles = explicit target roles UNION roles detected in the résumé.
+  const roles = effectiveRoles(prof?.target_roles, prof?.resume_text)
+  const roleFilter = roleOrFilter(roles, prof?.industries)
 
-  // If the user hasn't told us ANYTHING (no roles, no industries), do NOT dump
-  // the whole 40k-job firehose. Show a "set up your profile" state instead.
-  const needsProfile = !(prof?.target_roles?.length || prof?.industries?.length)
+  // Only show "set up your profile" when we truly have nothing to go on.
+  const needsProfile = !(roles.length || prof?.industries?.length)
   if (needsProfile) {
     return (
       <DashboardClient
