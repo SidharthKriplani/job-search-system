@@ -69,6 +69,9 @@ const FAMILIES: Record<string, string[]> = {
   ],
 }
 
+// Front/middle/back office finance are one connected market — cross-linked below.
+const FINANCE_FAMILIES = new Set(['finance_ib', 'finance_ops', 'finance_risk'])
+
 const FAMILY_SECTOR: Record<string, string | null> = {
   data_ml: null, software: null, product: null, design: null,
   finance_ib: 'finance', finance_ops: 'finance', finance_risk: 'finance',
@@ -185,6 +188,14 @@ export function expandRoleKeywords(
     if (fam) {
       for (const m of FAMILIES[fam]) phrases.add(m)        // neighbourhood as phrases
       if (FAMILY_SECTOR[fam]) sectors.add(FAMILY_SECTOR[fam] as string)
+      // Finance is one connected space — cross-link front/middle/back office so an
+      // IB-research target's feed also includes credit research / FP&A / ops roles
+      // (mirrors expand_roles' _FINANCE_FAMILIES cross-link in the Python matcher).
+      if (FINANCE_FAMILIES.has(fam)) {
+        for (const other of FINANCE_FAMILIES) {
+          if (other !== fam) for (const m of FAMILIES[other]) phrases.add(m)
+        }
+      }
     }
   }
 

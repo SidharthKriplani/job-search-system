@@ -126,21 +126,32 @@ def test_back_office_family():
         {"job_title": "AML Analyst", "company": "DB", "location": "Bangalore, India", "description_snippet": "monitoring"},
         {"job_title": "Investment Banking Analyst", "company": "X", "location": "Mumbai", "description_snippet": "M&A"},
     ]
-    out = _titles(filter_and_score([dict(j) for j in jobs], {"target_roles": ["fund accountant"]}))
+    res = filter_and_score([dict(j) for j in jobs], {"target_roles": ["fund accountant"]})
+    out = [j["job_title"] for j in res]
     assert "Fund Accountant" in out
     assert "AML Analyst" in out
-    assert "Investment Banking Analyst" not in out   # front office stays separate
+    # Finance is connected, so IB may also appear (cross-linked) — but the exact
+    # back-office target ranks above the cross-office IB role.
+    score = {j["job_title"]: j["match_score"] for j in res}
+    assert score["Fund Accountant"] > score.get("Investment Banking Analyst", 0)
 
 
-def test_front_office_target_excludes_back_office_without_industries():
-    # A role-only IB target (no industries set) must NOT pull back-office finance —
-    # the sector net is gated behind industries_set. (Locks the TS/Python alignment.)
+def test_finance_is_one_connected_space():
+    # Finance front/middle/back office are adjacent careers — an investment-banking
+    # target should ALSO surface back/middle-office finance (ranked lower), not show
+    # an empty feed. This is the "stop forcing front-vs-back on the user" fix.
     jobs = [
         {"job_title": "Investment Banking Analyst", "company": "A", "location": "Mumbai", "description_snippet": "M&A comps"},
-        {"job_title": "Fund Accountant", "company": "State Street", "location": "Hyderabad, India", "description_snippet": "nav reconciliations custody"},
-        {"job_title": "KYC Analyst", "company": "DB", "location": "Bangalore, India", "description_snippet": "kyc aml onboarding"},
+        {"job_title": "Fund Accountant", "company": "State Street", "location": "Hyderabad, India", "description_snippet": "nav"},
+        {"job_title": "KYC Analyst", "company": "DB", "location": "Bangalore, India", "description_snippet": "kyc aml"},
+        {"job_title": "Backend Engineer", "company": "Z", "location": "Bangalore", "description_snippet": "apis"},
     ]
-    out = _titles(filter_and_score([dict(j) for j in jobs], {"target_roles": ["investment banker"]}))
-    assert "Investment Banking Analyst" in out
-    assert "Fund Accountant" not in out
-    assert "KYC Analyst" not in out
+    out = filter_and_score([dict(j) for j in jobs], {"target_roles": ["investment banker"]})
+    titles = [j["job_title"] for j in out]
+    assert "Investment Banking Analyst" in titles
+    assert "Fund Accountant" in titles     # cross-linked finance now included
+    assert "KYC Analyst" in titles
+    assert "Backend Engineer" not in titles  # still not finance
+    # but the exact-role IB match ranks above the cross-office ones
+    score = {j["job_title"]: j["match_score"] for j in out}
+    assert score["Investment Banking Analyst"] > score["Fund Accountant"]

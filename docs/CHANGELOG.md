@@ -4,6 +4,24 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-06-23 (c) — finance is ONE connected market (stop forcing front/back office)
+
+The repeated "front office vs back office" pain was a modelling error: finance_ib
+(front), finance_ops (back), finance_risk (middle) were rigid silos with no
+cross-links, so an IB-research résumé fell into one silo and missed the rest —
+empty feed, user forced to manually re-pick roles every time.
+- `role_graph.py` `expand_roles` + `roleGraph.ts` `expandRoleKeywords`: the three
+  finance families are now **cross-linked** at weight 0.45 (`_FINANCE_FAMILIES`).
+  Within-family neighbours still rank highest; the whole finance-analytics space
+  (credit research, FP&A, ops, risk) is now reachable from any finance role.
+- Verified: Shivali's UNCHANGED "investment banking analyst" target now matches
+  **24 real India finance roles** (JPMorgan Global Research-Credit Strategy,
+  Wholesale Credit Risk, FP&A, Citi, WNS Credit Management) with zero re-picking.
+- Updated the test that asserted the old rigid separation → now asserts the
+  connected behaviour (back-office appears, exact role still ranks above). 22 green.
+
+---
+
 ## 2026-06-23 (b) — two new ATS-platform connectors: Oracle + SmartRecruiters
 
 Per-PLATFORM connectors (not per-company scrapers) — each adds many finance firms.

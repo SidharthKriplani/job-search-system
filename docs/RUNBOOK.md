@@ -13,9 +13,13 @@ GitHub Actions
   ├─ resync.yml  (on profile save via /api/resync)        → python main.py [RESYNC_ONLY=1, no scrape]
   └─ harvest.yml (weekly)                                  → ingest.harvester  [refresh company lists]
   main.py:
-       ├─ ingest.collect_jobs()      ← ATS APIs (Greenhouse/Lever/Ashby/Workday) + aggregators  [once]
+       ├─ ingest.collect_jobs()  ← Greenhouse/Lever/Ashby/Workday/Oracle/SmartRecruiters
+       │                            + JobSpy + aggregators (Adzuna/Remotive/Arbeitnow)  [once]
        ├─ per user: deep-copy pool + Gmail → filter_and_score (role graph + sector) → dedup → upsert → resync → digest
        └─ writes scraper_health
+  Connectors (ingest/connectors/): greenhouse, lever, ashby, workday, oracle,
+    smartrecruiters, jobspy, aggregators. Workday/Oracle fetch India directly
+    (searchText/keyword=India). Per-PLATFORM, not per-company (D17).
 Supabase (Postgres + Auth + RLS): user_profiles, gmail_tokens, job_feed,
   applications, referral_pipeline, message_templates, contacts, scraper_health
 Vercel (Next.js): /dashboard /applications /referrals /settings
@@ -91,6 +95,24 @@ Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 
 ## Troubleshooting (things we've hit)
 
+**★ Feed is empty / "0 In Feed" though matching is correct in tests — READ THE RUN LOG.**
+This is the recurring "works in sandbox, 0 on screen" gap. The diagnostic lives in
+the GitHub Actions run, which is the one thing the sandbox can't see. Steps:
+1. Dashboard → **"run log ↗"** (next to "Feed updated"), or repo → **Actions** →
+   latest **Daily Job Scraper** → **"Run job scrapers"** step.
+2. Read the **`=== SOURCE SUMMARY ===`** block (per-connector job counts) and the end.
+3. Diagnose:
+   - new connectors (`oracle`/`smartrecruiters`/`workday`) **absent** → latest code
+     didn't deploy to the Action (push/branch issue; the Action checks out `main`).
+   - sources listed but **0 jobs** → a source problem (probe with `python -m ingest.run`).
+   - jobs pulled but **"upserted 0"** → DB/schema (`JOB_FEED_COLUMNS` vs schema, RLS).
+   - **`Active users: 0`** → profile row missing / `is_active=false`.
+   - **Traceback / exit code 1** → main.py crashing partway; the trace says where.
+4. Note: a manual Refresh re-scrapes AND resyncs; the resync PRUNES stored jobs that
+   no longer match the profile. So if the new sources didn't run, you can end up with
+   FEWER jobs than before (old ones pruned, new ones not added). Confirm the deploy
+   landed before refreshing.
+
 **Run crashes: `TypeError: Client.__init__() got an unexpected keyword 'proxy'`**
 → Supabase dependency inconsistency. Fixed by upgrading to `supabase==2.31.0` +
 matching deps in `requirements.txt`. Do NOT downgrade or pin httpx below 0.26
@@ -103,12 +125,15 @@ a JWT-shaped key (a plain fake key short-circuits before the httpx init).
 auth users), and make sure the user's profile `is_active = true`.
 
 **Run succeeds but very few / no jobs in the feed**
-→ Usually coverage, not a bug. `filter_and_score` drops jobs that don't match the
-role neighbourhood, and now also drops clearly-foreign non-remote jobs by default
-(India-focused, D11). So e.g. "investment banker" can be honestly near-empty until
-India finance sources are added. Fix: add companies to `ingest/registry.py`,
-enable Adzuna India, and add India finance feeds. To see whether it's coverage vs
-a filter bug, run `python -m ingest.run` (raw counts, no filter).
+→ First rule out the deploy/pipeline gap above (read the run log). If sources DID
+run and returned jobs, then it's the profile or coverage:
+- **Profile mismatch:** the user's `target_roles` don't match what's in the pool.
+  Finance is now ONE connected market (D16), so a finance role surfaces the whole
+  finance-analytics space — but a role with no coverage at all (pure front-office
+  IB India) still returns ~0. Check `python -m ingest.run` for raw counts.
+- **Coverage:** India front-office IB / the Darwinbox KPOs (Evalueserve/Acuity/
+  CRISIL) aren't pullable → only via Naukri/Gmail. Foreign non-remote jobs are
+  dropped by default (D11).
 
 **Vercel build fails: "Type 'Set' can only be iterated … target 'es2015' or higher"**
 → `frontend/tsconfig.json` must have `"target": "es2017"` + `"downlevelIteration": true`
@@ -134,9 +159,15 @@ before recreating). If you edited it, keep that pattern.
 
 ## Add a company to the feed (one line)
 
-In `ingest/registry.py`, append `(slug, "Display Name")` under the right ATS:
-- Greenhouse → `boards.greenhouse.io/<slug>`
-- Lever → `jobs.lever.co/<slug>`
-- Ashby → `jobs.ashbyhq.com/<slug>`
+In `ingest/registry.py`, append under the right platform list. **Always verify
+live first** (curl the API, confirm India roles) before adding — wrong config = 0:
+- Greenhouse → `GREENHOUSE` — `(slug, "Name")`; API `boards-api.greenhouse.io/v1/boards/<slug>/jobs`
+- Lever → `LEVER` — `(slug, "Name")`; `api.lever.co/v0/postings/<slug>?mode=json`
+- Ashby → `ASHBY` — `(slug, "Name")`; `api.ashbyhq.com/posting-api/job-board/<slug>`
+- Workday → `WORKDAY` — `(tenant, "wdN", "Site", "Name")`; POST `.../wday/cxs/{tenant}/{site}/jobs`
+- Oracle ORC → `ORACLE` — `(host, "CX_n", "Name")`; GET `{host}/hcmRestApi/.../recruitingCEJobRequisitions`
+- SmartRecruiters → `SMARTRECRUITERS` — `(companyId, "Name")`; GET `api.smartrecruiters.com/v1/companies/{id}/postings?country=in`
 
-A dead slug returns 0 jobs (shown in the run summary) — it never crashes.
+A dead entry returns 0 jobs (shown in the run summary) — it never crashes.
+**Blocked platforms** (don't bother — need Naukri/Gmail): Darwinbox (captcha),
+SuccessFactors classic, iCIMS (HTML-only), Taleo, Oracle/SuccessFactors-auth-gated.

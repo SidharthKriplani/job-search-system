@@ -5,6 +5,24 @@ report. Newest first.
 
 ---
 
+## 2026-06-23 — Audit of recent features (résumé/seniority/guard/finance)
+**Scope:** ruthless audit of the résumé flow, seniority, the no-profile guard, and
+the new finance connectors (agent-assisted).
+**Fixed:** résumé no longer corrupts `target_roles` (suggest-not-inject, D20);
+seniority false-positives hardened (header-only cues, experience-phrase years,
+prefer-years on conflict); read-guard phrase cap 22→50 (a finance family is 27);
+saved-view un-save desync; `ROLE_PASS` 0.33→0.40 (single shared word no longer
+matches a 3-word role — "Premium Banking" ≠ "investment banking analyst").
+**Verified CORRECT (not changed):** the audit flagged a "critical" TS/Python sector
+disagreement — **checked `filter.py:277` and it was a FALSE ALARM** (Python also
+gates the sector net behind `industries_set`, so both drop back-office for a
+role-only target). Reverted the premature fix; added a test instead. _(Process
+win: verify against the code, don't trust the audit blindly.)_
+**Also confirmed:** the `needsProfile` guard is symmetric across page/api/client;
+PostgREST `.or()` is injection-hardened; seniority is ranking-only (never hides
+rows). Note: D16 later REPLACED the "front/back office stay separate" behaviour —
+finance is now intentionally connected.
+
 ## 2026-06-22 — Real-toolchain verification pass
 **Scope:** stopped trusting brace-counts; installed deps in the sandbox and ran the
 actual compilers/imports + filter edge-cases.

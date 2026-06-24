@@ -5,6 +5,54 @@ decision is reversed, add a new entry that supersedes it).
 
 ---
 
+### D20 — Résumé detection SUGGESTS, never silently injects (2026-06-23)
+Uploading a résumé used to write detected roles into `target_roles` (full weight,
+sticky, append-only) — a noisy parse permanently corrupted the user's stated
+targets, and it erased the deliberate "résumé roles are down-weighted vs typed
+roles" distinction. Now: résumé upload saves only `resume_text` + detected level;
+the résumé drives the feed via `effectiveRoles`/`resume_roles` (down-weighted),
+and detected roles are shown as info. Same principle for seniority — detected,
+shown, editable, never silently authoritative. Confident-and-wrong is the worst
+state.
+
+### D19 — Fetch India directly, don't sample-global-then-discard (2026-06-23)
+Workday/Oracle connectors fetched the first ~40 GLOBAL jobs and filtered to India
+— on a big board (Citi: thousands global, ~170 India) the India roles were never
+reached (returned 0). Fix: pass `searchText="India"` (Workday) / `keyword=India`
+(Oracle) so India roles rank first; the location filter still drops strays.
+Result: Citi 0→33, Morgan Stanley 8→37 India per page — multiplies India yield
+across every tenant. Config: `WORKDAY_SEARCH_TEXT` / `ORACLE_SEARCH_KEYWORD`.
+
+### D18 — Don't out-aggregate Naukri; use consented Gmail for the long tail (2026-06-23)
+Comprehensive job coverage is the aggregators' (Naukri/LinkedIn/Indeed) 15-year
+moat — we will not win it by hand-curating ATS boards forever (the "head-hitting"
+trap). ATS-pull covers ~30-40% of organised tech/finance and ~0% of the Indian
+long tail. Strategy: (1) per-platform ATS connectors for the slice we can pull
+cleanly, (2) the user's OWN Naukri/iimjobs alert emails via consented Gmail for
+the rest — legal (user's inbox, their data), incentive-aligned (apply link goes
+back to Naukri, we drive engagement to them), (3) put the real energy into the
+competence layer, the only thing that compounds and that aggregators don't do.
+
+### D17 — Per-PLATFORM ATS connectors, never per-company scrapers (2026-06-23)
+A finance company's "own job board" is ~95% a branded skin over an ATS platform
+(Workday/Oracle/SuccessFactors/iCIMS/Darwinbox/SmartRecruiters/Taleo). So build
+ONE connector per platform (covers many firms), not a bespoke scraper per company
+(fragile, breaks on every redesign, infinite maintenance). Verified-live before
+adding. Built: Oracle Recruiting Cloud + SmartRecruiters. Confirmed BLOCKED:
+Darwinbox (Cloudflare captcha — the IB-research KPOs), SuccessFactors classic,
+iCIMS (HTML-only), Taleo. Those need Gmail/Naukri (D18), not a connector.
+
+### D16 — Finance is ONE connected market (cross-link front/middle/back office) (2026-06-23)
+Front office (IB/M&A), middle office (risk/control), back office (ops/fund
+accounting) were modelled as rigid silos with no cross-links — so an IB-research
+résumé fell into the front-office silo and missed the credit-research / FP&A / ops
+roles that are the SAME person's adjacent moves (→ empty feed, user forced to
+re-pick roles repeatedly). Now the three finance families are cross-linked at
+weight 0.45 (`_FINANCE_FAMILIES`): within-family neighbours rank highest, but the
+whole finance-analytics space is reachable from any finance role. Tech families
+stay siloed (their titles are standardised). Verified: an unchanged "investment
+banking analyst" target now matches 24 real India finance roles.
+
 ### D15 — `tsconfig` target es2017 to kill the build-error class (2026-06-22)
 The frontend `tsconfig.json` had no `target` → defaulted to ES5, so the
 type-checker rejected every Set/Map iteration. We patched call sites twice

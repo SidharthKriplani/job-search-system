@@ -1,30 +1,56 @@
 # STATUS — current state
 
-_Last updated: 2026-06-22_
+_Last updated: 2026-06-23_
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
 
+## ⚠️ TOP OPEN BLOCKER (read first)
+
+**The live feed shows 0 jobs for the finance test user (Shivali) even after a
+Refresh — but the matching is proven correct in the sandbox.** Everything below
+("relevance works", "sources work") is verified in local tests; the gap is the
+LIVE scrape pipeline, which we have never actually observed. Next action:
+**read the GitHub Actions run log** ("Daily Job Scraper" → "Run job scrapers"
+step) — specifically the `=== SOURCE SUMMARY ===` block and any traceback /
+"exit code 1". That log distinguishes the four candidate causes:
+(a) latest code not deployed to the Action (connectors absent from SOURCE SUMMARY),
+(b) sources ran but returned 0, (c) jobs pulled but "upserted 0" (DB/schema),
+(d) `Active users: 0` (profile row not found), or a crash. Do NOT ship more
+matching changes until the log is read — the matching is not the problem.
+
 ## Phase
 
-**Live and iterating on relevance + reliability.** The feed produces real jobs
-(~5,000+ per user), the tracker and referrals work, and we've done a deep
-multi-pass bug audit + a real-toolchain verification pass. Current focus: making
-matching trustworthy (role graph + sectors) and India coverage.
+**Live; relevance + finance coverage are now strong in tests, but blocked on a
+live-pipeline visibility gap (above).** The feed, tracker, referrals, résumé
+flow, seniority, and a real test/CI gate all exist. Current focus: get eyes on
+the live scrape and close the deploy/DB gap that keeps producing empty feeds.
 
 ## Capabilities built to date (the journey)
 
 - **M1 ✅ Jobs live** — durable ingestion engine; real feeds of thousands of jobs.
-- **Data foundation** — ATS-source engine (Greenhouse/Lever/Ashby/**Workday**) +
-  **JobSpy** (Indeed/Naukri India) + aggregators (Remotive/Arbeitnow/**Adzuna
-  India**) + user Gmail. No fragile portal scraping. Curated ATS boards ∪ our own
-  **Common Crawl harvester** (`ingest/harvester.py`, weekly `harvest.yml`).
+- **Data foundation** — ATS-source engine: Greenhouse/Lever/Ashby + **Workday**
+  (27 tenants incl. 18 finance GCCs) + **Oracle Recruiting Cloud** (EXL/JPMorgan/
+  Jefferies) + **SmartRecruiters** (WNS/NielsenIQ) + **JobSpy** (Indeed/Naukri
+  India) + aggregators (Remotive/Arbeitnow/**Adzuna India**) + user Gmail. No
+  fragile portal scraping. Curated boards ∪ our **Common Crawl harvester**.
+  **Workday + Oracle now fetch India directly** (`searchText`/`keyword=India`)
+  instead of sampling global-then-discarding (D19) — Citi 0→33 India, etc.
+  Connectors are per-PLATFORM, not per-company (D17), so each scales to more firms.
 - **M2 ✅ Relevance (rebuilt)** — profile-driven filter with a curated
   **role-family graph** (`utils/role_graph.py`): a target role expands into a
   weighted neighbourhood (Data Scientist → ML/Analytics; Investment Banker →
   IB/M&A/PE/equity research), plus a **sector/domain layer** (finance, fintech,
   …) wired to the Industries field. Field-dependent: finance auto-activates the
-  sector keyword net; tech rides the title graph.
+  sector keyword net; tech rides the title graph. **Finance is now ONE connected
+  market** — front/middle/back-office families are cross-linked (D16), so an
+  IB-research profile surfaces credit research / FP&A / ops, not an empty feed.
+  Mirrored Python (`role_graph.py`) ↔ TS read-guard (`roleGraph.ts`).
+- **Résumé drives the search** — upload PDF/DOCX (parsed in-browser), roles +
+  seniority detected and shown; résumé text drives matching via `effectiveRoles`
+  (TS) / `resume_roles` (Python). Detection is suggest-not-inject (D20): it no
+  longer overwrites typed target_roles. Seniority detection hardened (header-only
+  title cues, experience-phrase years, prefer-years on conflict).
 - **M3 ✅ Scoring** — JD-aware, weighted by neighbourhood closeness, with
   human-readable reasons ("Related role: …", "Finance sector"). Generic-word and
   stem-collision bugs fixed; salary parsing handles absolute-INR (Adzuna).
@@ -45,6 +71,12 @@ matching trustworthy (role graph + sectors) and India coverage.
 - **Reliability** — idempotent schema with RLS + unique constraints; null-guards
   in the filter; `tsconfig` target fixed (build-error class closed); project spine
   in `docs/`.
+- **✅ Test/CI safety net (NEW)** — `tests/` pytest suite (22 tests) locking in
+  every fixed bug; `.github/workflows/ci.yml` runs pytest + `tsc --noEmit` on every
+  push; `scripts/check.sh` local pre-push gate; staging = branch → Vercel preview →
+  merge. This is the floor that stops silent regressions.
+- **No-profile guard** — an empty profile shows a "set up your roles / upload
+  résumé" state, never the 40k-job firehose. Résumé counts as a profile.
 
 ## At a glance
 
@@ -86,14 +118,18 @@ Vercel env: `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY`, `GITHUB_DISPATCH_TOKEN` (pow
 
 ## Known issues / open gaps
 
-- **India finance coverage — partially fixed.** Added 18 verified finance Workday
-  boards (State Street, Deutsche Bank, LSEG, Wells Fargo, PwC, BlackRock, S&P…) →
-  real India GCC / finance-data / bank roles now flow. **Still open:** front-office
-  IB/PE/equity-research (iimjobs/Naukri) has no ATS API → relies on the user
-  setting Gmail alerts (parsers exist; needs a setup nudge in the UI).
-- **Daily run shows a non-fatal "exit code 1"** annotation while still writing
-  jobs — likely a per-source or Resend (unverified domain) error caught in the
-  loop. Need the run log to pin down.
+- **LIVE FEED EMPTY (top blocker)** — see the banner at the top. Matching is
+  correct in tests; the live scrape isn't landing finance jobs. Blocked on reading
+  the run log.
+- **India finance coverage — sources now broad, but KPOs are walled.** Verified +
+  added: 18 finance Workday GCCs, Oracle (EXL/JPMorgan/Jefferies), SmartRecruiters
+  (WNS/NielsenIQ). The Indian IB-research KPOs Shivali most wants — **Evalueserve,
+  Acuity, CRISIL** — run on **Darwinbox behind a Cloudflare captcha → NOT
+  HTTP-pullable.** Moody's/EY (SuccessFactors), MSCI (iCIMS), BNP (Taleo) also not
+  cleanly pullable. **Their only route is Naukri/iimjobs via consented Gmail** —
+  that's the next real coverage lever (D18 thesis: don't out-aggregate Naukri).
+- **Daily run "exit code 1"** annotation — still undiagnosed; part of the live
+  blocker above. The run log will reveal it.
 - **Gmail title↔URL pairing by index** can mismatch on messy alert emails (parser
   rework needed; lower priority).
 - **Matching is keyword/stem + curated graph** — no true synonym understanding yet

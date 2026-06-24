@@ -5,6 +5,40 @@ how the product learns its owner's priorities.
 
 ---
 
+## 2026-06-23
+
+- **"This product is shit / still 0 jobs after refresh."** Feed empty for the
+  finance user despite matching being proven correct in tests. Root cause is the
+  LIVE scrape pipeline (deploy/DB gap) which we've never observed. → Stopped
+  shipping matching changes; need the GitHub Actions **run log** to diagnose
+  (SOURCE SUMMARY + the exit-code-1). Logged as the TOP BLOCKER in STATUS.
+
+- **"Why do you keep assuming? She's BACK office, her whole history is back office."**
+  Repeatedly mislabelled Shivali (Verity KPO = offshore IB-research SUPPORT =
+  back/middle office) as "front office" from surface keywords. Real lesson →
+  **finance is one connected market**; cross-linked the finance families (D16) so
+  the user never has to pick front-vs-back again.
+
+- **"Can't we scrape finance companies' own boards?"** → Per-PLATFORM connectors
+  (D17): built Oracle + SmartRecruiters (EXL/JPMorgan/Jefferies/WNS/NielsenIQ).
+  Probed Darwinbox/SuccessFactors/iCIMS/Taleo — the KPOs (Evalueserve/Acuity/
+  CRISIL) are captcha-walled; only Naukri/Gmail reaches them (D18).
+
+- **"How do we get past Naukri's engagement model?"** → Explained: don't scrape;
+  parse the user's OWN consented Naukri/iimjobs alert emails (apply stays on
+  Naukri). The defensible long-tail path (D18).
+
+- **"How do we build test gates / staging to catch regressions?"** → Built the
+  pytest suite + CI gate + pre-push script + branch→preview→merge staging.
+
+- **"Now critique yourself ruthlessly… then mentor us with solutions."** Did a
+  veteran-style teardown (12 flaws) + a sequenced fix plan. Agreed scope: finance
+  + tech only; foundation-first (data model, freshness, tests); then the moat
+  (competence engine + feedback loop); then retention.
+
+- **Process asks:** always `cd` into the project before git commands (after a
+  stray command tried to add `~/Library`); always verify don't assume.
+
 ## 2026-06-22
 
 - **"You might be doing a lot more shit you don't know about — I'll have to surface
