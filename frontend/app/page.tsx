@@ -8,7 +8,7 @@ import { Briefcase, Mail, Zap, Eye, EyeOff } from 'lucide-react'
 type Mode = 'signin' | 'signup'
 
 const FRIENDLY_ERRORS: Record<string, string> = {
-  access_denied:        'Google sign-in is restricted to test users while the app is in review. Use email/password below instead.',
+  access_denied:        'Google sign-in was cancelled or blocked. Try again, or use email/password below.',
   redirect_uri_mismatch:'OAuth configuration error — please contact support.',
   invalid_request:      'Invalid sign-in request. Please try again.',
 }
@@ -50,8 +50,10 @@ function LoginPage() {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: 'https://www.googleapis.com/auth/gmail.modify',
-        queryParams: { access_type: 'offline', prompt: 'consent' },
+        // Sign-in requests ONLY basic identity (email + profile). Requesting the
+        // restricted gmail.modify scope here was what triggered Google's
+        // "unverified app" warning, demanded full verification, and broke sign-in
+        // on mobile. Gmail alert parsing is a separate, optional connection.
       },
     })
     if (error) { setError(friendlyError(error.message)); setGoogleLoading(false) }
@@ -207,7 +209,7 @@ function LoginPage() {
         </p>
 
         <p className="text-slate-600 text-xs text-center mt-3">
-          Google sign-in also connects Gmail for job alert parsing. Email/password works for everything else.
+          Sign in with Google or email — both work the same. (Gmail job-alert parsing is an optional add-on you can enable later.)
         </p>
 
         <p className="text-slate-600 text-[11px] text-center mt-4">
