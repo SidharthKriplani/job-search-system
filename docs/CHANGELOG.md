@@ -4,6 +4,20 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (o) — saved searches + alerts (pull -> push)
+
+Users can now save a filter set and get alerted when new jobs match:
+- saved_searches table (user_id, name, filters jsonb, RLS own-rows).
+- /api/saved-searches (list/create/delete).
+- Dashboard: "Save search" captures the current filters+query; a "Saved (N)"
+  menu re-applies or deletes them.
+- Nightly: the daily-finalize pass counts is_new feed jobs matching each saved
+  search and adds a "Your saved searches" section to the digest — so people hear
+  about relevant new jobs without opening the app.
+
+Manual step: re-run supabase/schema.sql (adds saved_searches). Idempotent.
+
+
 ## 2026-07-15 (n) — egress/storage caps + opt-in Gmail connect
 
 Repo is public → GitHub Actions minutes are now unlimited-free (the private-tier

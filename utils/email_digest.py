@@ -108,15 +108,31 @@ def send_daily_digest(
     new_jobs: List[Dict],
     follow_ups: List[Dict],
     stale: List[Dict],
+    saved_alerts: List[Dict] = None,
 ) -> bool:
     """Send daily digest combining new jobs + reminders."""
-    if not new_jobs and not follow_ups and not stale:
+    saved_alerts = saved_alerts or []
+    if not new_jobs and not follow_ups and not stale and not saved_alerts:
         # No news = no email. An empty digest trains people to ignore the real ones.
         logger.info(f"[Digest] Nothing to send to {user_email}")
         return True
 
     today_str = date.today().strftime("%B %d, %Y")
     total_new = len(new_jobs)
+
+    # ── Saved-search alerts ──
+    alerts_html = ""
+    if saved_alerts:
+        rows = "".join(
+            f'<tr><td style="padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">'
+            f'<strong>{_esc(a.get("name"))}</strong> — {int(a.get("count",0))} new match'
+            f'{"es" if int(a.get("count",0))!=1 else ""}</td></tr>'
+            for a in saved_alerts
+        )
+        alerts_html = (
+            '<h2 style="color:#1e293b;font-size:18px;margin:20px 0 10px;">🔖 Your saved searches</h2>'
+            f'<table width="100%" cellpadding="0" cellspacing="0">{rows}</table>'
+        )
 
     # ── New jobs section ──
     jobs_html = ""
@@ -223,7 +239,7 @@ def send_daily_digest(
 
         <p style="color:#475569;font-size:14px;">Hi {user_name or 'there'},</p>
 
-        {jobs_html}
+        {alerts_html}{jobs_html}
         {followups_html}
         {stale_html}
 

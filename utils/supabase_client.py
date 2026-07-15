@@ -485,6 +485,38 @@ def get_stale_pool_keys(days: int, sources: List[str]) -> set:
     return out
 
 
+def get_saved_searches(user_id: str) -> List[Dict]:
+    try:
+        return get_client().table("saved_searches").select("*") \
+            .eq("user_id", user_id).eq("alerts_on", True).execute().data or []
+    except Exception as e:
+        logger.warning(f"[Supabase] get_saved_searches failed: {e}")
+        return []
+
+
+def count_saved_search_new(user_id: str, filters: Dict) -> int:
+    """How many is_new feed jobs match a saved search's filters — the alert count."""
+    sb = get_client()
+    try:
+        q = sb.table("job_feed").select("id", count="exact", head=True) \
+            .eq("user_id", user_id).eq("is_dismissed", False).eq("is_applied", False) \
+            .eq("is_new", True)
+        for col, key in (("source", "board"), ("position", "position"),
+                         ("location_city", "location"), ("company", "company")):
+            vals = filters.get(key) or []
+            if vals:
+                q = q.in_(col, vals)
+        # text query across title/company
+        text = (filters.get("q") or "").strip()
+        if text:
+            safe = text.replace(",", " ").replace("(", " ").replace(")", " ")
+            q = q.or_(f"job_title.ilike.%{safe}%,company.ilike.%{safe}%")
+        return q.execute().count or 0
+    except Exception as e:
+        logger.warning(f"[Supabase] count_saved_search_new failed: {e}")
+        return 0
+
+
 def record_run_history(shard_index: int, shard_total: int, pool_size: int,
                        users_processed: int, total_upserted: int, error_count: int) -> None:
     try:

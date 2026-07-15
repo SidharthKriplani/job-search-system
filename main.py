@@ -233,10 +233,18 @@ def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozen
         if stale:
             logger.info(f"Stale applications: {len(stale)}")
 
+        # Saved-search alerts: new jobs matching each saved filter set.
+        alerts = []
+        for sv in sb.get_saved_searches(user_id):
+            n = sb.count_saved_search_new(user_id, sv.get("filters") or {})
+            if n > 0:
+                alerts.append({"name": sv.get("name", "Saved search"), "count": n})
+
         if user_email and os.environ.get("SEND_DIGEST", "1") != "0":
             send_daily_digest(
                 user_email = user_email, user_name = user_name,
                 new_jobs = new_jobs_for_digest[:20], follow_ups = follow_ups, stale = stale,
+                saved_alerts = alerts,
             )
         elif not user_email:
             logger.warning(f"No email for user {user_id[:8]}, skipping digest")

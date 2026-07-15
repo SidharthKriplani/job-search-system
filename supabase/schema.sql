@@ -443,6 +443,32 @@ CREATE POLICY "Users read health history"
     ON scraper_health_history FOR SELECT USING (auth.role() = 'authenticated');
 
 -- ============================================================
+-- TABLE: saved_searches
+-- A user's saved filter set. The nightly run alerts them (in the digest) when
+-- NEW jobs match — turning the feed from pull to push.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    -- filter state: {q, board[], position[], company[], location[], min_score}
+    filters     JSONB NOT NULL DEFAULT '{}',
+    alerts_on   BOOLEAN DEFAULT TRUE,
+    last_alerted_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_searches_user ON saved_searches(user_id, created_at DESC);
+
+ALTER TABLE saved_searches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own searches" ON saved_searches;
+DROP POLICY IF EXISTS "Service role reads searches" ON saved_searches;
+CREATE POLICY "Users manage own searches"
+    ON saved_searches FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Service role reads searches"
+    ON saved_searches FOR ALL USING (auth.role() = 'service_role');
+
+-- ============================================================
 -- TABLE: feed_feedback
 -- One row per "not relevant" tap on a feed job — the raw signal for tuning
 -- the matcher (role graph weights, location rules, seniority fit).

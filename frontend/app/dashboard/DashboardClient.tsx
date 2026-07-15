@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Sidebar from '@/components/Sidebar'
 import JobCard from '@/components/JobCard'
 import { Job, ScraperHealth } from '@/lib/types'
-import { Search, Filter, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { Search, Filter, AlertCircle, CheckCircle, Clock, Bookmark, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import RefreshButton from '@/components/RefreshButton'
 import FacetSelect, { FacetOption } from '@/components/FacetSelect'
@@ -38,6 +38,47 @@ export default function DashboardClient({
   const [sort, setSort]           = useState<'relevance' | 'date'>('relevance')
   const [facets, setFacets]       = useState<{ positions: FacetOption[]; companies: FacetOption[]; locations: FacetOption[]; boards: FacetOption[] }>(
     { positions: [], companies: [], locations: [], boards: [] })
+  const [saved, setSaved_]        = useState<any[]>([])
+  const [showSavedMenu, setShowSavedMenu] = useState(false)
+
+  const loadSaved = useCallback(async () => {
+    try {
+      const d = await fetch('/api/saved-searches', { cache: 'no-store' }).then(r => r.json())
+      if (d.ok) setSaved_(d.searches)
+    } catch { /* ignore */ }
+  }, [])
+  useEffect(() => { loadSaved() }, [loadSaved])
+
+  const saveCurrentSearch = async () => {
+    const parts = [
+      search, ...Array.from(fPosition), ...Array.from(fLocation),
+      ...Array.from(fBoard), ...Array.from(fCompany),
+    ].filter(Boolean)
+    const name = parts.slice(0, 3).join(' · ') || 'All jobs'
+    const filters = {
+      q: search,
+      board: Array.from(fBoard), position: Array.from(fPosition),
+      company: Array.from(fCompany), location: Array.from(fLocation),
+    }
+    await fetch('/api/saved-searches', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, filters }),
+    })
+    loadSaved()
+  }
+
+  const applySaved = (sv: any) => {
+    const f = sv.filters || {}
+    setSearch(f.q || '')
+    setFBoard(new Set(f.board || [])); setFPosition(new Set(f.position || []))
+    setFCompany(new Set(f.company || [])); setFLocation(new Set(f.location || []))
+    setShowSavedMenu(false)
+  }
+
+  const deleteSaved = async (id: string) => {
+    await fetch(`/api/saved-searches?id=${id}`, { method: 'DELETE' })
+    loadSaved()
+  }
 
   // Load dynamic filter options once (and after a refresh brings new jobs).
   const loadFacets = useCallback(async () => {
@@ -280,6 +321,39 @@ export default function DashboardClient({
             >
               Clear filters
             </button>
+          )}
+          {isFiltered && (
+            <button onClick={saveCurrentSearch}
+              className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Bookmark className="w-3.5 h-3.5" /> Save search
+            </button>
+          )}
+          {saved.length > 0 && (
+            <div className="relative">
+              <button onClick={() => setShowSavedMenu(v => !v)}
+                className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600">
+                <Bookmark className="w-3.5 h-3.5" /> Saved ({saved.length})
+              </button>
+              {showSavedMenu && (
+                <div className="absolute z-20 mt-1 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1">
+                  {saved.map(sv => (
+                    <div key={sv.id} className="flex items-center gap-1 px-1">
+                      <button onClick={() => applySaved(sv)}
+                        className="flex-1 text-left px-2 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded truncate">
+                        {sv.name}
+                      </button>
+                      <button onClick={() => deleteSaved(sv.id)} title="Delete"
+                        className="p-1.5 text-slate-400 hover:text-red-500">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <p className="px-3 pt-1.5 pb-1 text-[10px] text-slate-400 border-t border-slate-100 dark:border-slate-800 mt-1">
+                    You'll get these in your daily email when new jobs match.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
           <div className="ml-auto flex items-center gap-1.5">
             <span className="text-xs text-slate-400 dark:text-slate-500">Sort</span>
