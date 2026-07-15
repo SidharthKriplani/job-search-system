@@ -406,6 +406,33 @@ def claim_digest_slot(user_id: str, today_iso: str) -> bool:
         return False
 
 
+def cap_user_feed(user_id: str, max_rows: int = 2500) -> int:
+    """Bound a user's stored feed. Keeps saved/applied rows always, plus the
+    top `max_rows` remaining by match_score; deletes the lowest-scoring surplus.
+    This is what stops job_feed growing without limit as users × matches climbs
+    (the O(users*matches) storage/egress ceiling). Users never scroll past a few
+    hundred, so trimming the low-score tail is invisible."""
+    sb = get_client()
+    try:
+        # Count the prunable (not saved/applied/dismissed) rows.
+        prunable = sb.table("job_feed").select("id", count="exact", head=True) \
+            .eq("user_id", user_id).eq("is_saved", False).eq("is_applied", False) \
+            .eq("is_dismissed", False).execute().count or 0
+        if prunable <= max_rows:
+            return 0
+        # Find the surplus: lowest-score prunable rows beyond the cap.
+        surplus = prunable - max_rows
+        rows = sb.table("job_feed").select("id") \
+            .eq("user_id", user_id).eq("is_saved", False).eq("is_applied", False) \
+            .eq("is_dismissed", False) \
+            .order("match_score", desc=False).limit(surplus).execute().data or []
+        ids = [r["id"] for r in rows]
+        return delete_jobs(ids, user_id=user_id) if ids else 0
+    except Exception as e:
+        logger.error(f"[Supabase] cap_user_feed failed: {e}")
+        return 0
+
+
 def cleanup_stale_capped_jobs(user_id: str, stale_keys: set) -> int:
     """Delete a user's feed rows whose (source, source_job_id) has been unseen
     in jobs_pool for a week (capped sources only). Saved/applied rows kept."""

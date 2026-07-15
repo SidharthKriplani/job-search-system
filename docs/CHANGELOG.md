@@ -4,6 +4,27 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (n) — egress/storage caps + opt-in Gmail connect
+
+Repo is public → GitHub Actions minutes are now unlimited-free (the private-tier
+2000-min/month ceiling that 6 nightly shards would have blown is gone).
+
+Storage/egress (the O(users*matches) ceiling), safe fixes that don't touch
+scoring/pruning logic:
+- description_snippet trimmed 500 -> 280 chars at ingestion (smaller job_feed
+  rows everywhere — storage + egress).
+- cap_user_feed(): each user's stored feed is bounded (default 2500 rows) —
+  keeps saved/applied always + top-by-score, prunes the low-score surplus. Stops
+  job_feed growing without limit as users climb. Users never scroll that far.
+- (resync already once/day; did NOT drop description from re-score — that would
+  lower scores and wrongly prune good jobs.)
+
+Gmail is now OPT-IN: sign-in stays scope-free (no warning), and a "Connect Gmail"
+button in Settings requests the gmail.modify scope only for users who want
+Naukri/iimjobs/LinkedIn alert parsing. Reopens that channel without forcing the
+restricted scope on everyone.
+
+
 ## 2026-07-15 (m) — indirect GitHub mining: +48 India company boards (+326 jobs)
 
 Followed the "indirect source" hunch. Mined the outscal/OpenJobs dataset

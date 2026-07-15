@@ -90,6 +90,21 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
     setSaved(false)
   }, [profile])
 
+  // Opt-in Gmail connection: re-auth with the gmail.modify scope ONLY for users
+  // who want alert parsing. Sign-in itself stays scope-free (no warning); this
+  // is the one place the restricted scope is requested. On return, the callback
+  // stores the token and flips gmail_connected.
+  const connectGmail = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=/settings`,
+        scopes: 'https://www.googleapis.com/auth/gmail.modify',
+        queryParams: { access_type: 'offline', prompt: 'consent' },
+      },
+    })
+  }
+
   const saveProfile = async () => {
     setSaving(true)
     setError(null)
@@ -200,8 +215,16 @@ export default function SettingsClient({ initialProfile, userId, gmailConnected,
                 <Mail className="w-4 h-4 flex-shrink-0" />
                 <p className="text-sm">Gmail not connected — job alert emails won't be parsed.</p>
               </div>
-              <p className="text-xs text-slate-400 mb-3">
-                Sign out and sign back in with Google to grant Gmail access.
+              <button
+                onClick={connectGmail}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-indigo-400 transition-colors"
+              >
+                <Mail className="w-4 h-4" /> Connect Gmail
+              </button>
+              <p className="text-xs text-slate-400 mt-2">
+                Opens Google to grant read access to your job-alert emails. You may see an
+                “unverified app” notice — that’s expected for the Gmail permission; click Advanced → Continue.
+                Only needed if you want Naukri/iimjobs/LinkedIn alerts parsed.
               </p>
             </div>
           )}

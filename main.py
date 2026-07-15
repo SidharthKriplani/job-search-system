@@ -211,6 +211,11 @@ def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozen
     if removed_closed:
         logger.info(f"Removed {removed_closed} closed postings")
 
+    # Bound the stored feed so it can't grow without limit (storage/egress cap).
+    capped = sb.cap_user_feed(user_id, int(os.environ.get("MAX_FEED_PER_USER", "2500")))
+    if capped:
+        logger.info(f"Capped feed: pruned {capped} low-score surplus rows")
+
     # ── Once-per-day heavy finalize (resync + reminders + digest) ──────────
     # process_user runs in all 6 nightly shards, but the full-feed resync read
     # (~14MB) and the digest must happen ONCE — else 6× the Supabase egress and

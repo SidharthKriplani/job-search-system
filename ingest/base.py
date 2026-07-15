@@ -53,9 +53,11 @@ def http_json(
         return None
 
 
-def strip_html(text: Optional[str], limit: int = 500) -> str:
+def strip_html(text: Optional[str], limit: int = 280) -> str:
     if not text:
         return ""
+    # 280 chars is enough for keyword/JD matching; keeping full JDs bloated every
+    # per-user job_feed row (storage + egress). The link goes to the full posting.
     return re.sub(r"<[^>]+>", " ", text).strip()[:limit]
 
 
