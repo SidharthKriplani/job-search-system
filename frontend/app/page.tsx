@@ -78,12 +78,30 @@ function LoginPage() {
       setMessage('Account created. If a confirmation email doesn’t arrive, ask the admin to disable email confirmation, then just Sign in.')
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { setError(error.message); setLoading(false); return }
-      // Force a full navigation so the server picks up the new session cookie.
+      if (error) {
+        // Most common cause: this email was created via Google (no password set).
+        const msg = /invalid login credentials/i.test(error.message)
+          ? "Wrong email/password — or this account was created with Google (which sets no password). Use \"Continue with Google\" above, or click \"Set / reset password\" below."
+          : error.message
+        setError(msg); setLoading(false); return
+      }
       window.location.href = '/dashboard'
       return
     }
     setLoading(false)
+  }
+
+  // Send a password-set/reset email — lets Google-created accounts add a password
+  // so they can ALSO use email login, and recovers forgotten passwords.
+  const sendReset = async () => {
+    if (!email) { setError('Enter your email first, then click Set / reset password.'); return }
+    setLoading(true); setError(null); setMessage(null)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset`,
+    })
+    setLoading(false)
+    if (error) { setError(error.message); return }
+    setMessage('Check your email for a link to set your password.')
   }
 
   return (
@@ -196,6 +214,15 @@ function LoginPage() {
             {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
+
+        {/* Forgot / set password */}
+        {mode === 'signin' && (
+          <p className="text-center mt-3">
+            <button onClick={sendReset} type="button" className="text-indigo-400 hover:text-indigo-300 text-xs">
+              Set / reset password
+            </button>
+          </p>
+        )}
 
         {/* Toggle mode */}
         <p className="text-slate-500 text-xs text-center mt-4">
