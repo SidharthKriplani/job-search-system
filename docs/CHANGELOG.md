@@ -4,6 +4,15 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (r) — foundit expanded 12→40 terms: 2,764 India jobs
+
+Widened foundit's query set across data/AI, software, product/design, finance
+(front+middle+back office), and consulting/ops/HR. Result: 2,937 jobs (2,589
+unique), **2,764 India-located**, in ~192s (well under jobspy's wall-clock).
+foundit alone now nearly matches the ENTIRE pre-session India pool (~3k). This is
+the single largest India source in the pipeline.
+
+
 ## 2026-07-15 (q) — foundit (Monster India) connector — the Naukri alternative (+854 India)
 
 Creative-source research for the walled India boards:

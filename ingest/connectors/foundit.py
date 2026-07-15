@@ -28,9 +28,23 @@ _HEADERS = {
 }
 
 DEFAULT_TERMS = [
-    "data scientist", "machine learning", "data analyst", "software engineer",
-    "product manager", "business analyst", "financial analyst", "investment banking",
-    "equity research", "credit analyst", "accountant", "devops",
+    # Data / AI
+    "data scientist", "machine learning engineer", "data analyst", "data engineer",
+    "business intelligence", "ai engineer",
+    # Software
+    "software engineer", "backend developer", "frontend developer",
+    "full stack developer", "java developer", "python developer", "devops engineer",
+    "cloud engineer", "qa engineer", "mobile developer",
+    # Product / design / PM
+    "product manager", "business analyst", "product analyst", "ui ux designer",
+    "project manager", "program manager",
+    # Finance (front + middle + back office, KPO/GCC)
+    "financial analyst", "investment banking", "equity research", "credit analyst",
+    "risk analyst", "chartered accountant", "fp&a", "accountant", "audit",
+    "treasury", "wealth management", "actuary",
+    # Consulting / ops / other high-volume
+    "consultant", "operations manager", "supply chain", "digital marketing",
+    "sales manager", "hr manager",
 ]
 
 
