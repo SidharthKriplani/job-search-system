@@ -75,12 +75,22 @@ first once that exists.
 
 ## Environment variables
 
-GitHub Actions secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `GOOGLE_CLIENT_ID`,
-`GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `NEXT_PUBLIC_APP_URL`, and optional
-`ADZUNA_APP_ID` / `ADZUNA_APP_KEY`.
+**GitHub Actions secrets:** `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `NEXT_PUBLIC_APP_URL`,
+`ADZUNA_APP_ID` / `ADZUNA_APP_KEY` (India breadth + salary — set).
 
-Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-`GITHUB_DISPATCH_TOKEN` (fine-grained PAT, Actions: read & write on the repo).
+**Vercel:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`GITHUB_DISPATCH_TOKEN` (fine-grained PAT, Actions: read & write),
+`NEXT_PUBLIC_MIN_FEED_SCORE` (optional, default 0.45 — the default-feed relevance floor).
+
+**Optional tuning env (main.py / connectors, sensible defaults):**
+`MAX_HARVESTED_PER_ATS` (1000), `WORKDAY_MAX_PER_COMPANY` (150),
+`ORACLE_MAX_PER_COMPANY` (200), `JOBSPY_SITES` (indeed,linkedin),
+`JOBSPY_PER_TERM` (60), `ADZUNA_PAGES` (4), `INSTAHYRE_MAX` (1000),
+`EMBED_RERANK_CAP` (2000), `MAX_JOB_AGE_DAYS` (90), `MAX_FEED_PER_USER` (2500),
+`BATCH_TOTAL`/`BATCH_INDEX` (sharding — set by daily.yml from the cron string).
+
+Repo is **public** → GitHub Actions minutes are free (no private-tier cap).
 
 ## First-time go-live (do once, in order)
 
@@ -88,10 +98,21 @@ Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 2. Run `supabase/schema.sql` in the Supabase SQL editor (idempotent; creates +
    backfills `user_profiles`, tightens RLS, adds unique indexes). **Re-run it
    whenever you pull schema changes** — it de-dupes existing rows first.
-3. Disable email confirmation: Supabase → Auth → Providers → Email (so signups
-   don't get stuck).
-4. Fill in Settings (roles, locations, salary floor).
-5. Trigger a run; confirm jobs land in the dashboard.
+3. Supabase → Auth → Providers → Email: **turn OFF "Confirm email"** and ensure
+   **"Allow new users to sign up" is ON** (both required for friend signups).
+4. Supabase → Auth → URL Configuration: Site URL + redirect allowlist = the live
+   Vercel URL (`https://job-search-system-zeta.vercel.app` and `/**`).
+5. Fill in Settings (roles, locations, salary floor). Gmail parsing is OPTIONAL —
+   users click "Connect Gmail" in Settings if they want Naukri/iimjobs alerts.
+6. Trigger a run; confirm jobs land in the dashboard.
+
+**Auth notes (things that bit us):**
+- Sign-in requests NO Gmail scope (D30) → no "unverified app" warning. Don't
+  re-add the scope to sign-in; Gmail is opt-in via Settings only.
+- The `handle_new_user` trigger is bulletproofed (D29) — if signups ever 500
+  again, re-run schema.sql to restore the current trigger.
+- An account created via Google has no password; email/password login for it
+  fails until the user sets one via "Set / reset password".
 
 ## Troubleshooting (things we've hit)
 

@@ -5,6 +5,62 @@ decision is reversed, add a new entry that supersedes it).
 
 ---
 
+### D30 — Sign-in requests NO Gmail scope; Gmail is opt-in (2026-07-15)
+Every Google sign-in used to request the restricted `gmail.modify` scope, which
+triggered Google's "unverified app" warning, demanded full verification (blocked
+by the vercel.app domain we don't own), and broke sign-in on mobile. **Now:**
+sign-in requests only basic identity (email+profile) — no warning, no
+verification needed. Gmail alert parsing is a separate opt-in "Connect Gmail"
+button in Settings, requesting the scope only for users who want Naukri/iimjobs
+parsing. Don't gate the front door on the one feature 90% of users don't need.
+
+### D29 — Triggers on auth.users must never be able to block signup (2026-07-15)
+`handle_new_user` ran inside the signup transaction and threw (live-DB drift after
+partial migrations) → every signup 500'd (email) / OAuth aborted → 404 (Google).
+**Now:** each step (profile insert, template seed) is wrapped in its own
+EXCEPTION-WHEN-OTHERS handler that swallows errors; the function always RETURN NEW.
+A missing profile/template must never stop a user being created (the app creates
+the profile lazily on first Settings save). Auth is load-bearing — nothing
+optional may be able to fail it.
+
+### D28 — Consume community datasets, don't fight anti-scraping (2026-07-15)
+Direct India job APIs (Naukri, Instahyre) rate-limit/captcha-wall datacenter IPs.
+The productive indirect route: mine a community-maintained company→ATS dataset
+(outscal/OpenJobs, 12k records, public GitHub), extract India companies' ATS
+slugs, LIVE-VERIFY each, add the ones that yield jobs (+48 boards, +326 India
+jobs). Someone else maintains the discovery; we consume the output. Global-remote
+job APIs (The Muse, RemoteOK) were tested and REJECTED — ~3% India, mostly
+US-remote noise that would pass our filter as "remote" and pollute the feed.
+
+### D27 — Relevance floor only on the DEFAULT feed, never on searches (2026-07-15)
+A 0.45 match-score floor hides junk (construction/foreign-lang jobs at ~0.39) from
+the unfiltered firehose. But applying it to searches/filters hid results the user
+explicitly asked for ("data scientist" → only 15). **Now:** the floor applies only
+to the default browse view; any search/facet/scope narrowing drops it — the user
+is doing the relevance-narrowing themselves.
+
+### D26 — Read-time role re-filter removed; trust the backend match (2026-07-15)
+The dashboard re-filtered the feed with a 150+-term ILIKE OR (incl.
+description_snippet) over ~24k rows at read time → blew Postgres' 8s statement
+timeout → empty feed while the is_new count (partial index) still returned a
+number (the "298 New but 0 In Feed" paradox). **Now:** no read-time role filter —
+every stored row was already matched by the backend; role changes reconcile via
+the on-save resync. A cheap `match_score` floor replaces the expensive ILIKE.
+
+### D25 — Source-domain is a scoring signal (2026-07-15)
+Sources are tagged finance/tech/general. A finance job from a finance-specialist
+board (Workday finance GCC / Oracle / SmartRecruiters) outranks the identical
+title from a generic board (~5-6% score weight — a tiebreaker, not an override).
+Fetch order also prioritises the domains the night's active users need.
+
+### D24 — Bound per-user storage instead of normalizing (for now) (2026-07-15)
+The real fix for O(users×matches) growth is normalizing job_feed into shared
+`jobs` + thin `user_job_matches`. That's a big migration on a live app. Interim,
+lower-risk: trim stored descriptions (280 chars) + `cap_user_feed` (2500 rows/user,
+keep saved/applied + top-by-score). Buys runway to ~10 users; normalize before that.
+
+---
+
 ### D20 — Résumé detection SUGGESTS, never silently injects (2026-06-23)
 Uploading a résumé used to write detected roles into `target_roles` (full weight,
 sticky, append-only) — a noisy parse permanently corrupted the user's stated

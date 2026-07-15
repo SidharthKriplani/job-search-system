@@ -40,6 +40,15 @@ export default function DashboardClient({
     { positions: [], companies: [], locations: [], boards: [] })
   const [saved, setSaved_]        = useState<any[]>([])
   const [showSavedMenu, setShowSavedMenu] = useState(false)
+  const savedMenuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!showSavedMenu) return
+    const onDoc = (e: MouseEvent) => {
+      if (savedMenuRef.current && !savedMenuRef.current.contains(e.target as Node)) setShowSavedMenu(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [showSavedMenu])
 
   const loadSaved = useCallback(async () => {
     try {
@@ -329,7 +338,7 @@ export default function DashboardClient({
             </button>
           )}
           {saved.length > 0 && (
-            <div className="relative">
+            <div className="relative" ref={savedMenuRef}>
               <button onClick={() => setShowSavedMenu(v => !v)}
                 className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600">
                 <Bookmark className="w-3.5 h-3.5" /> Saved ({saved.length})
