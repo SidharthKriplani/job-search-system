@@ -48,6 +48,14 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS seniority_level TEXT;
 -- shards from each emailing the user (claim_digest_slot).
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_digest_date DATE;
 
+-- Heal any job_feed rows written with NULL status flags (a pre-fix resync bug
+-- inserted pool matches with NULL is_applied/is_saved, which .eq(is_applied,false)
+-- excludes → invisible feed). Safe + idempotent.
+UPDATE job_feed SET is_applied  = FALSE WHERE is_applied  IS NULL;
+UPDATE job_feed SET is_saved    = FALSE WHERE is_saved    IS NULL;
+UPDATE job_feed SET is_dismissed= FALSE WHERE is_dismissed IS NULL;
+UPDATE job_feed SET is_new      = FALSE WHERE is_new      IS NULL;
+
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own profile"   ON user_profiles;

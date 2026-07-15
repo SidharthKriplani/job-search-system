@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { roleOrFilter, effectiveRoles } from '@/lib/feedFilter'
+import { effectiveRoles } from '@/lib/feedFilter'
 
 /**
  * Server-side feed query — so search, source filter, and "New/Saved" run against
@@ -27,7 +27,6 @@ export async function GET(req: Request) {
   const { data: prof } = await supabase
     .from('user_profiles').select('target_roles, industries, resume_text').eq('user_id', user.id).maybeSingle()
   const roles = effectiveRoles(prof?.target_roles, prof?.resume_text)
-  const roleFilter = roleOrFilter(roles, prof?.industries)
 
   // No profile → no firehose. Return empty + a flag the UI uses to prompt setup.
   if (!(roles.length || prof?.industries?.length)) {
@@ -41,7 +40,8 @@ export async function GET(req: Request) {
     .eq('is_dismissed', false)
     .eq('is_applied', false)
 
-  if (roleFilter)        query = query.or(roleFilter)
+  // No read-time role .or() — see dashboard/page.tsx: rows are already matched
+  // by the backend; the heavy ILIKE OR blew the statement timeout → empty feed.
   if (scope === 'new')   query = query.eq('is_new', true)
   if (scope === 'saved') query = query.eq('is_saved', true)
 
