@@ -7,8 +7,11 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/dashboard'
 
+  const oauthErr = searchParams.get('error_description') || searchParams.get('error')
   if (!code) {
-    return NextResponse.redirect(`${origin}/auth/error`)
+    // Google returned without a code (user cancelled, or signup failed upstream).
+    const msg = oauthErr || 'Google sign-in did not complete. Please try again.'
+    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(msg)}`)
   }
 
   const cookieStore = cookies()

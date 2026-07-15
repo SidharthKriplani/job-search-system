@@ -547,16 +547,25 @@ CREATE TRIGGER update_message_templates_updated_at
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- 1. Ensure a profile row exists so the scraper can find this user.
-    INSERT INTO user_profiles (user_id, email, full_name)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
-    )
-    ON CONFLICT (user_id) DO NOTHING;
+    -- CRITICAL: this trigger runs INSIDE the auth signup transaction. If ANYTHING
+    -- here raises, Supabase fails the whole signup with a 500 (email path) and
+    -- aborts OAuth (Google path → callback 404). So every step is wrapped to
+    -- swallow errors — a missing profile/template must never block a user being
+    -- created. The app lazily creates the profile on first Settings save anyway.
+    BEGIN
+        INSERT INTO user_profiles (user_id, email, full_name)
+        VALUES (
+            NEW.id,
+            NEW.email,
+            COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
+        )
+        ON CONFLICT (user_id) DO NOTHING;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;  -- never block signup on profile creation
+    END;
 
-    -- 2. Seed default outreach templates, but only once per user.
+    BEGIN
+    -- Seed default outreach templates, but only once per user.
     IF NOT EXISTS (SELECT 1 FROM message_templates WHERE user_id = NEW.id) THEN
         INSERT INTO message_templates (user_id, name, template_type, subject_line, body, variables, is_default)
         VALUES
@@ -588,6 +597,9 @@ BEGIN
             TRUE
         );
     END IF;
+    EXCEPTION WHEN OTHERS THEN
+        NULL;  -- never block signup on template seeding
+    END;
 
     RETURN NEW;
 END;
