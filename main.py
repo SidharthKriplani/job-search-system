@@ -103,7 +103,7 @@ def resync_user(profile: Dict) -> None:
         logger.error(f"[resync] failed for {user_id[:8]}: {e}")
 
 
-def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
+def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozenset(), pool_companies: set = frozenset()) -> Dict:
     """
     Run the full pipeline for one user against the shared ATS job pool.
 
@@ -172,6 +172,14 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
     # ── Re-sync the STORED feed to the CURRENT profile ─────────────────────
     resync_user(profile)
 
+    # ── Remove postings that have CLOSED at the source ─────────────────────
+    # (absent from the current pool although their board fetch succeeded).
+    removed_closed = 0
+    if pool_keys:
+        removed_closed = sb.cleanup_closed_jobs(user_id, pool_keys, pool_companies)
+        if removed_closed:
+            logger.info(f"Removed {removed_closed} closed postings")
+
     # ── Get follow-up reminders ────────────────────────────────────────────
     follow_ups = sb.get_follow_up_due(user_id)
     stale      = sb.get_stale_applications(user_id, days=7)
@@ -192,6 +200,50 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
         )
     else:
         logger.warning(f"No email set for user {user_id[:8]}, skipping digest")
+
+    return {
+        "user": _mask_email(user_email),
+        "matched": len(unique),
+        "new": len(new_jobs_for_digest),
+        "removed_closed": removed_closed,
+    }
+
+
+def _mask_email(email: str) -> str:
+    """a***@domain — enough to identify, not enough to harvest."""
+    if not email or "@" not in email:
+        return "(no email)"
+    local, dom = email.split("@", 1)
+    return f"{local[:1]}***@{dom}"
+
+
+def _write_run_report(path: str, *, started, shard_index: int, shard_total: int,
+                      pool_size: int, user_stats: List[Dict], errors: List[str]) -> None:
+    """Sanitized run summary committed back to the repo by the workflow — makes
+    every production run diagnosable with a plain `git pull` (no Actions UI)."""
+    from datetime import datetime, timezone
+    lines = [
+        "# Last run report",
+        "",
+        f"- **When:** {started.strftime('%Y-%m-%d %H:%M UTC')} (finished {datetime.now(timezone.utc).strftime('%H:%M UTC')})",
+        f"- **Shard:** {shard_index + 1}/{shard_total}",
+        f"- **Pool:** {pool_size} jobs — " + ", ".join(f"{k}: {v}" for k, v in SOURCE_SUMMARY.items()),
+        "",
+        "| user | matched | new | closed removed |",
+        "|------|---------|-----|----------------|",
+    ]
+    for u in user_stats:
+        lines.append(f"| {u['user']} | {u['matched']} | {u['new']} | {u['removed_closed']} |")
+    if errors:
+        lines += ["", "## Errors", ""] + [f"- {e}" for e in errors]
+    else:
+        lines += ["", "No errors."]
+    lines.append("")
+    try:
+        with open(path, "w") as f:
+            f.write("\n".join(lines))
+    except Exception as e:
+        logger.warning(f"[report] could not write {path}: {e}")
 
 
 def main():
@@ -257,15 +309,34 @@ def main():
         except Exception as e:
             logger.warning(f"[health] {source}: {e}")
 
+    # Pool identity sets for closed-job cleanup (mirror upsert's key fallback).
+    import hashlib as _hashlib
+    def _pool_key(j):
+        sjid = j.get("source_job_id") or _hashlib.md5((j.get("job_url") or "").encode()).hexdigest()[:20]
+        return (j.get("source"), str(sjid))
+    pool_keys      = {_pool_key(j) for j in shared_pool}
+    pool_companies = {(j.get("source"), (j.get("company") or "").strip().lower()) for j in shared_pool}
+
     # Process each user sequentially against the shared pool
+    user_stats: List[Dict] = []
+    run_errors: List[str] = []
     for i, profile in enumerate(users, 1):
         logger.info(f"\n[User {i}/{len(users)}]")
         try:
-            process_user(profile, shared_pool)
+            stats = process_user(profile, shared_pool, pool_keys, pool_companies)
+            if stats:
+                user_stats.append(stats)
         except Exception as e:
             logger.error(f"FATAL error for user {profile.get('user_id', '?')[:8]}: {e}")
             logger.debug(traceback.format_exc())
+            run_errors.append(f"user {profile.get('user_id', '?')[:8]}: {type(e).__name__}: {e}")
             # Continue to next user — never let one user crash the whole run
+
+    if os.environ.get("WRITE_RUN_REPORT", "1") != "0":
+        _write_run_report("docs/LAST_RUN.md", started=start,
+                          shard_index=shard_index, shard_total=shard_total,
+                          pool_size=len(shared_pool), user_stats=user_stats,
+                          errors=run_errors)
 
     elapsed = (datetime.now(timezone.utc) - start).total_seconds()
     logger.info(f"\n✓ Run complete in {elapsed:.1f}s")

@@ -20,6 +20,9 @@ on:
         required: false
         default: 'false'
 
+permissions:
+  contents: write   # lets the run commit docs/LAST_RUN.md back to main
+
 jobs:
   scrape:
     name: Run Job Scrapers
@@ -39,11 +42,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Install Playwright (for Naukri refresh)
-        run: |
-          pip install playwright==1.42.0
-          playwright install chromium --with-deps
-        continue-on-error: true   # non-critical if it fails
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/fastembed
+          key: fastembed-bge-small-en-v1.5
+
+      - name: Install embeddings deps (optional semantic rerank)
+        run: pip install -r requirements-embeddings.txt
+        continue-on-error: true   # rerank is optional — run degrades to keyword scoring
 
       - name: Run job scrapers
         env:
@@ -61,14 +68,25 @@ jobs:
           # (and the Refresh Now button) do a full single run.
           BATCH_TOTAL:           ${{ github.event_name == 'schedule' && '6' || '1' }}
           LOG_LEVEL:             ${{ github.event.inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
+          USE_EMBEDDINGS:        '1'
+          FASTEMBED_CACHE_PATH:  ~/.cache/fastembed
         run: python main.py
 
-      - name: Run Naukri profile refresh (optional)
-        env:
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python naukri_refresh.py
-        continue-on-error: true  # non-critical — failure doesn't break the run
+      - name: Commit run report
+        if: always()
+        continue-on-error: true
+        run: |
+          git config user.name  "run-report"
+          git config user.email "run-report@users.noreply.github.com"
+          git add docs/LAST_RUN.md
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: run report [skip ci]"
+          # 6 sharded runs can race on the push — rebase-retry a few times
+          for i in 1 2 3 4; do
+            git push && exit 0
+            git pull --rebase --autostash || true
+          done
+          echo "report push failed after retries (non-fatal)"
 
       - name: Report status
         if: always()

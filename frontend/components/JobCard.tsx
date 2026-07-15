@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, DollarSign, Calendar, Clock, Briefcase, BarChart3, ExternalLink, Bookmark, X, CheckCircle } from 'lucide-react'
+import { MapPin, DollarSign, Calendar, Clock, Briefcase, BarChart3, ExternalLink, Bookmark, X, CheckCircle, ThumbsDown } from 'lucide-react'
 import { Job, SOURCE_LABELS } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 import clsx from 'clsx'
@@ -35,9 +35,19 @@ function prettyType(t: string | null): string | null {
   return map[t] || null
 }
 
+const FEEDBACK_REASONS: { key: string; label: string }[] = [
+  { key: 'wrong_role',      label: 'Wrong role' },
+  { key: 'wrong_location',  label: 'Wrong location' },
+  { key: 'wrong_seniority', label: 'Wrong seniority' },
+  { key: 'wrong_company',   label: 'Company not for me' },
+  { key: 'stale',           label: 'Posting looks dead' },
+  { key: 'other',           label: 'Other' },
+]
+
 export default function JobCard({ job, onUpdate }: Props) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
   const scorePct = Math.round((job.match_score || 0) * 100)
   const scoreColor =
     scorePct >= 70 ? 'bg-green-100 text-green-700' :
@@ -80,6 +90,24 @@ export default function JobCard({ job, onUpdate }: Props) {
   }
   const dismiss     = () => update({ is_dismissed: true })
   const toggleSave  = () => update({ is_saved: !job.is_saved })
+
+  // "Not relevant" = dismiss + record WHY. The reasons are the raw signal for
+  // tuning the matcher (role graph weights, location rules, seniority fit).
+  const notRelevant = async (reason: string) => {
+    setShowFeedback(false)
+    try {
+      await supabase.from('feed_feedback').insert({
+        user_id:     job.user_id,
+        job_id:      job.id,
+        job_title:   job.job_title,
+        company:     job.company,
+        source:      job.source,
+        match_score: job.match_score,
+        reason,
+      })
+    } catch { /* feedback is best-effort; the dismiss below still applies */ }
+    await update({ is_dismissed: true })
+  }
 
   if (job.is_dismissed) return null
 
@@ -205,14 +233,39 @@ export default function JobCard({ job, onUpdate }: Props) {
           <Bookmark className="w-3.5 h-3.5" fill={job.is_saved ? 'currentColor' : 'none'} />
         </button>
 
-        <button
-          onClick={dismiss}
-          disabled={saving}
-          className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors disabled:opacity-50 ml-auto"
-          title="Dismiss"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="relative ml-auto flex items-center gap-1">
+          <button
+            onClick={() => setShowFeedback(v => !v)}
+            disabled={saving}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition-colors disabled:opacity-50"
+            title="Not relevant — tell us why"
+          >
+            <ThumbsDown className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={dismiss}
+            disabled={saving}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition-colors disabled:opacity-50"
+            title="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+
+          {showFeedback && (
+            <div className="absolute right-0 bottom-8 z-10 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1">
+              <p className="px-3 py-1 text-xs font-medium text-slate-400 dark:text-slate-500">Not relevant because…</p>
+              {FEEDBACK_REASONS.map(r => (
+                <button
+                  key={r.key}
+                  onClick={() => notRelevant(r.key)}
+                  className="w-full text-left px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

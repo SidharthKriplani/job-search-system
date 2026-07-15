@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import {
   LayoutDashboard, Briefcase, Users, Settings,
-  LogOut, Zap
+  LogOut, Zap, Activity
 } from 'lucide-react'
 import clsx from 'clsx'
 import ThemeToggle from './ThemeToggle'
@@ -14,6 +14,7 @@ const NAV = [
   { href: '/dashboard',     label: 'Job Feed',     icon: LayoutDashboard },
   { href: '/applications',  label: 'Applications', icon: Briefcase },
   { href: '/referrals',     label: 'Referrals',    icon: Users },
+  { href: '/health',        label: 'Health',       icon: Activity },
   { href: '/settings',      label: 'Settings',     icon: Settings },
 ]
 

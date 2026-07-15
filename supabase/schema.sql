@@ -29,17 +29,14 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     exclude_companies TEXT[] DEFAULT '{}',
     is_active       BOOLEAN DEFAULT TRUE,
     gmail_connected BOOLEAN DEFAULT FALSE,
-    -- Optional Naukri auto-refresh credentials (used by naukri_refresh.py).
-    -- Opt-in only; many users leave these null.
-    naukri_email    TEXT,
-    naukri_password TEXT,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Backfill the optional Naukri columns on pre-existing installs.
-ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_email    TEXT;
-ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS naukri_password TEXT;
+-- Naukri auto-refresh feature REMOVED 2026-07-15 (stored plaintext passwords).
+-- If your install ever created the columns, drop them (safe if absent):
+ALTER TABLE user_profiles DROP COLUMN IF EXISTS naukri_email;
+ALTER TABLE user_profiles DROP COLUMN IF EXISTS naukri_password;
 -- Master resume text — powers resume-aware job matching (M4).
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS resume_text     TEXT;
 -- Last manual "Refresh Now" time — used to rate-limit non-admin refreshes.
@@ -340,6 +337,38 @@ ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage own contacts" ON contacts;
 CREATE POLICY "Users can manage own contacts"
     ON contacts FOR ALL USING (auth.uid() = user_id);
+
+-- ============================================================
+-- TABLE: feed_feedback
+-- One row per "not relevant" tap on a feed job — the raw signal for tuning
+-- the matcher (role graph weights, location rules, seniority fit).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS feed_feedback (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    job_id      UUID,             -- job_feed.id at the time (row may be deleted later)
+    job_title   TEXT,
+    company     TEXT,
+    source      TEXT,
+    match_score FLOAT,
+    reason      TEXT NOT NULL CHECK (reason IN
+                  ('wrong_role','wrong_location','wrong_seniority','wrong_company','stale','other')),
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_feed_feedback_user ON feed_feedback(user_id, created_at DESC);
+
+ALTER TABLE feed_feedback ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users insert own feedback" ON feed_feedback;
+DROP POLICY IF EXISTS "Users view own feedback"   ON feed_feedback;
+DROP POLICY IF EXISTS "Service role manages feedback" ON feed_feedback;
+CREATE POLICY "Users insert own feedback"
+    ON feed_feedback FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users view own feedback"
+    ON feed_feedback FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Service role manages feedback"
+    ON feed_feedback FOR ALL USING (auth.role() = 'service_role');
 
 -- ============================================================
 -- TABLE: scraper_health

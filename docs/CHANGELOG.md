@@ -4,6 +4,31 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (c) — six product improvements (post-blocker hardening)
+
+1. **Dead-job cleanup** — `cleanup_closed_jobs()`: ATS-source rows absent from
+   the current pool are deleted when their company's board fetch succeeded
+   (saved/applied rows kept; gmail/jobspy/aggregators exempt — their listings
+   are partial by nature). The feed no longer accumulates dead links.
+2. **Run report** — every daily run writes sanitized `docs/LAST_RUN.md`
+   (shard, source summary, per-user matched/new/removed, errors) and the
+   workflow commits it `[skip ci]` with a rebase-retry for sharded races.
+   Any future "why is it broken" starts with `git pull`, not a PAT.
+3. **Relevance feedback** — new `feed_feedback` table (RLS: insert/view own) +
+   a "Not relevant → why" menu on JobCard (wrong role/location/seniority/
+   company/stale/other). The raw signal for tuning the matcher.
+4. **Embeddings rerank ON** — `USE_EMBEDDINGS=1` in daily.yml + fastembed
+   install + model cache. Semantic rerank of the keyword shortlist.
+5. **Scraper-health page** — `/health` lists per-source status, last run,
+   job count, failures, last error. Sidebar link added.
+6. **Naukri credentials feature REMOVED** — naukri_refresh.py deleted,
+   workflow step dropped, schema now DROPs the plaintext password columns.
+
+⚠️ Requires one manual step: re-run `supabase/schema.sql` in the Supabase SQL
+editor (adds feed_feedback, drops naukri columns). Idempotent, no data loss.
+
+---
+
 ## 2026-07-15 (b) — LIVE BLOCKER CLOSED: first observed end-to-end production run
 
 Ran the real pipeline on GitHub Actions with live secrets via a temporary

@@ -230,6 +230,58 @@ def age_out_new_flags(user_id: str, hours: int = 24) -> int:
         return total
 
 
+# Sources whose pool listing is COMPLETE for each company board (deterministic
+# ATS APIs). Rotating/partial sources (jobspy, aggregators, gmail_*) must never
+# be cleaned by pool-absence — a job can be live yet absent from their sample.
+DETERMINISTIC_SOURCES = {"greenhouse", "lever", "ashby", "workday", "oracle", "smartrecruiters"}
+
+
+def cleanup_closed_jobs(user_id: str, pool_keys: set, pool_companies: set) -> int:
+    """
+    Remove stored feed rows whose posting has CLOSED at the source.
+
+    A row is deleted only when ALL of:
+      - its source is a deterministic ATS API (complete board listings),
+      - its (source, source_job_id) is absent from the current pool,
+      - its company DID appear in the pool for that source (board fetch
+        succeeded — a failed/missing board never triggers deletion),
+      - the user hasn't saved or applied to it.
+    This is what keeps the feed free of dead links without ever deleting on a
+    transient fetch failure.
+    """
+    sb = get_client()
+    doomed: List[str] = []
+    page, start = 1000, 0
+    try:
+        while True:
+            rows = sb.table("job_feed") \
+                .select("id, source, source_job_id, company, is_saved, is_applied") \
+                .eq("user_id", user_id) \
+                .order("id") \
+                .range(start, start + page - 1) \
+                .execute().data or []
+            for r in rows:
+                src = r.get("source")
+                if src not in DETERMINISTIC_SOURCES:
+                    continue
+                if r.get("is_saved") or r.get("is_applied"):
+                    continue
+                if (src, str(r.get("source_job_id"))) in pool_keys:
+                    continue
+                if (src, (r.get("company") or "").strip().lower()) not in pool_companies:
+                    continue  # board absent/failed this run — don't judge
+                doomed.append(r["id"])
+            if len(rows) < page:
+                break
+            start += page
+        if doomed:
+            return delete_jobs(doomed, user_id=user_id)
+        return 0
+    except Exception as e:
+        logger.error(f"[Supabase] cleanup_closed_jobs failed: {e}")
+        return 0
+
+
 # ─── Scraper health helpers ──────────────────────────────────────────────────
 
 def update_scraper_health(
