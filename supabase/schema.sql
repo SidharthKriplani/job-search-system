@@ -48,6 +48,8 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS seniority_level TEXT;
 -- shards from each emailing the user (claim_digest_slot).
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_digest_date DATE;
 ALTER TABLE job_feed ADD COLUMN IF NOT EXISTS source_domain TEXT;
+ALTER TABLE job_feed ADD COLUMN IF NOT EXISTS position TEXT;
+ALTER TABLE job_feed ADD COLUMN IF NOT EXISTS location_city TEXT;
 
 -- Heal any job_feed rows written with NULL status flags (a pre-fix resync bug
 -- inserted pool matches with NULL is_applied/is_saved, which .eq(is_applied,false)
@@ -125,6 +127,8 @@ CREATE TABLE IF NOT EXISTS job_feed (
     experience_required TEXT,
     seniority       TEXT,            -- junior, mid, senior, lead, manager, director
     source_domain   TEXT,            -- finance | tech | general (provenance for scoring)
+    position        TEXT,            -- canonical role bucket (facet filter)
+    location_city   TEXT,            -- canonical city bucket (facet filter)
 
     -- Status
     is_new          BOOLEAN DEFAULT TRUE,
@@ -371,6 +375,8 @@ CREATE TABLE IF NOT EXISTS jobs_pool (
     job_type        TEXT,
     seniority       TEXT,
     source_domain   TEXT,
+    position        TEXT,
+    location_city   TEXT,
     first_seen_at   TIMESTAMPTZ DEFAULT NOW(),
     last_seen_at    TIMESTAMPTZ DEFAULT NOW(),
 
@@ -378,6 +384,8 @@ CREATE TABLE IF NOT EXISTS jobs_pool (
 );
 
 ALTER TABLE jobs_pool ADD COLUMN IF NOT EXISTS source_domain TEXT;
+ALTER TABLE jobs_pool ADD COLUMN IF NOT EXISTS position TEXT;
+ALTER TABLE jobs_pool ADD COLUMN IF NOT EXISTS location_city TEXT;
 CREATE INDEX IF NOT EXISTS idx_jobs_pool_last_seen ON jobs_pool(last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_pool_source    ON jobs_pool(source);
 
@@ -638,3 +646,31 @@ BEGIN
             ON job_feed(user_id, source, source_job_id);
     END IF;
 END $$;
+
+-- ============================================================
+-- FUNCTION: get_feed_facets — dynamic filter options for the dashboard.
+-- Returns distinct boards / positions / locations (+ top-60 companies) that are
+-- actually present in the user's ACTIVE feed, each with a count. SECURITY
+-- INVOKER so RLS scopes it to the caller's own rows.
+-- ============================================================
+CREATE OR REPLACE FUNCTION get_feed_facets(p_user UUID)
+RETURNS JSONB
+LANGUAGE sql STABLE SECURITY INVOKER AS $$
+  WITH f AS (
+    SELECT source, company, position, location_city
+    FROM job_feed
+    WHERE user_id = p_user AND is_dismissed = FALSE AND is_applied = FALSE
+  )
+  SELECT jsonb_build_object(
+    'boards', COALESCE((SELECT jsonb_agg(jsonb_build_object('value', v, 'count', c) ORDER BY c DESC)
+                        FROM (SELECT source v, count(*) c FROM f WHERE source IS NOT NULL GROUP BY source) a), '[]'::jsonb),
+    'positions', COALESCE((SELECT jsonb_agg(jsonb_build_object('value', v, 'count', c) ORDER BY c DESC)
+                        FROM (SELECT position v, count(*) c FROM f WHERE position IS NOT NULL GROUP BY position) b), '[]'::jsonb),
+    'locations', COALESCE((SELECT jsonb_agg(jsonb_build_object('value', v, 'count', c) ORDER BY c DESC)
+                        FROM (SELECT location_city v, count(*) c FROM f WHERE location_city IS NOT NULL GROUP BY location_city) d), '[]'::jsonb),
+    'companies', COALESCE((SELECT jsonb_agg(jsonb_build_object('value', v, 'count', c) ORDER BY c DESC)
+                        FROM (SELECT company v, count(*) c FROM f WHERE company IS NOT NULL AND company <> '' GROUP BY company ORDER BY count(*) DESC LIMIT 60) e), '[]'::jsonb)
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION get_feed_facets(UUID) TO authenticated;

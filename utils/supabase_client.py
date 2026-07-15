@@ -68,11 +68,22 @@ JOB_FEED_COLUMNS = {
     "description_snippet", "posted_date", "source", "source_job_id", "job_type",
     "seniority", "is_new", "is_applied", "is_saved",
     "is_dismissed", "match_score", "match_reasons", "source_domain",
+    "position", "location_city",
 }
 # NOTE: "experience_required" was removed — there is NO such column in job_feed
 # (see supabase/schema.sql). Whitelisting a non-existent column is a landmine:
 # if any connector ever emits it, Supabase rejects the ENTIRE batch and the rows
 # are silently lost.
+
+
+def _enrich_facets(row: Dict) -> None:
+    """Stamp canonical position + location_city (idempotent) so the feed filters
+    have clean buckets. Applied on every write path — fresh scrape, pool, resync."""
+    from utils import normalize
+    if not row.get("position"):
+        row["position"] = normalize.normalize_position(row.get("job_title"))
+    if not row.get("location_city"):
+        row["location_city"] = normalize.normalize_location(row.get("location"))
 
 
 def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
@@ -91,6 +102,7 @@ def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
         # Keep only real job_feed columns — stray keys (e.g. a "remote" flag)
         # would make Supabase reject the entire batch.
         row = {k: v for k, v in job.items() if k in JOB_FEED_COLUMNS}
+        _enrich_facets(row)
         row["user_id"] = user_id
         if not row.get("source_job_id"):
             row["source_job_id"] = hashlib.md5(row.get("job_url", "").encode()).hexdigest()[:20]
@@ -142,7 +154,7 @@ def get_user_feed_rows(user_id: str) -> List[Dict]:
     out: List[Dict] = []
     cols = ("id, job_title, company, location, salary_range, job_url, "
             "description_snippet, posted_date, source, source_job_id, seniority, "
-            "job_type, is_applied, is_saved, source_domain")
+            "job_type, is_applied, is_saved, source_domain, position, location_city")
     page = 1000
     try:
         start = 0
@@ -301,7 +313,7 @@ def cleanup_closed_jobs(user_id: str, pool_keys: set, pool_companies: set) -> in
 POOL_COLUMNS = {
     "source", "source_job_id", "job_title", "company", "location",
     "salary_range", "job_url", "description_snippet", "posted_date",
-    "job_type", "seniority", "source_domain",
+    "job_type", "seniority", "source_domain", "position", "location_city",
 }
 
 
@@ -317,6 +329,7 @@ def upsert_pool_jobs(jobs: List[Dict]) -> int:
     rows = []
     for j in jobs:
         row = {k: v for k, v in j.items() if k in POOL_COLUMNS}
+        _enrich_facets(row)
         if not row.get("source_job_id"):
             row["source_job_id"] = hashlib.md5((row.get("job_url") or "").encode()).hexdigest()[:20]
         row["source_job_id"] = str(row["source_job_id"])

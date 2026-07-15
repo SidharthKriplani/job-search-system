@@ -4,6 +4,28 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (h) — feed filters + sort (Position / Company / Location / Board)
+
+Server-side faceted filtering (correct across the WHOLE feed, not just the
+loaded page):
+- **Canonical buckets** (`utils/normalize.py`): every job gets a `position`
+  (title → Data Scientist / Equity Research Analyst / … / Other) and
+  `location_city` (raw → Bangalore / Mumbai / Remote / Overseas / …) stamped at
+  write time (`_enrich_facets` on all upsert paths). All fuzzy naming-approx
+  logic in one place. Stored columns → exact, fast filtering + clean dropdowns.
+- **Dynamic options** (`get_feed_facets` RPC + `/api/facets`): dropdowns show
+  only the boards / positions / locations / top-60 companies actually present
+  in the user's feed, each with a count. One RLS-scoped round-trip.
+- **Feed route**: multi-select `.in_()` filters for position/company/location
+  (board already existed) + `sort` = Best match (relevance, default) | Date
+  posted (posted_date desc, nulls last).
+- **UI**: `FacetSelect` multi-select dropdowns (company searchable) + a sort
+  select, wired to re-query server-side; facets refresh after a manual Refresh.
+
+Manual step: re-run supabase/schema.sql (adds position/location_city columns +
+get_feed_facets function). Idempotent.
+
+
 ## 2026-07-15 (g) — domain-aware source routing (finance + tech)
 
 Sources are now tagged finance / tech / general (registry.unit_domain):

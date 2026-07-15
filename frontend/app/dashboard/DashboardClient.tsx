@@ -7,6 +7,7 @@ import { Job, ScraperHealth } from '@/lib/types'
 import { Search, Filter, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import clsx from 'clsx'
 import RefreshButton from '@/components/RefreshButton'
+import FacetSelect, { FacetOption } from '@/components/FacetSelect'
 
 const DEFAULT_SOURCES = [
   'All', 'indeed', 'naukri', 'greenhouse', 'lever', 'ashby',
@@ -35,6 +36,23 @@ export default function DashboardClient({
   const [showNew, setShowNew]     = useState(false)
   const [showSaved, setShowSaved] = useState(false)
 
+  // Facet filters (server-side, multi-select) + sort.
+  const [fPosition, setFPosition] = useState<Set<string>>(new Set())
+  const [fCompany,  setFCompany]  = useState<Set<string>>(new Set())
+  const [fLocation, setFLocation] = useState<Set<string>>(new Set())
+  const [sort, setSort]           = useState<'relevance' | 'date'>('relevance')
+  const [facets, setFacets]       = useState<{ positions: FacetOption[]; companies: FacetOption[]; locations: FacetOption[] }>(
+    { positions: [], companies: [], locations: [] })
+
+  // Load dynamic filter options once (and after a refresh brings new jobs).
+  const loadFacets = useCallback(async () => {
+    try {
+      const d = await fetch('/api/facets', { cache: 'no-store' }).then(r => r.json())
+      if (d.ok) setFacets({ positions: d.positions, companies: d.companies, locations: d.locations })
+    } catch { /* non-blocking */ }
+  }, [])
+  useEffect(() => { loadFacets() }, [loadFacets])
+
   // Live counters (start from server, adjust as jobs leave the feed) so the stat
   // tiles stay honest without a full reload.
   const [nNew, setNNew]         = useState(newCount)
@@ -48,19 +66,22 @@ export default function DashboardClient({
   const [loadingMore, setLoadingMore] = useState(false)
 
   const scope = showNew ? 'new' : showSaved ? 'saved' : 'all'
-  const isFiltered = !!search || sourceFilter !== 'All' || scope !== 'all'
+  const isFiltered = !!search || sourceFilter !== 'All' || scope !== 'all' || fPosition.size > 0 || fCompany.size > 0 || fLocation.size > 0
 
   const SOURCES = availableSources && availableSources.length > 1 ? availableSources : DEFAULT_SOURCES
 
   const fetchPage = useCallback(async (offset: number): Promise<{ jobs: Job[]; total: number } | null> => {
-    const p = new URLSearchParams({ q: search, source: sourceFilter, scope, offset: String(offset), limit: '50' })
+    const p = new URLSearchParams({ q: search, source: sourceFilter, scope, sort, offset: String(offset), limit: '50' })
+    if (fPosition.size) p.set('position', Array.from(fPosition).join(','))
+    if (fCompany.size)  p.set('company',  Array.from(fCompany).join(','))
+    if (fLocation.size) p.set('location', Array.from(fLocation).join(','))
     try {
       const r = await fetch(`/api/feed?${p.toString()}`, { cache: 'no-store' })
       const d = await r.json()
       if (!d.ok) return null
       return { jobs: d.jobs as Job[], total: d.total as number }
     } catch { return null }
-  }, [search, sourceFilter, scope])
+  }, [search, sourceFilter, scope, sort, fPosition, fCompany, fLocation])
 
   // Re-query when search (debounced) / source / scope changes. Skip the very
   // first render — initialJobs already covers the default view.
@@ -72,7 +93,7 @@ export default function DashboardClient({
       const res = await fetchPage(0)
       if (res) { setJobs(res.jobs); setQueryTotal(res.total) }
       setLoading(false)
-    }, search ? 300 : 0)   // debounce typing; instant for pill toggles
+    }, search ? 300 : 0)   // debounce typing; instant for pill/facet toggles
     return () => clearTimeout(t)
   }, [fetchPage, search])
 
@@ -107,8 +128,9 @@ export default function DashboardClient({
       const n = await fetch('/api/feed?scope=new&limit=1', { cache: 'no-store' }).then(r => r.json())
       if (n?.ok) setNNew(n.total)
     } catch { /* best-effort */ }
+    loadFacets()
     setLoading(false)
-  }, [fetchPage, nTotal, isFiltered])
+  }, [fetchPage, nTotal, isFiltered, loadFacets])
 
   const handleUpdate = (id: string, updates: Partial<Job>) => {
     const job = jobs.find(j => j.id === id)
@@ -248,7 +270,7 @@ export default function DashboardClient({
         </div>
 
         {/* Source filter pills */}
-        <div className="flex gap-1.5 flex-wrap mb-5">
+        <div className="flex gap-1.5 flex-wrap mb-3">
           {SOURCES.map(src => (
             <button
               key={src}
@@ -263,6 +285,32 @@ export default function DashboardClient({
               {src === 'All' ? 'All Sources' : src}
             </button>
           ))}
+        </div>
+
+        {/* Facet filters + sort */}
+        <div className="flex gap-2 flex-wrap items-center mb-5">
+          <FacetSelect label="Position" options={facets.positions} selected={fPosition} onChange={setFPosition} />
+          <FacetSelect label="Company"  options={facets.companies} selected={fCompany}  onChange={setFCompany} searchable />
+          <FacetSelect label="Location" options={facets.locations} selected={fLocation} onChange={setFLocation} />
+          {(fPosition.size || fCompany.size || fLocation.size) > 0 && (
+            <button
+              onClick={() => { setFPosition(new Set()); setFCompany(new Set()); setFLocation(new Set()) }}
+              className="text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 underline"
+            >
+              Clear filters
+            </button>
+          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="text-xs text-slate-400 dark:text-slate-500">Sort</span>
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value as 'relevance' | 'date')}
+              className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="relevance">Best match</option>
+              <option value="date">Date posted</option>
+            </select>
+          </div>
         </div>
 
         {/* Job list */}

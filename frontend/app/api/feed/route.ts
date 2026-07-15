@@ -18,8 +18,12 @@ export async function GET(req: Request) {
 
   const url    = new URL(req.url)
   const q      = (url.searchParams.get('q') || '').trim()
-  const source = url.searchParams.get('source') || 'All'
-  const scope  = url.searchParams.get('scope') || 'all'
+  const source   = url.searchParams.get('source') || 'All'
+  const scope    = url.searchParams.get('scope') || 'all'
+  const position = url.searchParams.get('position') || ''
+  const company  = url.searchParams.get('company') || ''
+  const location = url.searchParams.get('location') || ''
+  const sort     = url.searchParams.get('sort') || 'relevance'
   const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0)
   const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || String(PAGE), 10) || PAGE)
 
@@ -49,6 +53,11 @@ export async function GET(req: Request) {
     if (source === 'gmail') query = query.ilike('source', 'gmail%')
     else                    query = query.eq('source', source)
   }
+  // Facet filters (exact bucket values from get_feed_facets). Comma = multi-select.
+  const multi = (v: string) => v.split(',').map(x => x.trim()).filter(Boolean)
+  const pos = multi(position); if (pos.length) query = query.in('position', pos)
+  const loc = multi(location); if (loc.length) query = query.in('location_city', loc)
+  const co  = multi(company);  if (co.length)  query = query.in('company', co)
 
   if (q) {
     // Escape commas/parens that would break PostgREST's or() filter grammar.
@@ -56,10 +65,16 @@ export async function GET(req: Request) {
     query = query.or(`job_title.ilike.%${safe}%,company.ilike.%${safe}%,location.ilike.%${safe}%`)
   }
 
-  const { data, count, error } = await query
-    .order('match_score', { ascending: false })
-    .order('scraped_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+  // Sort: relevance (match score) or newest (date posted). posted_date can be
+  // null (undated), so push nulls last and tie-break by scraped_at.
+  if (sort === 'date') {
+    query = query.order('posted_date', { ascending: false, nullsFirst: false })
+                 .order('scraped_at', { ascending: false })
+  } else {
+    query = query.order('match_score', { ascending: false })
+                 .order('scraped_at', { ascending: false })
+  }
+  const { data, count, error } = await query.range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, jobs: data || [], total: count || 0 })
