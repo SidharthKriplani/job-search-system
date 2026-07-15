@@ -1,6 +1,6 @@
 # STATUS — current state
 
-_Last updated: 2026-07-15 (evening)_
+_Last updated: 2026-07-15 (late — through foundit/Recruitee/Workday-tenant adds)_
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
@@ -27,11 +27,15 @@ signup-blocking trigger bug is fixed; sources have been expanded ~3×.
   with a set/reset-password flow; the `handle_new_user` trigger is bulletproofed
   (wrapped in EXCEPTION handlers) so signup can never 500 again. Multiple friends
   signed in successfully.
-- **Ingestion** — ~71k jobs/run from greenhouse, ashby, lever, workday (India-
-  searched finance GCCs), oracle, smartrecruiters, jobspy (Indeed **+ LinkedIn**),
-  adzuna (paginated, finance/tech India queries), and instahyre (India, best-effort).
-  India coverage ~tripled this session (jobspy 250→~1.8k, adzuna ~400→~1.2k, +48
-  India company boards mined from the OpenJobs dataset, +harvested-cap 400→1000).
+- **Ingestion** — ~74k jobs/run from greenhouse, ashby, lever, **workday (66
+  tenants** — India-searched finance GCCs + global India offices), oracle,
+  smartrecruiters, jobspy (Indeed **+ LinkedIn**), adzuna (paginated, finance/tech
+  India queries), **recruitee**, instahyre (best-effort), and **foundit / Monster
+  India** — the largest single India source (~2.7k India jobs/run, the Naukri
+  alternative that isn't recaptcha-walled). India coverage went from ~3k to
+  ~4–5× deeper this session: jobspy 250→~1.8k, adzuna ~400→~1.2k, foundit ~2.7k,
+  +39 Workday tenants (~690 India), Recruitee (~130), +48 mined greenhouse/lever
+  boards, harvested-cap 400→1000.
 - **Matching** — role-graph + sector + résumé + seniority + **source-domain
   provenance** (a finance job from a finance board outranks a generic keyword
   match). Read-time relevance floor (0.45) on the default feed; dropped when the
@@ -51,8 +55,11 @@ signup-blocking trigger bug is fixed; sources have been expanded ~3×.
   row per (user, job). `cap_user_feed` (2500/user) + trimmed descriptions bound it,
   but past ~10 heavy users the right fix is `jobs` (canonical) + `user_job_matches`
   (thin pointers). See ROADMAP.
-- **Naukri / iimjobs** — recaptcha-walled; only reachable via the opt-in Gmail
-  connect (now available in Settings, but parsing quality unverified at scale).
+- **Naukri / iimjobs** — recaptcha-walled (re-confirmed 3 ways incl. the direct
+  jobapi/v3/search → 406 from datacenter IPs). Only reachable via the opt-in Gmail
+  connect. **foundit (Monster India) now covers most of this gap** — comparable
+  India volume, no wall. Other India boards (iimjobs/hirist/shine/cutshort) have
+  no usable API from our infra.
 - **Google verification** — not completed (needs a domain you own; vercel.app can't
   be verified). Not needed — sign-in is scope-free so there's no warning anyway.
 - **Instahyre** — rate-limits datacenter IPs; contributes when unblocked, else 0.
