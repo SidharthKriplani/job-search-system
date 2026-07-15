@@ -230,10 +230,12 @@ def age_out_new_flags(user_id: str, hours: int = 24) -> int:
         return total
 
 
-# Sources whose pool listing is COMPLETE for each company board (deterministic
-# ATS APIs). Rotating/partial sources (jobspy, aggregators, gmail_*) must never
-# be cleaned by pool-absence — a job can be live yet absent from their sample.
-DETERMINISTIC_SOURCES = {"greenhouse", "lever", "ashby", "workday", "oracle", "smartrecruiters"}
+# Sources whose pool listing is COMPLETE for each company board. Only these may
+# be cleaned by pool-absence. Workday/Oracle are CAPPED per company
+# (WORKDAY_MAX_PER_COMPANY / ORACLE_MAX_PER_COMPANY) and smartrecruiters
+# paginates — a live job beyond the cap is absent from the pool, so deleting on
+# absence would destroy good rows. jobspy/aggregators/gmail_* are sampled feeds.
+DETERMINISTIC_SOURCES = {"greenhouse", "lever", "ashby"}
 
 
 def cleanup_closed_jobs(user_id: str, pool_keys: set, pool_companies: set) -> int:

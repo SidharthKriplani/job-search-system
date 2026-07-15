@@ -5,6 +5,14 @@ how the product learns its owner's priorities.
 
 ---
 
+## 2026-07-15
+
+- **"App refresh works for 3 minutes but the backend job runs longer — this is
+  a 2nd refresh running. This is stupid, why did you not check this?"** Right —
+  the button's timing model was never validated against a real run. Fixed: real
+  ETA (600s), no mid-run give-up, 409 + attach on concurrent trigger, auto-attach
+  on page load. _(CHANGELOG 07-15 (d))_
+
 ## 2026-06-23
 
 - **"This product is shit / still 0 jobs after refresh."** Feed empty for the

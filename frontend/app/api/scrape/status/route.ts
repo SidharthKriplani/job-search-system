@@ -22,8 +22,8 @@ export async function GET() {
   const workflow = process.env.GITHUB_WORKFLOW_FILE || 'daily.yml'
 
   try {
-    const resp = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow}/runs?per_page=1`,
+    const gh = (qs: string) => fetch(
+      `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow}/runs?${qs}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -33,11 +33,20 @@ export async function GET() {
         cache: 'no-store',
       }
     )
-    if (!resp.ok) {
-      return NextResponse.json({ ok: false, error: `GitHub ${resp.status}` }, { status: 502 })
+    // Prefer an ACTIVE run (in_progress, then queued) so the UI can attach to
+    // it even after a page reload; fall back to the most recent run.
+    let run: any = null
+    for (const st of ['in_progress', 'queued']) {
+      const r = await gh(`status=${st}&per_page=1`)
+      if (r.ok) { run = ((await r.json()).workflow_runs || [])[0]; if (run) break }
     }
-    const data = await resp.json()
-    const run = (data.workflow_runs || [])[0]
+    if (!run) {
+      const resp = await gh('per_page=1')
+      if (!resp.ok) {
+        return NextResponse.json({ ok: false, error: `GitHub ${resp.status}` }, { status: 502 })
+      }
+      run = (((await resp.json()).workflow_runs) || [])[0]
+    }
     if (!run) {
       return NextResponse.json({ ok: true, status: 'none' })
     }

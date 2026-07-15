@@ -7,10 +7,13 @@ import clsx from 'clsx'
 
 type State = 'idle' | 'running' | 'done' | 'error'
 
-// A typical end-to-end run (queue + scrape + filter) lands around here. The bar
-// eases toward this ceiling but never claims 100% until the run actually finishes,
-// so the estimate guiding the user is honest about being an estimate.
-const EXPECTED_SEC = 210 // ~3.5 min
+// A typical end-to-end run (queue + full scrape + filter + upsert + embeddings)
+// lands around here — measured from real production runs, not hoped. The bar
+// eases toward 95% by this point and snaps to 100% only on true completion.
+const EXPECTED_SEC = 600 // ~10 min
+// Absolute polling cap. If a run exceeds this we stop polling but KEEP the
+// button disabled-looking state honest via the status text + log link.
+const MAX_POLL_MS = 30 * 60_000
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60)
@@ -36,6 +39,46 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
     timerRef.current = null
   }
   useEffect(() => stop, [])
+
+  // Attach to an ALREADY-RUNNING run (started by a previous click, another tab,
+  // or the nightly cron) — with elapsed time taken from the run itself. This is
+  // what stops a page reload from offering a second concurrent refresh.
+  const attach = (runStartedAt?: string | null, url?: string | null) => {
+    stop()
+    const startMs = runStartedAt ? new Date(runStartedAt).getTime() : Date.now()
+    startedRef.current = startMs
+    if (url) setRunUrl(url)
+    setState('running')
+    setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
+    setStatusText('Attached to the running scrape…')
+    timerRef.current = setInterval(
+      () => setElapsed(Math.floor((Date.now() - startedRef.current) / 1000)),
+      1000
+    )
+    pollRef.current = setInterval(poll, 5000)
+    setTimeout(poll, 1500)
+    setTimeout(() => {
+      if (pollRef.current) {
+        stop()
+        setState('error')
+        setStatusText('Run exceeded 30 min — open the log to see why.')
+      }
+    }, MAX_POLL_MS)
+  }
+
+  // On mount: if a run is already active, attach instead of sitting idle.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/scrape/status', { cache: 'no-store' })
+        const d = await r.json()
+        if (d.ok && (d.status === 'in_progress' || d.status === 'queued')) {
+          attach(d.run_started_at || d.created_at, d.html_url)
+        }
+      } catch { /* fine — stay idle */ }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const poll = async () => {
     try {
@@ -84,6 +127,12 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
     try {
       const res = await fetch('/api/scrape', { method: 'POST' })
       const data = await res.json()
+      if (res.status === 409 && data.alreadyRunning) {
+        // A run is already going — attach to IT rather than erroring or
+        // (worse) starting a duplicate.
+        attach(data.run_started_at, data.html_url)
+        return
+      }
       if (!data.ok) {
         setState('error')
         setStatusText(data.error || 'Failed to start scraper.')
@@ -95,14 +144,15 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
       )
       pollRef.current = setInterval(poll, 5000)
       setTimeout(poll, 2500) // first check quickly
-      // Safety cap: stop after 6 minutes
+      // Poll until ACTUAL completion (capped) — never flip back to idle while
+      // the backend is still running; that invites a duplicate refresh.
       setTimeout(() => {
         if (pollRef.current) {
           stop()
-          setState('idle')
-          setStatusText('Still running — check the run log if jobs don’t appear.')
+          setState('error')
+          setStatusText('Run exceeded 30 min — open the log to see why.')
         }
-      }, 360000)
+      }, MAX_POLL_MS)
     } catch (e: any) {
       setState('error')
       setStatusText(e?.message || 'Network error.')
@@ -161,8 +211,8 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
               <Coffee className="w-3.5 h-3.5 flex-shrink-0" />
               <span>
                 {remaining > 30
-                  ? `Good time for a coffee — about ${fmt(remaining)} left.`
-                  : 'Almost there — finishing up…'}
+                  ? `Full scrape takes ~10 min — about ${fmt(remaining)} to go (estimate).`
+                  : 'Wrapping up — waiting for the run to confirm…'}
               </span>
             </div>
           )}

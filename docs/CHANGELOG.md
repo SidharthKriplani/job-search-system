@@ -4,6 +4,24 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (d) — refresh UX desync (user-reported) + cleanup cap-safety
+
+**"App refresh works for 3 minutes but the backend job runs longer — a 2nd
+refresh started."** Root causes, all in RefreshButton/API:
+- `EXPECTED_SEC=210` promised ~3.5 min; real full runs take 7–10+ min → 600.
+- A 6-minute give-up timer flipped the button back to idle MID-RUN — inviting
+  the duplicate refresh the user saw. Removed; polling now runs to actual
+  completion (30-min cap).
+- `/api/scrape` had no concurrency guard → now returns 409 with the active
+  run's URL; the button ATTACHES to that run instead of starting another.
+  Status route prefers the active run; on page load the button auto-attaches
+  to any run already in progress (reload can no longer bypass the guard).
+- Cap-safety (proactive): dead-job cleanup now only trusts greenhouse/lever/
+  ashby (complete listings). Workday/Oracle are capped per company and
+  smartrecruiters paginates — absence there ≠ closed.
+
+---
+
 ## 2026-07-15 (c) — six product improvements (post-blocker hardening)
 
 1. **Dead-job cleanup** — `cleanup_closed_jobs()`: ATS-source rows absent from

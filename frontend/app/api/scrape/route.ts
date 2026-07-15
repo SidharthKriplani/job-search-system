@@ -59,7 +59,38 @@ export async function POST() {
   const workflow = process.env.GITHUB_WORKFLOW_FILE || 'daily.yml'
   const branch   = process.env.GITHUB_DEFAULT_BRANCH || 'main'
 
-  // 3. Fire workflow_dispatch.
+  // 3. Concurrency guard — never start a second run while one is queued or
+  // in progress. Doubles cost, races the DB, and desyncs the UI.
+  try {
+    for (const st of ['in_progress', 'queued'] as const) {
+      const check = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow}/runs?status=${st}&per_page=1`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+          cache: 'no-store',
+        }
+      )
+      if (check.ok) {
+        const d = await check.json()
+        const active = (d.workflow_runs || [])[0]
+        if (active) {
+          return NextResponse.json({
+            ok: false,
+            alreadyRunning: true,
+            html_url: active.html_url,
+            run_started_at: active.run_started_at || active.created_at,
+            error: 'A refresh is already running — attaching to it.',
+          }, { status: 409 })
+        }
+      }
+    }
+  } catch { /* guard is best-effort; worst case GitHub queues the dispatch */ }
+
+  // 4. Fire workflow_dispatch.
   try {
     const resp = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow}/dispatches`,
@@ -83,7 +114,7 @@ export async function POST() {
           .update({ last_manual_refresh: new Date().toISOString() })
           .eq('user_id', user.id)
       } catch { /* ignore */ }
-      return NextResponse.json({ ok: true, message: 'Scraper started. Jobs usually appear within 2–3 minutes — reload then.' })
+      return NextResponse.json({ ok: true, message: 'Scraper started. A full run typically takes 8–10 minutes.' })
     }
 
     const text = await resp.text()
