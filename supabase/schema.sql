@@ -653,13 +653,16 @@ END $$;
 -- actually present in the user's ACTIVE feed, each with a count. SECURITY
 -- INVOKER so RLS scopes it to the caller's own rows.
 -- ============================================================
-CREATE OR REPLACE FUNCTION get_feed_facets(p_user UUID)
+CREATE OR REPLACE FUNCTION get_feed_facets(p_user UUID, p_min_score FLOAT DEFAULT 0.45)
 RETURNS JSONB
 LANGUAGE sql STABLE SECURITY INVOKER AS $$
+  -- Mirror the feed's match_score floor so a facet option never yields an empty
+  -- feed when selected.
   WITH f AS (
     SELECT source, company, position, location_city
     FROM job_feed
     WHERE user_id = p_user AND is_dismissed = FALSE AND is_applied = FALSE
+      AND COALESCE(match_score, 0) >= p_min_score
   )
   SELECT jsonb_build_object(
     'boards', COALESCE((SELECT jsonb_agg(jsonb_build_object('value', v, 'count', c) ORDER BY c DESC)
@@ -673,4 +676,4 @@ LANGUAGE sql STABLE SECURITY INVOKER AS $$
   );
 $$;
 
-GRANT EXECUTE ON FUNCTION get_feed_facets(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_feed_facets(UUID, FLOAT) TO authenticated;
