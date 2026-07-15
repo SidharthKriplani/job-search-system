@@ -213,7 +213,7 @@ _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Cap how many harvested boards the daily run uses (sorted by job count), so the
 # run stays bounded even as the harvested file grows to thousands. The full file
 # is still kept; raise this as the scaling architecture matures.
-_MAX_HARVESTED = int(os.environ.get("MAX_HARVESTED_PER_ATS", "400"))
+_MAX_HARVESTED = int(os.environ.get("MAX_HARVESTED_PER_ATS", "1000"))
 
 
 def _harvested(ats: str):

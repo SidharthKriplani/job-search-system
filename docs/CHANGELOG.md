@@ -4,6 +4,24 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (k) — scraper audit: raised harvested-board cap (recovers India coverage)
+
+Empirically audited every connector. Findings:
+- greenhouse/ashby: pull full boards, healthy — BUT capped at 400 harvested
+  boards each. The excluded band (rank 400-900) held 514 India jobs across 86
+  boards (SonicWall, CloudSEK, DevRev, Cialfo…). Raised MAX_HARVESTED_PER_ATS
+  400 -> 1000: board-only India jobs ~3000 -> 3507, board fetch 65s -> 116s (fine).
+- workday: verified NOT truncated — pulls all India-searched results per tenant
+  (PwC 144, none hit the 150 cap). Optimal.
+- oracle / smartrecruiters: pull all; small (few curated firms) — headroom is
+  adding more finance tenants (needs live verification, marginal).
+- lever: structurally thin — probed 34 known Indian companies, only 1 on Lever
+  with 0 India roles. Indian firms don't use Lever; not worth expanding.
+- jobspy (k-1) + adzuna (k-2): already maximised.
+Verdict: scrapers now near their practical India best; remaining gap is
+structural (Naukri recaptcha-walled).
+
+
 ## 2026-07-15 (j) — Adzuna scaled (pagination + finance/tech queries)
 
 Correction: Adzuna WAS live in prod (aggregators 538 vs 138 keyless) — the keys
