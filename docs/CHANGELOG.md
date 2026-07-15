@@ -4,6 +4,29 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (i) — India coverage: jobspy scaled 6-7x (the real "too few postings" fix)
+
+Diagnosed the thin feed: the 71k pool is only ~4% India-located (2,996 jobs) —
+Greenhouse/Ashby are US/global tech. The India-native source (jobspy) was
+throttled. Live-verified fixes:
+- **jobspy per_term 25 -> 60** (Indeed returns 80/term; we were leaving 3x on
+  the table).
+- **LinkedIn enabled** (JOBSPY_SITES "indeed" -> "indeed,linkedin") — LinkedIn
+  returns ~80 India jobs/term and wasn't being used at all.
+- **Finance + tech India-relevant default terms** (data scientist, equity
+  research, credit analyst, fp&a, …) replacing the generic ones.
+- Verified yield: 3 terms x 2 sites @60 = 360 jobs/85s → full 16-term set ≈
+  1,500-1,900 India jobs vs 250 before (6-7x).
+- Fixed a NaN leak (company/title showing literal "nan" from empty pandas cells).
+- Confirmed dead ends (won't chase): Naukri = recaptcha-walled, Glassdoor/Google
+  = broken via jobspy.
+
+NEXT India lever (needs your action, free): enable **Adzuna** — get a free key at
+developer.adzuna.com and add ADZUNA_APP_ID / ADZUNA_APP_KEY as GitHub secrets.
+The connector already handles it (skips cleanly without a key); it adds India
+breadth + salary data.
+
+
 ## 2026-07-15 (h) — feed filters + sort (Position / Company / Location / Board)
 
 Server-side faceted filtering (correct across the WHOLE feed, not just the

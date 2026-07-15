@@ -27,9 +27,22 @@ from ..base import make_job, strip_html
 logger = logging.getLogger(__name__)
 
 DEFAULT_TERMS = [
-    "manager", "engineer", "analyst", "executive", "developer",
-    "sales", "marketing", "operations", "consultant", "associate",
+    # Tech
+    "data scientist", "machine learning engineer", "data engineer",
+    "data analyst", "software engineer", "backend developer", "product manager",
+    "business analyst", "devops engineer",
+    # Finance (the market this product serves + India KPO/GCC roles)
+    "financial analyst", "investment banking", "equity research",
+    "credit analyst", "risk analyst", "fp&a", "quantitative analyst",
 ]
+
+
+def _s(v) -> str:
+    """pandas cells are float NaN when missing; str(NaN) == 'nan' leaked as a
+    literal company/title. Coerce NaN (and None) to empty string."""
+    if v is None or v != v:   # NaN != NaN
+        return ""
+    return str(v).strip()
 
 
 def _salary(row):
@@ -53,11 +66,13 @@ def fetch() -> List[Dict]:
         logger.warning("[jobspy] python-jobspy not installed — skipping")
         return []
 
-    sites    = [s.strip() for s in os.environ.get("JOBSPY_SITES", "indeed").split(",") if s.strip()]
+    # indeed + linkedin both return ~80 India jobs/term (verified). glassdoor/
+    # google/naukri are broken or captcha-walled — don't add them.
+    sites    = [s.strip() for s in os.environ.get("JOBSPY_SITES", "indeed,linkedin").split(",") if s.strip()]
     terms    = [t.strip() for t in os.environ.get("JOBSPY_TERMS", "").split(",") if t.strip()] or DEFAULT_TERMS
     location = os.environ.get("JOBSPY_LOCATION", "India")
     country  = os.environ.get("JOBSPY_COUNTRY", "India")
-    per_term = int(os.environ.get("JOBSPY_PER_TERM", "25"))
+    per_term = int(os.environ.get("JOBSPY_PER_TERM", "60"))
     hours    = int(os.environ.get("JOBSPY_HOURS_OLD", "168"))
 
     out: List[Dict] = []
@@ -83,17 +98,17 @@ def fetch() -> List[Dict]:
         for _, r in df.iterrows():
             row = r.to_dict()
             job = make_job(
-                title=str(row.get("title") or ""),
-                company=str(row.get("company") or ""),
-                url=str(row.get("job_url") or ""),
-                source=str(row.get("site") or "indeed"),
-                location=str(row.get("location") or location),
+                title=_s(row.get("title")),
+                company=_s(row.get("company")),
+                url=_s(row.get("job_url")),
+                source=_s(row.get("site")) or "indeed",
+                location=_s(row.get("location")) or location,
                 salary_range=_salary(row),
-                description=strip_html(str(row.get("description") or "")),
-                posted=str(row.get("date_posted") or ""),
-                source_job_id=str(row.get("id") or row.get("job_url") or ""),
-                job_type=str(row.get("job_type") or ""),
-                remote=bool(row.get("is_remote")),
+                description=strip_html(_s(row.get("description"))),
+                posted=_s(row.get("date_posted")),
+                source_job_id=_s(row.get("id")) or _s(row.get("job_url")),
+                job_type=_s(row.get("job_type")),
+                remote=bool(row.get("is_remote")) if row.get("is_remote") == row.get("is_remote") else False,
             )
             if job:
                 out.append(job)
