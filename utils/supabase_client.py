@@ -284,6 +284,163 @@ def cleanup_closed_jobs(user_id: str, pool_keys: set, pool_companies: set) -> in
         return 0
 
 
+# ─── Global jobs_pool helpers (shared pool persistence) ─────────────────────
+
+POOL_COLUMNS = {
+    "source", "source_job_id", "job_title", "company", "location",
+    "salary_range", "job_url", "description_snippet", "posted_date",
+    "job_type", "seniority",
+}
+
+
+def upsert_pool_jobs(jobs: List[Dict]) -> int:
+    """Persist the shared pool. On conflict, refresh the row + last_seen_at —
+    that timestamp is the liveness signal for capped-source cleanup."""
+    if not jobs:
+        return 0
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    import hashlib
+    sb = get_client()
+    rows = []
+    for j in jobs:
+        row = {k: v for k, v in j.items() if k in POOL_COLUMNS}
+        if not row.get("source_job_id"):
+            row["source_job_id"] = hashlib.md5((row.get("job_url") or "").encode()).hexdigest()[:20]
+        row["source_job_id"] = str(row["source_job_id"])
+        row["last_seen_at"] = now
+        rows.append(row)
+    total = 0
+    for i in range(0, len(rows), 500):
+        batch = rows[i:i+500]
+        try:
+            sb.table("jobs_pool").upsert(
+                batch, on_conflict="source,source_job_id", ignore_duplicates=False,
+            ).execute()
+            total += len(batch)
+        except Exception as e:
+            logger.error(f"[Supabase] upsert_pool_jobs batch failed ({len(batch)} rows): {e}")
+    return total
+
+
+def get_pool_jobs() -> List[Dict]:
+    """Read the stored global pool (paginated) — resync's job source, which is
+    what gives a brand-new user a feed WITHOUT waiting for the nightly scrape."""
+    sb = get_client()
+    out: List[Dict] = []
+    cols = ("source, source_job_id, job_title, company, location, salary_range, "
+            "job_url, description_snippet, posted_date, job_type, seniority")
+    page, start = 1000, 0
+    try:
+        while True:
+            rows = sb.table("jobs_pool").select(cols) \
+                .order("id").range(start, start + page - 1).execute().data or []
+            out.extend(rows)
+            if len(rows) < page:
+                break
+            start += page
+    except Exception as e:
+        logger.error(f"[Supabase] get_pool_jobs failed (got {len(out)}): {e}")
+    return out
+
+
+def prune_pool(days: int = 14) -> int:
+    """Delete pool rows not seen for `days` (batched — never one giant DELETE)."""
+    from datetime import datetime, timedelta, timezone
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    sb = get_client()
+    total = 0
+    try:
+        while True:
+            rows = sb.table("jobs_pool").select("id") \
+                .lt("last_seen_at", cutoff).limit(500).execute().data or []
+            if not rows:
+                break
+            sb.table("jobs_pool").delete().in_("id", [r["id"] for r in rows]).execute()
+            total += len(rows)
+            if len(rows) < 500:
+                break
+    except Exception as e:
+        logger.error(f"[Supabase] prune_pool failed (after {total}): {e}")
+    return total
+
+
+def cleanup_stale_capped_jobs(user_id: str, stale_keys: set) -> int:
+    """Delete a user's feed rows whose (source, source_job_id) has been unseen
+    in jobs_pool for a week (capped sources only). Saved/applied rows kept."""
+    if not stale_keys:
+        return 0
+    sb = get_client()
+    doomed: List[str] = []
+    page, start = 1000, 0
+    try:
+        while True:
+            rows = sb.table("job_feed") \
+                .select("id, source, source_job_id, is_saved, is_applied") \
+                .eq("user_id", user_id) \
+                .in_("source", ["workday", "oracle", "smartrecruiters"]) \
+                .order("id").range(start, start + page - 1).execute().data or []
+            for r in rows:
+                if r.get("is_saved") or r.get("is_applied"):
+                    continue
+                if (r.get("source"), str(r.get("source_job_id"))) in stale_keys:
+                    doomed.append(r["id"])
+            if len(rows) < page:
+                break
+            start += page
+        return delete_jobs(doomed, user_id=user_id) if doomed else 0
+    except Exception as e:
+        logger.error(f"[Supabase] cleanup_stale_capped_jobs failed: {e}")
+        return 0
+
+
+def get_stale_pool_keys(days: int, sources: List[str]) -> set:
+    """(source, source_job_id) pairs not seen in the pool for `days` — the
+    conservative closed-signal for CAPPED sources (workday/oracle/…), where
+    same-run absence proves nothing but a week of absence is decisive."""
+    from datetime import datetime, timedelta, timezone
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    sb = get_client()
+    out = set()
+    page, start = 1000, 0
+    try:
+        while True:
+            rows = sb.table("jobs_pool").select("source, source_job_id") \
+                .lt("last_seen_at", cutoff).in_("source", sources) \
+                .order("id").range(start, start + page - 1).execute().data or []
+            out.update((r["source"], str(r["source_job_id"])) for r in rows)
+            if len(rows) < page:
+                break
+            start += page
+    except Exception as e:
+        logger.error(f"[Supabase] get_stale_pool_keys failed: {e}")
+    return out
+
+
+def record_run_history(shard_index: int, shard_total: int, pool_size: int,
+                       users_processed: int, total_upserted: int, error_count: int) -> None:
+    try:
+        get_client().table("run_history").insert({
+            "shard_index": shard_index, "shard_total": shard_total,
+            "pool_size": pool_size, "users_processed": users_processed,
+            "total_upserted": total_upserted, "error_count": error_count,
+        }).execute()
+    except Exception as e:
+        logger.warning(f"[Supabase] record_run_history failed: {e}")
+
+
+def recent_pool_sizes(shard_total: int, limit: int = 7) -> List[int]:
+    """Pool sizes of recent comparable runs (same shard config) — alarm baseline."""
+    try:
+        rows = get_client().table("run_history").select("pool_size") \
+            .eq("shard_total", shard_total) \
+            .order("run_at", desc=True).limit(limit).execute().data or []
+        return [r["pool_size"] for r in rows if r.get("pool_size")]
+    except Exception as e:
+        logger.warning(f"[Supabase] recent_pool_sizes failed: {e}")
+        return []
+
+
 # ─── Scraper health helpers ──────────────────────────────────────────────────
 
 def update_scraper_health(
@@ -291,7 +448,13 @@ def update_scraper_health(
     job_count: int,
     error: Optional[str] = None
 ) -> None:
-    """Log scraper health after each run."""
+    """Log scraper health after each run (latest state + append-only history)."""
+    try:
+        get_client().table("scraper_health_history").insert({
+            "source": source, "job_count": job_count, "error": error,
+        }).execute()
+    except Exception as e:
+        logger.debug(f"[health-history] {source}: {e}")
     from datetime import datetime, timezone
     sb = get_client()
     now = datetime.now(timezone.utc).isoformat()

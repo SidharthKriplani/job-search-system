@@ -4,6 +4,34 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (e) — product pass: instant onboarding, feedback loop, ops alarms
+
+1. **jobs_pool persistence + instant onboarding** — the nightly pool is now
+   stored (jobs_pool, last_seen_at). resync sources candidates from stored feed
+   ∪ pool, so a NEW user who saves a profile gets a feed in ~a minute from last
+   night's pool — no scrape wait. Pool pruned at 14d unseen.
+2. **Capped-source cleanup (cap-safe)** — workday/oracle/smartrecruiters rows
+   unseen in jobs_pool for 7 days are removed (same-run absence proves nothing
+   for capped listings; a week does).
+3. **Ops alarms** — run_history table + pool-drop alarm (pool < 50% of recent
+   median → _pool health warning + report flag); canary profile match check
+   every run (_canary health row) — catches "green run, broken matching".
+4. **Health trends** — scraper_health_history (append-only) + trend column on
+   /health; dashboard empty-state now says when sources are failing instead of
+   blaming the user's profile.
+5. **Digest sharpened** — top 10 only, stats strip (new/follow-ups/stale),
+   no empty sends. Adzuna predicted salaries labeled "(est.)".
+6. **Feedback→tuning loop v1** — weekly scripts/feedback_report.py aggregates
+   feed_feedback → docs/TUNING_REPORT.md (by reason/source/title, flags
+   confident-but-wrong ≥0.7 rejections). Committed by the weekly workflow.
+7. **Referral ranking** — LinkedIn import list ranks connections by live
+   openings at their company ("4 openings" beats "in your feed").
+
+⚠️ Manual step: re-run supabase/schema.sql (adds jobs_pool, run_history,
+scraper_health_history). Idempotent.
+
+---
+
 ## 2026-07-15 (d) — refresh UX desync (user-reported) + cleanup cap-safety
 
 **"App refresh works for 3 minutes but the backend job runs longer — a 2nd

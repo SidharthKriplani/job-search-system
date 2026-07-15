@@ -40,14 +40,21 @@ jobs:
             --max-pages ${{ github.event.inputs.max_pages || '8' }} \
             --max-verify 3000
 
-      - name: Commit refreshed registry
+      - name: Weekly relevance-tuning report
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/feedback_report.py
+        continue-on-error: true
+
+      - name: Commit refreshed registry + tuning report
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ingest/data/
+          git add ingest/data/ docs/TUNING_REPORT.md
           if git diff --staged --quiet; then
-            echo "No registry changes."
+            echo "No changes."
           else
-            git commit -m "chore: refresh harvested company registry [skip ci]"
+            git commit -m "chore: refresh harvested registry + tuning report [skip ci]"
             git push
           fi

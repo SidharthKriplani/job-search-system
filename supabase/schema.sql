@@ -339,6 +339,88 @@ CREATE POLICY "Users can manage own contacts"
     ON contacts FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
+-- TABLE: jobs_pool
+-- The GLOBAL job pool — one row per live posting across all sources, shared by
+-- every user. Written by the nightly run; read by resync for instant onboarding
+-- (a new user gets a feed from last night's pool without waiting for a scrape).
+-- last_seen_at powers dead-job cleanup for capped sources.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS jobs_pool (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source          TEXT NOT NULL,
+    source_job_id   TEXT NOT NULL,
+    job_title       TEXT NOT NULL,
+    company         TEXT,
+    location        TEXT,
+    salary_range    TEXT,
+    job_url         TEXT NOT NULL,
+    description_snippet TEXT,
+    posted_date     DATE,
+    job_type        TEXT,
+    seniority       TEXT,
+    first_seen_at   TIMESTAMPTZ DEFAULT NOW(),
+    last_seen_at    TIMESTAMPTZ DEFAULT NOW(),
+
+    UNIQUE(source, source_job_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_pool_last_seen ON jobs_pool(last_seen_at);
+CREATE INDEX IF NOT EXISTS idx_jobs_pool_source    ON jobs_pool(source);
+
+ALTER TABLE jobs_pool ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role manages pool" ON jobs_pool;
+CREATE POLICY "Service role manages pool"
+    ON jobs_pool FOR ALL USING (auth.role() = 'service_role');
+
+-- ============================================================
+-- TABLE: run_history
+-- One row per scraper run — powers the pool-drop alarm and run trend analysis.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS run_history (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    run_at          TIMESTAMPTZ DEFAULT NOW(),
+    shard_index     INTEGER DEFAULT 0,
+    shard_total     INTEGER DEFAULT 1,
+    pool_size       INTEGER DEFAULT 0,
+    users_processed INTEGER DEFAULT 0,
+    total_upserted  INTEGER DEFAULT 0,
+    error_count     INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_history_run_at ON run_history(run_at DESC);
+
+ALTER TABLE run_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role manages runs" ON run_history;
+DROP POLICY IF EXISTS "Users read runs"           ON run_history;
+CREATE POLICY "Service role manages runs"
+    ON run_history FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Users read runs"
+    ON run_history FOR SELECT USING (auth.role() = 'authenticated');
+
+-- ============================================================
+-- TABLE: scraper_health_history
+-- Append-only per-run per-source counts — the trend behind /health.
+-- (scraper_health keeps only the latest state; this keeps the series.)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS scraper_health_history (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source      TEXT NOT NULL,
+    run_at      TIMESTAMPTZ DEFAULT NOW(),
+    job_count   INTEGER DEFAULT 0,
+    error       TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_shh_source_run ON scraper_health_history(source, run_at DESC);
+
+ALTER TABLE scraper_health_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role manages health history" ON scraper_health_history;
+DROP POLICY IF EXISTS "Users read health history"           ON scraper_health_history;
+CREATE POLICY "Service role manages health history"
+    ON scraper_health_history FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Users read health history"
+    ON scraper_health_history FOR SELECT USING (auth.role() = 'authenticated');
+
+-- ============================================================
 -- TABLE: feed_feedback
 -- One row per "not relevant" tap on a feed job — the raw signal for tuning
 -- the matcher (role graph weights, location rules, seniority fit).

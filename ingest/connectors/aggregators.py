@@ -96,6 +96,11 @@ def fetch_adzuna() -> List[Dict]:
             for j in data["results"]:
                 smin, smax = j.get("salary_min"), j.get("salary_max")
                 salary = f"{int(smin)}-{int(smax)}" if smin and smax else None
+                # Adzuna marks model-predicted salaries — label them so no user
+                # quotes an estimate as an employer number ("CTC — I don't want
+                # to look like a fool" is a product principle here).
+                if salary and str(j.get("salary_is_predicted", "0")) == "1":
+                    salary += " (est.)"
                 job = make_job(
                     title=j.get("title", ""),
                     company=(j.get("company") or {}).get("display_name", ""),

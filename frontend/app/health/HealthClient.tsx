@@ -31,7 +31,7 @@ const STATUS_META = {
   error:   { icon: XCircle,       cls: 'text-red-600 dark:text-red-500',      label: 'Error' },
 } as const
 
-export default function HealthClient({ rows }: { rows: HealthRow[] }) {
+export default function HealthClient({ rows, prev = {} }: { rows: HealthRow[]; prev?: Record<string, number> }) {
   const failing = rows.filter(r => r.status === 'error').length
 
   return (
@@ -58,6 +58,7 @@ export default function HealthClient({ rows }: { rows: HealthRow[] }) {
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Last run</th>
                 <th className="px-4 py-3 font-medium text-right">Jobs</th>
+                <th className="px-4 py-3 font-medium text-right">Trend</th>
                 <th className="px-4 py-3 font-medium">Last error</th>
               </tr>
             </thead>
@@ -77,6 +78,16 @@ export default function HealthClient({ rows }: { rows: HealthRow[] }) {
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{timeAgo(r.last_run_at)}</td>
                     <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">
                       {r.last_job_count ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs tabular-nums">
+                      {(() => {
+                        const p = prev[r.source]
+                        const c = r.last_job_count
+                        if (p === undefined || c === null || c === undefined) return <span className="text-slate-300 dark:text-slate-600">—</span>
+                        const d = c - p
+                        if (d === 0) return <span className="text-slate-400">=</span>
+                        return <span className={d > 0 ? 'text-green-600 dark:text-green-500' : 'text-amber-600 dark:text-amber-500'}>{d > 0 ? '▲' : '▼'} {Math.abs(d)}</span>
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400 dark:text-slate-500 max-w-[16rem] truncate" title={r.last_error || undefined}>
                       {r.last_error || '—'}

@@ -96,6 +96,7 @@ def send_daily_digest(
 ) -> bool:
     """Send daily digest combining new jobs + reminders."""
     if not new_jobs and not follow_ups and not stale:
+        # No news = no email. An empty digest trains people to ignore the real ones.
         logger.info(f"[Digest] Nothing to send to {user_email}")
         return True
 
@@ -105,12 +106,30 @@ def send_daily_digest(
     # ── New jobs section ──
     jobs_html = ""
     if new_jobs:
-        top_jobs = new_jobs[:15]  # cap at 15 per digest
+        top_jobs = new_jobs[:10]  # top 10 only — the digest is a shortlist, not a dump
         jobs_rows = "\n".join(_job_row_html(j, i+1) for i, j in enumerate(top_jobs))
-        more_str = f"<p style='color:#64748b;font-size:13px;text-align:center;'>+ {total_new - 15} more in your dashboard</p>" if total_new > 15 else ""
+        more_str = f"<p style='color:#64748b;font-size:13px;text-align:center;'>+ {total_new - 10} more in your dashboard</p>" if total_new > 10 else ""
         jobs_html = f"""
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0 4px;">
+          <tr>
+            <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;">
+              <span style="font-size:20px;font-weight:700;color:#4f46e5;">{total_new}</span>
+              <span style="font-size:12px;color:#64748b;display:block;">new matches</span>
+            </td>
+            <td style="width:8px;"></td>
+            <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;">
+              <span style="font-size:20px;font-weight:700;color:#d97706;">{len(follow_ups)}</span>
+              <span style="font-size:12px;color:#64748b;display:block;">follow-ups due</span>
+            </td>
+            <td style="width:8px;"></td>
+            <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;">
+              <span style="font-size:20px;font-weight:700;color:#dc2626;">{len(stale)}</span>
+              <span style="font-size:12px;color:#64748b;display:block;">going stale</span>
+            </td>
+          </tr>
+        </table>
         <h2 style="color:#1e293b;font-size:18px;margin:24px 0 12px;">
-          🎯 {total_new} New Jobs Found
+          🎯 Today's top {min(total_new, 10)}
         </h2>
         <table width="100%" cellpadding="0" cellspacing="0">
           {jobs_rows}

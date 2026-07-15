@@ -31,12 +31,16 @@ export default async function ReferralsPage() {
       .eq('user_id', user.id),
   ])
 
-  // De-duped list of companies that matter to this user (feed + tracker).
-  const feedCompanies = Array.from(new Set(
-    [...(feedRows || []), ...(appRows || [])]
-      .map(r => (r.company || '').trim())
-      .filter(Boolean)
-  ))
+  // Companies that matter to this user, with LIVE OPENING COUNTS — so the
+  // import list can rank "3 connections at companies with 12 open matches"
+  // above one-off overlaps.
+  const companyCounts: Record<string, number> = {}
+  for (const r of [...(feedRows || []), ...(appRows || [])]) {
+    const c = (r.company || '').trim()
+    if (!c) continue
+    companyCounts[c] = (companyCounts[c] || 0) + 1
+  }
+  const feedCompanies = Object.keys(companyCounts)
 
   return (
     <ReferralsClient
@@ -44,6 +48,7 @@ export default async function ReferralsPage() {
       templates={templates || []}
       userId={user.id}
       feedCompanies={feedCompanies}
+      companyCounts={companyCounts}
     />
   )
 }

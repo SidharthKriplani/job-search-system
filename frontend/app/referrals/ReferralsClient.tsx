@@ -115,9 +115,10 @@ interface Props {
   templates: any[]
   userId: string
   feedCompanies: string[]
+  companyCounts?: Record<string, number>
 }
 
-export default function ReferralsClient({ initialReferrals, templates, userId, feedCompanies }: Props) {
+export default function ReferralsClient({ initialReferrals, templates, userId, feedCompanies, companyCounts = {} }: Props) {
   const supabase = createClient()
   const [referrals, setReferrals] = useState(initialReferrals)
   const [showModal, setShowModal] = useState(false)
@@ -133,13 +134,18 @@ export default function ReferralsClient({ initialReferrals, templates, userId, f
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
 
-  // Which parsed connections are at a company in the user's feed/tracker.
+  // Which parsed connections are at a company in the user's feed/tracker —
+  // and HOW MANY live openings that company has (drives the ranking: a
+  // connection at a company with 12 open matches outranks a one-off overlap).
   const matchIndex = (conn: ParsedConnection) =>
     feedCompanies.some(fc => companiesMatch(fc, conn.company))
+  const openings = (conn: ParsedConnection) =>
+    feedCompanies.reduce((n, fc) => companiesMatch(fc, conn.company) ? n + (companyCounts[fc] || 0) : n, 0)
 
   const visibleConns = (parsed || [])
-    .map((c, i) => ({ c, i, match: matchIndex(c) }))
+    .map((c, i) => ({ c, i, match: matchIndex(c), openings: openings(c) }))
     .filter(x => (matchesOnly ? x.match : true))
+    .sort((a, b) => b.openings - a.openings)
 
   const matchCount = (parsed || []).filter(matchIndex).length
 
@@ -466,13 +472,17 @@ export default function ReferralsClient({ initialReferrals, templates, userId, f
                     <p className="text-sm text-slate-400 p-4 text-center">
                       No connections at your feed companies. Uncheck the filter to browse all {parsed.length}.
                     </p>
-                  ) : visibleConns.map(({ c, i, match }) => (
+                  ) : visibleConns.map(({ c, i, match, openings: nOpen }) => (
                     <label key={i} className="flex items-center gap-3 p-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50">
                       <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{c.contact_name}</span>
-                          {match && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-medium rounded-full whitespace-nowrap">in your feed</span>}
+                          {match && (
+                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-medium rounded-full whitespace-nowrap">
+                              {nOpen > 1 ? `${nOpen} openings` : 'in your feed'}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {c.contact_role ? `${c.contact_role} · ` : ''}{c.company}

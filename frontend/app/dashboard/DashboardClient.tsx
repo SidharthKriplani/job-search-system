@@ -282,12 +282,21 @@ export default function DashboardClient({
             ) : (
               <>
                 <p className="font-medium text-slate-600 dark:text-slate-300">No jobs match your roles yet</p>
-                <p className="text-sm mt-1.5 max-w-md mx-auto">
-                  We haven't found roles matching your profile in our current sources.
-                  Niche / front-office roles (e.g. investment banking, consulting) mostly come from
-                  <strong> Naukri &amp; iimjobs</strong> — connect Gmail in Settings to pull those alerts.
-                  Or broaden your target roles.
-                </p>
+                {errorCount > 0 ? (
+                  <p className="text-sm mt-1.5 max-w-md mx-auto">
+                    <strong>{errorCount} data source{errorCount > 1 ? 's are' : ' is'} currently failing</strong> —
+                    that may be why the feed is empty, not your profile.
+                    Check <a href="/health" className="text-indigo-600 dark:text-indigo-400 hover:underline">Health</a> before
+                    changing your roles.
+                  </p>
+                ) : (
+                  <p className="text-sm mt-1.5 max-w-md mx-auto">
+                    We haven't found roles matching your profile in our current sources.
+                    Niche / front-office roles (e.g. investment banking, consulting) mostly come from
+                    <strong> Naukri &amp; iimjobs</strong> — connect Gmail in Settings to pull those alerts.
+                    Or broaden your target roles.
+                  </p>
+                )}
                 <a href="/settings" className="inline-block mt-4 text-indigo-600 dark:text-indigo-400 text-sm hover:underline">
                   Adjust roles / connect Gmail →
                 </a>

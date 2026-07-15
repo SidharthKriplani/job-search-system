@@ -73,23 +73,34 @@ def fetch_gmail_jobs(profile: Dict) -> List[Dict]:
         return []
 
 
-def resync_user(profile: Dict) -> None:
-    """Re-filter the user's STORED feed against their CURRENT profile.
+def resync_user(profile: Dict, pool: List[Dict] = None) -> None:
+    """Re-filter the user's feed against their CURRENT profile — sourcing
+    candidates from BOTH their stored rows and the GLOBAL jobs_pool.
 
-    Without this, changing Settings (roles/locations/salary) has no effect on
-    jobs already in the feed — they were scored against the OLD profile, so the
-    feed shows stale matches (e.g. Engineers after you switch to "investment
-    banker"). This re-scores everything stored and drops what no longer matches
-    (unless the user applied to / saved it). It does NO scraping, so it's cheap
-    and can run on its own the moment the profile changes.
+    The pool part is what makes onboarding instant: a brand-new user who saves
+    a profile gets matched against last night's stored pool in ~a minute — no
+    scraping, no waiting for the nightly cron. In the daily run the in-memory
+    pool is passed in; in RESYNC_ONLY mode it's read from the jobs_pool table.
     """
     user_id = profile["user_id"]
     try:
         stored = sb.get_user_feed_rows(user_id)
-        if not stored:
+        if pool is None:
+            pool = sb.get_pool_jobs()
+
+        # Candidates = stored rows (carry id/applied/saved state) ∪ pool rows
+        # not already stored (deep-copied — filter mutates score fields).
+        import hashlib
+        def _key(j):
+            sjid = j.get("source_job_id") or hashlib.md5((j.get("job_url") or "").encode()).hexdigest()[:20]
+            return (j.get("source"), str(sjid))
+        stored_keys = {_key(r) for r in stored}
+        candidates = list(stored) + [dict(j) for j in pool if _key(j) not in stored_keys]
+
+        if not candidates:
             return
-        matched = filter_and_score(stored, profile)
-        matched_ids = {r.get("id") for r in matched}
+        matched = filter_and_score(candidates, profile)
+        matched_ids = {r.get("id") for r in matched if r.get("id")}
         stale_ids = [
             r["id"] for r in stored
             if r.get("id") not in matched_ids
@@ -97,13 +108,15 @@ def resync_user(profile: Dict) -> None:
         ]
         removed = sb.delete_jobs(stale_ids, user_id=user_id)
         if matched:
-            sb.upsert_jobs(user_id, matched)  # refresh scores/reasons
-        logger.info(f"Re-sync {user_id[:8]}: {len(matched)} match, removed {removed} stale")
+            sb.upsert_jobs(user_id, matched)  # refresh scores/reasons + add pool finds
+        logger.info(f"Re-sync {user_id[:8]}: {len(matched)} match "
+                    f"({len(matched) - len(matched_ids)} new from pool), removed {removed} stale")
     except Exception as e:
         logger.error(f"[resync] failed for {user_id[:8]}: {e}")
 
 
-def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozenset(), pool_companies: set = frozenset()) -> Dict:
+def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozenset(),
+                 pool_companies: set = frozenset(), stale_capped_keys: set = frozenset()) -> Dict:
     """
     Run the full pipeline for one user against the shared ATS job pool.
 
@@ -170,15 +183,19 @@ def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozen
     logger.info(f"Upserted {len(unique)} jobs ({len(new_jobs_for_digest)} genuinely new)")
 
     # ── Re-sync the STORED feed to the CURRENT profile ─────────────────────
-    resync_user(profile)
+    resync_user(profile, pool=shared_pool)
 
     # ── Remove postings that have CLOSED at the source ─────────────────────
     # (absent from the current pool although their board fetch succeeded).
     removed_closed = 0
     if pool_keys:
         removed_closed = sb.cleanup_closed_jobs(user_id, pool_keys, pool_companies)
-        if removed_closed:
-            logger.info(f"Removed {removed_closed} closed postings")
+    # Capped sources (workday/oracle/smartrecruiters): same-run absence proves
+    # nothing, but a week unseen in jobs_pool does — remove those too.
+    if stale_capped_keys:
+        removed_closed += sb.cleanup_stale_capped_jobs(user_id, stale_capped_keys)
+    if removed_closed:
+        logger.info(f"Removed {removed_closed} closed postings")
 
     # ── Get follow-up reminders ────────────────────────────────────────────
     follow_ups = sb.get_follow_up_due(user_id)
@@ -302,6 +319,52 @@ def main():
         shared_pool = []
     logger.info(f"Shared pool: {len(shared_pool)} jobs from {dict(SOURCE_SUMMARY)}")
 
+    # ── Persist the pool (instant onboarding + capped-source liveness) ─────────
+    persisted = sb.upsert_pool_jobs(shared_pool)
+    pruned = sb.prune_pool(days=14)
+    logger.info(f"Pool persisted: {persisted} rows refreshed, {pruned} pruned (>14d unseen)")
+
+    # ── Pool-drop alarm: tonight's pool vs recent comparable runs ─────────────
+    baseline = sb.recent_pool_sizes(shard_total)
+    pool_alarm = None
+    if len(baseline) >= 3:
+        med = sorted(baseline)[len(baseline) // 2]
+        if med > 0 and len(shared_pool) < med * 0.5:
+            pool_alarm = (f"Pool dropped to {len(shared_pool)} vs recent median {med} "
+                          f"(-{100 - len(shared_pool) * 100 // med}%) — sources may be failing silently")
+            logger.error(f"[ALARM] {pool_alarm}")
+            try:
+                sb.update_scraper_health("_pool", len(shared_pool), pool_alarm)
+            except Exception:
+                pass
+
+    # ── Canary: a known-good synthetic profile must ALWAYS match something ────
+    # Catches "run green but matching broken" — the failure mode that produced
+    # a month of empty feeds. No DB user needed; purely in-memory.
+    canary_alarm = None
+    try:
+        canary = {
+            "user_id": "canary", "email": "", "gmail_connected": False,
+            "target_roles": ["software engineer", "data analyst"],
+            "locations": [], "industries": [], "salary_floor": 0,
+        }
+        canary_matches = filter_and_score([dict(j) for j in shared_pool[:20000]], canary)
+        if len(canary_matches) < 10:
+            canary_alarm = (f"Canary profile matched only {len(canary_matches)} jobs "
+                            f"from a {len(shared_pool)}-job pool — matching may be broken")
+            logger.error(f"[ALARM] {canary_alarm}")
+            sb.update_scraper_health("_canary", len(canary_matches), canary_alarm)
+        else:
+            logger.info(f"Canary OK: {len(canary_matches)} matches")
+            sb.update_scraper_health("_canary", len(canary_matches), None)
+    except Exception as e:
+        logger.warning(f"[canary] check failed: {e}")
+
+    # Stale keys for capped sources (computed once, shared by all users)
+    stale_capped_keys = sb.get_stale_pool_keys(days=7, sources=["workday", "oracle", "smartrecruiters"])
+    if stale_capped_keys:
+        logger.info(f"Capped-source stale keys (7d unseen): {len(stale_capped_keys)}")
+
     # Record per-source health once (the pool is global, not per-user)
     for source, count in SOURCE_SUMMARY.items():
         try:
@@ -323,7 +386,7 @@ def main():
     for i, profile in enumerate(users, 1):
         logger.info(f"\n[User {i}/{len(users)}]")
         try:
-            stats = process_user(profile, shared_pool, pool_keys, pool_companies)
+            stats = process_user(profile, shared_pool, pool_keys, pool_companies, stale_capped_keys)
             if stats:
                 user_stats.append(stats)
         except Exception as e:
@@ -331,6 +394,14 @@ def main():
             logger.debug(traceback.format_exc())
             run_errors.append(f"user {profile.get('user_id', '?')[:8]}: {type(e).__name__}: {e}")
             # Continue to next user — never let one user crash the whole run
+
+    for alarm in (pool_alarm, canary_alarm):
+        if alarm:
+            run_errors.insert(0, f"ALARM: {alarm}")
+
+    sb.record_run_history(shard_index, shard_total, len(shared_pool),
+                          len(user_stats), sum(u["matched"] for u in user_stats),
+                          len(run_errors))
 
     if os.environ.get("WRITE_RUN_REPORT", "1") != "0":
         _write_run_report("docs/LAST_RUN.md", started=start,
