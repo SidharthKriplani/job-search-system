@@ -206,6 +206,28 @@ WORKDAY = [
     ("ms",    "wd5",  "External",             "Morgan Stanley"),       # ~37 India/page, QR/capital markets
     ("ghr",   "wd1",  "lateral-ba_continuum", "Bank of America"),      # Continuum India GCC
     ("factset","wd108","FactSetCareers",      "FactSet"),              # financial-data India (Hyderabad)
+
+    # India-verified from OpenJobs Workday mining (2026-07-15):
+    ("maersk", "wd3", "Maersk_Careers", "Maersk"), ("intel", "wd1", "External", "Intel"),
+    ("sabre", "wd1", "SabreJobs", "Sabre"), ("aptiv", "wd5", "APTIV_CAREERS", "Aptiv"),
+    ("ebay", "wd5", "apply", "eBay"), ("zelis", "wd1", "ZelisCareers", "Zelis"),
+    ("crowdstrike", "wd5", "crowdstrikecareers", "CrowdStrike"), ("motorolasolutions", "wd5", "Careers", "Motorola Solutions"),
+    ("unisys", "wd5", "External", "Unisys"), ("hp", "wd5", "ExternalCareerSite", "HP"),
+    ("dentsuaegis", "wd3", "DAN_GLOBAL", "Dentsu"), ("rollsroyce", "wd3", "professional", "Rolls-Royce"),
+    ("travelhrportal", "wd1", "Jobs", "Travelhrportal"), ("issgovernance", "wd1", "ISScareers", "ISS"),
+    ("mrisoftware", "wd501", "External_CareerSite", "MRI Software"), ("illumina", "wd1", "illumina-careers", "Illumina"),
+    ("phinia", "wd5", "PHINIA_Careers", "PHINIA"), ("sprinklr", "wd1", "careers", "Sprinklr"),
+    ("trekbikes", "wd1", "TREK", "Trek"), ("lytx", "wd1", "Lytx", "Lytx"),
+    ("mimecast", "wd5", "Mimecast-Careers", "Mimecast"), ("sglottery", "wd5", "ScientificGamesExternalCareers", "Sglottery"),
+    ("trellix", "wd1", "EnterpriseCareers", "Trellix"), ("syniverse", "wd1", "SyniverseCareers", "Syniverse"),
+    ("ansira", "wd1", "Ansira_Careers", "Ansira"), ("plugpower", "wd5", "Plug_Power_Inc", "Plugpower"),
+    ("bb", "wd3", "QNX", "Bb"), ("philips", "wd3", "jobs-and-careers", "Philips"),
+    ("gsknch", "wd3", "GSKCareers", "Gsknch"), ("rocket", "wd5", "rocket_careers", "Rocket"),
+    ("ouryahoo", "wd5", "careers", "Ouryahoo"), ("lnw", "wd5", "SciPlayExternalCareersSite", "Lnw"),
+    ("adtran", "wd3", "ADTRAN", "Adtran"), ("comscore", "wd5", "External", "Comscore"),
+    ("tencent", "wd1", "Tencent_Careers", "Tencent"), ("autodesk", "wd1", "Ext", "Autodesk"),
+    ("wk", "wd3", "External", "Wk"), ("thales", "wd3", "Careers", "Thales"),
+    ("cerence", "wd5", "Cerence", "Cerence"),
 ]
 
 
@@ -225,6 +247,24 @@ SMARTRECRUITERS = [
     ("NielsenIQ",            "NielsenIQ"),    # Analyst-Banking, data science, India
 ]
 
+
+# ── Recruitee companies (slug, display) — mined + verified from OpenJobs ──
+RECRUITEE = [
+    ("hiddencity", "Hiddencity"), ("immersionspzoo", "Immersionspzoo"), ("reflectorentertainment", "Reflectorentertainment"), ("apply", "Apply"),
+    ("infeedo", "Infeedo"), ("mitsogo", "Mitsogo"), ("chaos", "Chaos"), ("futureworks", "Futureworks"),
+    ("spocket", "Spocket"), ("framestore", "Framestore"), ("trackman", "Trackman"), ("megaparticleinc", "Megaparticleinc"),
+    ("focushomeinteractive", "Focushomeinteractive"), ("realitygames", "Realitygames"), ("playtestcloud", "Playtestcloud"), ("edelman", "Edelman"),
+    ("atlys", "Atlys"), ("tgs", "Tgs"), ("gamesglobal", "Gamesglobal"), ("gainpro", "Gainpro"),
+    ("saaslabs", "Saaslabs"), ("nxtlvl", "Nxtlvl"), ("villagetalkies", "Villagetalkies"), ("rocketwerkz", "Rocketwerkz"),
+    ("terra", "Terra"), ("bettercollective", "Bettercollective"), ("focusentertainment", "Focusentertainment"), ("crazygames", "Crazygames"),
+    ("propel", "Propel"), ("curvgroup", "Curvgroup"), ("noobz", "Noobz"), ("exigent", "Exigent"),
+    ("csgoroll", "Csgoroll"), ("company3", "Company3"), ("grid", "Grid"), ("pixelpool", "Pixelpool"),
+    ("tensquaregames", "Tensquaregames"), ("clever", "Clever"), ("chimpworks", "Chimpworks"), ("lucidgames", "Lucidgames"),
+    ("squeezestudio", "Squeezestudio"), ("myr", "Myr"), ("universegroup", "Universegroup"), ("lucidrealitylabs", "Lucidrealitylabs"),
+    ("sense", "Sense"), ("rubygamestudio", "Rubygamestudio"), ("playsoncareers", "Playsoncareers"), ("wonderkind", "Wonderkind"),
+    ("scorewarrior", "Scorewarrior"), ("stealthstartup", "Stealthstartup"), ("illuvium", "Illuvium"), ("huuuge", "Huuuge"),
+    ("vibes", "Vibes"), ("mangopay", "Mangopay"), ("11bitstudios", "11Bitstudios"),
+]
 
 # ── Harvested lists (our own, from ingest/harvester.py via Common Crawl) ───────
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -288,4 +328,6 @@ def unit_domain(label: str, uid: str) -> str:
         return "tech" if uid in curated else "general"
     if label == "instahyre":
         return "tech"             # India tech/analytics board
+    if label == "recruitee":
+        return "general"
     return "general"              # jobspy, aggregators

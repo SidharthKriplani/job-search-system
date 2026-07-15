@@ -23,7 +23,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Tuple
 
-from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre
+from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee
 from .dedup import deduplicate
 from . import registry
 from .registry import unit_domain
@@ -66,6 +66,7 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]], str]]:
     units.append(("jobspy", "jobspy", jobspy.fetch))
     units.append(("aggregators", "aggregators", aggregators.fetch))
     units.append(("instahyre", "instahyre", instahyre.fetch))
+    units.append(("recruitee", "recruitee", recruitee.fetch))
     return [(label, uid, fn, unit_domain(label, uid)) for (label, uid, fn) in units]
 
 

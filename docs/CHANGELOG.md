@@ -4,6 +4,18 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (p) — more India jobs: +39 Workday tenants, +Recruitee connector
+
+Mined the OpenJobs dataset deeper and live-verified everything:
+- **+39 Workday tenants** (692 India jobs) — Maersk 57, Intel 40, Sabre 40,
+  Aptiv 40, eBay 39, CrowdStrike 35, Motorola 34, HP 29, Rolls-Royce, Illumina,
+  Sprinklr, Unisys, Zelis, Trek, … Workday is India-dense because we search it
+  for "India" directly, so even global firms' India GCCs surface.
+- **New Recruitee connector** (127 India jobs / 930 total) — public JSON ATS
+  (`{slug}.recruitee.com/api/offers/`), 55 verified company slugs. Domain=general.
+Net ~+800 India jobs. WORKDAY tenants 27→66; new source `recruitee` in the pool.
+
+
 ## 2026-07-15 (o) — saved searches + alerts (pull -> push)
 
 Users can now save a filter set and get alerted when new jobs match:
