@@ -4,6 +4,21 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (m) — indirect GitHub mining: +48 India company boards (+326 jobs)
+
+Followed the "indirect source" hunch. Mined the outscal/OpenJobs dataset
+(12,144 company→ATS records, public GitHub repo). Extracted the India-tagged
+companies' Greenhouse/Lever/Ashby slugs NOT already in our registry, then
+LIVE-VERIFIED each for India yield. Added the 48 that returned India jobs:
+- 33 greenhouse (Brillio, IMC, Roblox India, Conga, Jumio, AnyDesk, Krafton
+  India, Moniepoint, Blenheim Chalcot India, …)
+- 15 lever (brillio-2 56 jobs!, D&B 34, Drivetrain 22, Coupa 18, Netomi, …)
+- +326 India jobs total, all live-checked (dead/US-only slugs discarded).
+This is the indirect route the direct API probes couldn't reach — consuming a
+community-maintained company dataset rather than hitting job APIs that block us.
+Also holds 164 Workday configs + Recruitee/Workable adapters for future mining.
+
+
 ## 2026-07-15 (l) — new source research + Instahyre; raised run timeouts
 
 Researched more sources empirically (probed live, kept only real India value):

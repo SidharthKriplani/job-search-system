@@ -86,6 +86,18 @@ GREENHOUSE = [
     ("creativefabrica", "Creative Fabrica"), ("crossbeam", "Crossbeam"), ("credible", "Credible"),
     # moved from Ashby → Greenhouse (live-verified 2026-07-15, 103 jobs)
     ("cresta", "Cresta"),
+    # India-verified from OpenJobs dataset mining (2026-07-15, live-checked):
+    ("globalhealthcareexchangeinc", "Globalhealthcareexchangeinc"), ("imc", "Imc"), ("roblox", "Roblox"),
+    ("conga", "Conga"), ("techholding", "Techholding"), ("definitivehcindia", "Definitivehc"),
+    ("pay2dc", "Pay2Dc"), ("globalizationpartners", "Globalizationpartners"), ("ethernovia", "Ethernovia"),
+    ("putnamassociatesllc", "Putnamassociatesllc"), ("innophaseiot", "Innophaseiot"), ("blenheimchalcotindia", "Blenheimchalcot"),
+    ("arcadiacareers", "Arcadiacareers"), ("moniepoint", "Moniepoint"), ("oportun", "Oportun"),
+    ("jumio", "Jumio"), ("zinnia", "Zinnia"), ("arkoselabs", "Arkoselabs"),
+    ("onarchipelago", "Onarchipelago"), ("atariinc", "Atariinc"), ("hightouch", "Hightouch"),
+    ("gatherai", "Gatherai"), ("merqube", "Merqube"), ("instabase", "Instabase"),
+    ("kraftonindia", "Krafton"), ("headoutlinkedin", "Headoutlinkedin"), ("tellius", "Tellius"),
+    ("fluxon", "Fluxon"), ("anydesk", "Anydesk"), ("prophecysimpledatalabs", "Prophecysimpledatalabs"),
+    ("poppulo", "Poppulo"), ("goguardian", "Goguardian"), ("spauldingridge", "Spauldingridge"),
 ]
 
 LEVER = [
@@ -104,6 +116,12 @@ LEVER = [
     ("nium", "Nium"),
     ("mistral", "Mistral AI"),
     ("porter", "Porter"),
+    # India-verified from OpenJobs dataset mining (2026-07-15, live-checked):
+    ("brillio-2", "Brillio"), ("dnb", "Dnb"), ("drivetrain", "Drivetrain"),
+    ("coupa", "Coupa"), ("netomi", "Netomi"), ("highspot", "Highspot"),
+    ("extremenetworks", "Extremenetworks"), ("bounteous", "Bounteous"), ("actian", "Actian"),
+    ("entrata", "Entrata"), ("regrello", "Regrello"), ("levelai", "Levelai"),
+    ("matchgroup", "Matchgroup"), ("aeratechnology", "Aeratechnology"), ("findem", "Findem"),
 ]
 
 ASHBY = [
