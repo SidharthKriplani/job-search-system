@@ -94,7 +94,7 @@ export default function Sidebar() {
       </header>
 
       {/* ── Mobile: bottom tab nav ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-4
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-5
                       bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800
                       pb-[env(safe-area-inset-bottom)]">
         {NAV.map(({ href, label, icon: Icon }) => {
@@ -104,14 +104,14 @@ export default function Sidebar() {
               key={href}
               href={href}
               className={clsx(
-                'flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors',
+                'flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
                 active
                   ? 'text-indigo-600 dark:text-indigo-400'
                   : 'text-slate-500 dark:text-slate-400'
               )}
             >
-              <Icon className="w-5 h-5" />
-              {label}
+              <Icon className="w-[18px] h-[18px]" />
+              <span className="truncate max-w-full px-0.5">{label}</span>
             </Link>
           )
         })}
