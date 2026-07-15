@@ -154,7 +154,16 @@ def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozen
     # "Data Scientist"). No-op unless USE_EMBEDDINGS=1 and fastembed installed.
     if embeddings.available():
         profile_text = " ".join(profile.get("target_roles", []) or []) + " " + (profile.get("resume_text") or "")
-        unique = embeddings.rerank(profile_text, unique)
+        # Re-rank ONLY the head of the keyword ranking. Embedding the full
+        # shortlist (24k+ texts for a broad profile) took a 2-core runner past
+        # the 30-min job timeout. The tail below the cap keeps keyword order —
+        # nobody's reading past rank 1500 anyway.
+        cap = int(os.environ.get("EMBED_RERANK_CAP", "1500"))
+        if len(unique) > cap:
+            head = embeddings.rerank(profile_text, unique[:cap])
+            unique = head + unique[cap:]
+        else:
+            unique = embeddings.rerank(profile_text, unique)
 
     # ── Determine which jobs are genuinely NEW (not already in the feed) ────
     # Must run BEFORE upsert. We mirror the same source_job_id fallback that

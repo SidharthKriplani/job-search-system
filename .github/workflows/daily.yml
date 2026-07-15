@@ -27,7 +27,7 @@ jobs:
   scrape:
     name: Run Job Scrapers
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
