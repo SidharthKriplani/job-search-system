@@ -7,9 +7,10 @@ and computes a match_score (0–1) for display ranking.
 Called after scrapers return raw jobs, before upsert.
 """
 
+import os
 import re
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import List, Dict, Tuple, Optional
 
 from . import role_graph
@@ -236,7 +237,19 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
 
     results: List[Dict] = []
 
+    # ── Staleness cutoff ── the product promise is RECENT jobs. Postings older
+    # than MAX_JOB_AGE_DAYS (default 90) are dropped up front; jobs with no
+    # parseable date are kept (recency scoring already treats them as neutral).
+    max_age_days = int(os.environ.get("MAX_JOB_AGE_DAYS", "90") or 0)
+    stale_cutoff = (date.today() - timedelta(days=max_age_days)).isoformat() if max_age_days > 0 else None
+    dropped_stale = 0
+
     for job in jobs:
+        if stale_cutoff:
+            pd = job.get("posted_date")
+            if pd and str(pd)[:10] < stale_cutoff:
+                dropped_stale += 1
+                continue
         title    = (job.get("job_title") or "").lower()
         company  = (job.get("company") or "").lower()
         location = (job.get("location") or "").lower()
@@ -382,7 +395,8 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
 
     results.sort(key=lambda j: j["match_score"], reverse=True)
     top = results[0]["match_score"] if results else 0
-    logger.info(f"[Filter] {len(results)}/{len(jobs)} passed | top score {top}")
+    stale_note = f" | dropped {dropped_stale} stale (>{max_age_days}d)" if dropped_stale else ""
+    logger.info(f"[Filter] {len(results)}/{len(jobs)} passed | top score {top}{stale_note}")
     return results
 
 

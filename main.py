@@ -154,6 +154,12 @@ def process_user(profile: Dict, shared_pool: List[Dict]) -> None:
             sjid = hashlib.md5(job.get("job_url", "").encode()).hexdigest()[:20]
         return (job.get("source"), sjid)
 
+    # Age out yesterday's "new" flags so the dashboard's "New Today" stat is
+    # honest (is_new used to be write-once TRUE and counted every job ever).
+    aged = sb.age_out_new_flags(user_id, hours=24)
+    if aged:
+        logger.info(f"Aged out {aged} stale is_new flags")
+
     existing_keys = sb.get_existing_job_keys(user_id)
     new_jobs_for_digest = [j for j in unique if _effective_key(j) not in existing_keys]
     logger.info(f"Genuinely new (not seen before): {len(new_jobs_for_digest)}")

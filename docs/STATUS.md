@@ -1,6 +1,6 @@
 # STATUS — current state
 
-_Last updated: 2026-06-23_
+_Last updated: 2026-07-15_
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
@@ -132,10 +132,14 @@ Vercel env: `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY`, `GITHUB_DISPATCH_TOKEN` (pow
   blocker above. The run log will reveal it.
 - **Gmail title↔URL pairing by index** can mismatch on messy alert emails (parser
   rework needed; lower priority).
+- **2026-07-15 cloud audit:** code pipeline re-verified healthy end-to-end from a
+  clean sandbox (70k-job live ingest, 16k finance matches, frontend builds, schema
+  idempotent on real Postgres). Fixed: stale-posting cutoff (MAX_JOB_AGE_DAYS=90),
+  is_new 24h age-out, 6 dead/moved ATS slugs. The blocker is NOT code — it is
+  deploy/infra: the Actions run log has STILL never been read.
 - **Matching is keyword/stem + curated graph** — no true synonym understanding yet
   (that's the deferred LLM/embeddings Stage 2). Role graph is only as broad as the
   seeded families.
-- `scraper_health` is global (per-source), not per-user.
 - Legacy `scrapers/` HTML portal modules remain but are out of the pipeline.
 
 ## Things I can't verify from the sandbox (need live data/secrets)

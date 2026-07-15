@@ -4,6 +4,31 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 — full-project health pass (cloud sandbox audit + fixes)
+
+Verified live from a clean environment: full ingest run pulled **70,314 jobs**
+(greenhouse 60,301 / ashby 27,243 / workday 1,059 / oracle 224 / smartrecruiters
+111 / jobspy 250 / aggregators 139); finance profile matched 16k+, incl. JPMorgan
+Mumbai equity research. Frontend `tsc --noEmit` clean + `next build` succeeds.
+schema.sql applied twice against a real Postgres 16 (stubbed auth schema) — fully
+idempotent, all 8 tables, signup trigger creates profile + 3 templates, job_feed
+upsert conflict path correct. Conclusion: the code pipeline is healthy end-to-end;
+the "0 jobs live" blocker is deploy/infra (Actions log still unread — needs repo access).
+
+Fixes shipped in this pass:
+- **Staleness cutoff** (`utils/filter.py`): postings older than `MAX_JOB_AGE_DAYS`
+  (default 90) are dropped up front — the live pool carried 2019-dated postings
+  (7,587 dropped on a real run). Undated jobs kept (neutral recency). New test.
+- **`is_new` now ages out** (`utils/supabase_client.py` `age_out_new_flags` +
+  `main.py`): rows older than 24h get `is_new=false` at the start of each user's
+  daily pass, so the dashboard "New Today" stat is honest (was write-once TRUE).
+- **Registry hygiene** (`ingest/registry.py`), live-verified: mux moved Lever→Ashby;
+  cresta moved Ashby→Greenhouse (added, 103 jobs); voiceflow, romerolabs,
+  clipboardhealth, statsig dead on all 3 ATSes → removed.
+- Tests: 23 green (added stale-drop regression test).
+
+---
+
 ## 2026-06-23 (c) — finance is ONE connected market (stop forcing front/back office)
 
 The repeated "front office vs back office" pain was a modelling error: finance_ib

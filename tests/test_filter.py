@@ -155,3 +155,24 @@ def test_finance_is_one_connected_space():
     # but the exact-role IB match ranks above the cross-office ones
     score = {j["job_title"]: j["match_score"] for j in out}
     assert score["Investment Banking Analyst"] > score["Fund Accountant"]
+
+
+def test_stale_jobs_dropped_by_max_age():
+    # The product promise is RECENT jobs: postings older than MAX_JOB_AGE_DAYS
+    # (default 90) are dropped up front; undated jobs are kept (neutral recency).
+    from datetime import date, timedelta
+    fresh = (date.today() - timedelta(days=5)).isoformat()
+    stale = (date.today() - timedelta(days=200)).isoformat()
+    jobs = [
+        {"job_title": "Investment Banking Analyst", "company": "A", "location": "Mumbai",
+         "description_snippet": "M&A", "posted_date": fresh},
+        {"job_title": "Investment Banking Analyst", "company": "B", "location": "Mumbai",
+         "description_snippet": "M&A", "posted_date": stale},
+        {"job_title": "Investment Banking Analyst", "company": "C", "location": "Mumbai",
+         "description_snippet": "M&A", "posted_date": None},
+    ]
+    out = filter_and_score([dict(j) for j in jobs], {"target_roles": ["investment banker"]})
+    companies = {j["company"] for j in out}
+    assert "A" in companies          # fresh kept
+    assert "B" not in companies      # stale dropped
+    assert "C" in companies          # undated kept

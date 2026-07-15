@@ -183,6 +183,29 @@ def get_existing_job_keys(user_id: str) -> set:
     return {(row.get("source"), row.get("source_job_id")) for row in (result.data or [])}
 
 
+def age_out_new_flags(user_id: str, hours: int = 24) -> int:
+    """
+    Reset is_new=false on feed rows older than `hours`. Without this the
+    dashboard's "New Today" stat counts every un-applied job EVER (is_new was
+    write-once TRUE). Runs at the start of each user's daily pass, so "new"
+    means "arrived in the last day", matching what the stat claims.
+    """
+    from datetime import datetime, timedelta, timezone
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    sb = get_client()
+    try:
+        result = sb.table("job_feed") \
+            .update({"is_new": False}) \
+            .eq("user_id", user_id) \
+            .eq("is_new", True) \
+            .lt("created_at", cutoff) \
+            .execute()
+        return len(result.data or [])
+    except Exception as e:
+        logger.error(f"[Supabase] age_out_new_flags failed: {e}")
+        return 0
+
+
 # ─── Scraper health helpers ──────────────────────────────────────────────────
 
 def update_scraper_health(

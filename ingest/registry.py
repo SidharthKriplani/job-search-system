@@ -84,6 +84,8 @@ GREENHOUSE = [
     ("customerio", "Customer.io"), ("crexi", "Crexi"), ("cultureamp", "Culture Amp"),
     ("cymulate", "Cymulate"), ("creativex", "CreativeX"), ("crashplan", "CrashPlan"),
     ("creativefabrica", "Creative Fabrica"), ("crossbeam", "Crossbeam"), ("credible", "Credible"),
+    # moved from Ashby → Greenhouse (live-verified 2026-07-15, 103 jobs)
+    ("cresta", "Cresta"),
 ]
 
 LEVER = [
@@ -96,9 +98,9 @@ LEVER = [
     ("netflix", "Netflix"),
     ("spotify", "Spotify"),
     ("kpler", "Kpler"),
-    ("mux", "Mux"),
-    ("voiceflow", "Voiceflow"),
-    ("romerolabs", "Romero Labs"),
+    # removed 2026-07-15 (live-verified 404 on Lever):
+    #   mux → moved to Ashby (jobs.ashbyhq.com/mux, covered via harvested list)
+    #   voiceflow, romerolabs → board gone on Lever/Greenhouse/Ashby
     ("nium", "Nium"),
     ("mistral", "Mistral AI"),
     ("porter", "Porter"),
@@ -118,7 +120,7 @@ ASHBY = [
     ("mercury", "Mercury"),
     ("vanta", "Vanta"),
     ("runway", "Runway"),
-    ("clipboardhealth", "Clipboard Health"),
+    # removed 2026-07-15: clipboardhealth 404 on Ashby/Greenhouse/Lever (own careers site now)
     ("posthog", "PostHog"),
     ("hex", "Hex"),
     # Bulk-verified batch (2026-06-20)
@@ -134,9 +136,10 @@ ASHBY = [
     ("deepgram", "Deepgram"), ("sanity", "Sanity"), ("livekit", "LiveKit"),
     ("zapier", "Zapier"), ("railway", "Railway"),
     # Batch 3 (2026-06-20)
-    ("harvey", "Harvey"), ("sierra", "Sierra"), ("cresta", "Cresta"),
+    # removed 2026-07-15: cresta → moved to Greenhouse (added there); statsig 404 on all 3 ATSes
+    ("harvey", "Harvey"), ("sierra", "Sierra"),
     ("synthesia", "Synthesia"), ("redis", "Redis"), ("camunda", "Camunda"),
-    ("pleo", "Pleo"), ("anyscale", "Anyscale"), ("statsig", "Statsig"),
+    ("pleo", "Pleo"), ("anyscale", "Anyscale"),
     ("unit", "Unit"), ("moderntreasury", "Modern Treasury"), ("fullstory", "FullStory"),
     ("stream", "Stream"), ("scaler", "Scaler"),
     # Batch 4 — Feashliaa list, verified
