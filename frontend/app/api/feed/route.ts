@@ -38,14 +38,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, jobs: [], total: 0, needsProfile: true })
   }
 
-  const MIN_SCORE = Number(process.env.NEXT_PUBLIC_MIN_FEED_SCORE || 0.45)
   let query = supabase
     .from('job_feed')
     .select('*', { count: 'exact' })
     .eq('user_id', user.id)
     .eq('is_dismissed', false)
     .eq('is_applied', false)
-    .gte('match_score', MIN_SCORE)
 
   // No read-time role .or() — see dashboard/page.tsx: rows are already matched
   // by the backend; the heavy ILIKE OR blew the statement timeout → empty feed.
@@ -69,6 +67,15 @@ export async function GET(req: Request) {
     // Escape commas/parens that would break PostgREST's or() filter grammar.
     const safe = q.replace(/[,()]/g, ' ')
     query = query.or(`job_title.ilike.%${safe}%,company.ilike.%${safe}%,location.ilike.%${safe}%`)
+  }
+
+  // Relevance floor applies ONLY to the default browse view. Once the user has
+  // searched or applied any filter, THEY are doing the narrowing, so showing
+  // weaker matches they explicitly asked for is correct — no floor.
+  const narrowed = !!q || boards.length > 0 || pos.length > 0 || loc.length > 0 || co.length > 0 || scope !== 'all'
+  if (!narrowed) {
+    const MIN_SCORE = Number(process.env.NEXT_PUBLIC_MIN_FEED_SCORE || 0.45)
+    query = query.gte('match_score', MIN_SCORE)
   }
 
   // Sort: relevance (match score) or newest (date posted). posted_date can be
