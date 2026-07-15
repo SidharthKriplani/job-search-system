@@ -30,7 +30,8 @@ signup-blocking trigger bug is fixed; sources have been expanded ~3×.
 - **Ingestion** — ~95k jobs/run from greenhouse, ashby, lever, workday (India-
   searched finance GCCs), oracle, smartrecruiters, recruitee, foundit (Monster
   India), **workable (NEW — 240 harvested + curated boards)**, **bamboohr (NEW —
-  309 harvested companies)**, **phenom (NEW — NTT/Mastercard/DuPont/Danaher, ~515 India jobs)**,
+  309 harvested companies)**, **phenom (NEW — 7 tenants: NTT/Mastercard/DuPont/Danaher/ThermoFisher/GSK/GE-Aero, ~700+ India jobs)**,
+  **smartrecruiters expanded 2→38 companies (~2.3k India postings: Bosch, Nagarro, …)**,
   jobspy (Indeed **+ LinkedIn**), adzuna (paginated,
   finance/tech India queries), jooble (NEW, needs free `JOOBLE_API_KEY`), and
   instahyre (India, best-effort). Workable+bamboohr smoke: +7.4k deduped jobs.

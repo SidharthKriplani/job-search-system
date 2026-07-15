@@ -26,10 +26,10 @@ in CHANGELOG.
 
 ## NOW — the one real ceiling
 
-- [ ] **Data-model normalization (#3)** — split per-user `job_feed` into `jobs`
-      (canonical, deduped) + `user_job_matches` (thin: user_id, job_id, score,
-      flags). `cap_user_feed` + trimmed rows buy time, but do this before ~10 heavy
-      users. Big migration on a LIVE app → stage carefully (branch → preview → cut).
+- [ ] **Data-model normalization (#3)** — SQL READY: `supabase/migrations/
+      2026-07-16-user-job-matches.sql` + staged plan in `docs/PLAN-normalization.md`.
+      jobs_pool already IS canonical; migration adds user_job_matches + compat view.
+      Stage 0 (run SQL, non-destructive) safe now; stages 1-4 = one live session.
 - [ ] **Verify Gmail parsing at scale** — now opt-in and reachable; confirm the
       parser handles real Naukri/iimjobs alert emails (title↔URL pairing bug, D-note).
 
@@ -54,8 +54,9 @@ in CHANGELOG.
 - [x] ~~More Workday tenants + Workable adapter~~ → DONE 2026-07-15: workable +
       bamboohr connectors live; 193 harvested Workday tenants gated behind
       `WORKDAY_INCLUDE_HARVESTED` (flip on after normalization).
-- [ ] **More Oracle/SmartRecruiters tenants** (OpenJobs dataset still has
-      unmined ORC/SR configs).
+- [x] ~~More Oracle/SmartRecruiters tenants~~ → DONE 2026-07-15: +36 SR
+      companies (~2.3k India postings) mined from OpenJobs + live-verified;
+      ORC candidates probed, zero India yield, stays curated.
 - [x] ~~Enterprise ATS platforms~~ → DONE 2026-07-15: **Phenom shipped** (4
       tenants, ~515 India jobs); **Eightfold shipped best-effort** (403s
       datacenter IPs); Taleo/iCIMS/SuccessFactors/Careerjet probed + ruled out

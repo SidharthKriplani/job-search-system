@@ -245,6 +245,27 @@ ORACLE = [
 SMARTRECRUITERS = [
     ("WNSGlobalServices144", "WNS"),         # credit/market-research analysts, India
     ("NielsenIQ",            "NielsenIQ"),    # Analyst-Banking, data science, India
+    # Batch 2 — mined from OpenJobs dataset, live-verified via the public
+    # postings API with country=in (2026-07-15; India posting counts in comments).
+    # 36 companies, ~2,323 India postings at verification time.
+    ("boschgroup", "Bosch Group"), ("Nagarro1", "Nagarro"),                    # 539, 469
+    ("ASSYSTEM", "Assystem"), ("renesaselectronics", "Renesas Electronics"),   # 166, 124
+    ("miratech1", "Miratech"), ("Ramboll3", "Ramboll"),                        # 122, 117
+    ("continental", "Continental"), ("MattelInc", "Mattel"),                   # 104, 78
+    ("SikaAG", "Sika Group"), ("Experian", "Experian"),                        # 70, 63
+    ("konecranes", "Konecranes"), ("freshworks", "Freshworks"),                # 44, 42
+    ("Version1", "Version 1"), ("linkedin3", "LinkedIn"),                      # 42, 41
+    ("aristanetworks", "Arista Networks"), ("AFRY", "AFRY"),                   # 34, 34
+    ("endava", "Endava"), ("SyngentaGroup", "Syngenta Group"),                 # 34, 33
+    ("servicenow", "ServiceNow"), ("vizexperts", "Viz Experts"),               # 29, 19
+    ("blend360", "Blend 360"), ("ewargames", "Ewar Games"),                    # 13, 10
+    ("gloify", "Gloify"), ("talentfolks", "Talent Folks"),                     # 9, 9
+    ("BetaCraftTechnologies", "BetaCraft"), ("TechnorizenSoftwareSolution", "Technorizen"),  # 9, 9
+    ("MovingWallsIndiaPvtLtd", "Moving Walls India"), ("InformaGroupPlc", "Informa Group"),  # 8, 8
+    ("believe", "Believe"), ("veremark", "Veremark"),                          # 6, 6
+    ("springernature", "Springer Nature"), ("Recruitrix", "Recruitrix"),       # 6, 6
+    ("KnackStudios", "Knack Studios"), ("WesternDigital", "Western Digital"),  # 5, 5
+    ("teampumpkin", "Team Pumpkin"), ("hackerrank", "HackerRank"),             # 5, 5
 ]
 
 
@@ -289,6 +310,10 @@ PHENOM = [
     ("careers.mastercard.com",      "Mastercard"),   # ~241 India hits
     ("careers.dupont.com",          "DuPont"),       # ~20 India hits
     ("jobs.danaher.com",            "Danaher"),      # ~98 India hits
+    # Batch 2 (2026-07-15 sweep of ~79 enterprise hosts; only open tenants kept)
+    ("jobs.thermofisher.com",       "Thermo Fisher"),  # ~334 India hits
+    ("jobs.gsk.com",                "GSK"),            # ~134 India hits
+    ("careers.geaerospace.com",     "GE Aerospace"),   # ~14 India hits
 ]
 
 # ── Eightfold tenants (tenant, company-domain, display) — BEST-EFFORT ─────────
@@ -387,10 +412,17 @@ _FINANCE_WD = {
     "citi","ms","ghr","factset","visa","mastercard","pwc",
 }
 
+# SmartRecruiters ids that are finance/analytics GCCs (the original curated
+# pair + Experian). The OpenJobs batch is engineering/IT-services heavy → tech.
+_FINANCE_SR = {"WNSGlobalServices144", "NielsenIQ", "Experian"}
+
+
 def unit_domain(label: str, uid: str) -> str:
     """Coarse domain for a fetch unit: 'finance' | 'tech' | 'general'."""
-    if label in ("oracle", "smartrecruiters"):
-        return "finance"          # both registries are finance GCCs
+    if label == "oracle":
+        return "finance"          # ORC registry is all finance GCCs
+    if label == "smartrecruiters":
+        return "finance" if uid in _FINANCE_SR else "tech"
     if label == "workday":
         return "finance" if uid in _FINANCE_WD else "tech"
     if label in ("workable", "bamboohr"):

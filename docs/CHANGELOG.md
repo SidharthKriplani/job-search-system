@@ -4,6 +4,30 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (u) — +3 Phenom tenants, +36 SmartRecruiters companies, normalization SQL ready
+
+Follow-through on the remaining free coverage levers:
+
+- **Phenom batch 2** — swept ~79 enterprise career hosts via POST /widgets;
+  3 open tenants added: Thermo Fisher (~334 India hits), GSK (~134),
+  GE Aerospace (~14). Most enterprise Phenom tenants 403 datacenter IPs —
+  the open ones are the exception, keep probing over time.
+- **SmartRecruiters batch 2 (+36 companies, ~2.3k India postings)** — mined the
+  OpenJobs dataset's 304 SR links, live-verified every id via the public
+  postings API with country=in, kept the 36 with ≥5 India postings: Bosch (539),
+  Nagarro (469), Assystem (166), Renesas (124), Miratech (122), Ramboll (117),
+  Continental (104), Experian, Freshworks, ServiceNow, Arista, HackerRank, …
+  smartrecruiters units 2 → 38. Domain tagging split: finance = WNS/NielsenIQ/
+  Experian, rest = tech (was blanket finance).
+- **Oracle: no new tenants** — OpenJobs' 7 ORC links live-probed, zero India
+  jobs (gaming studios). ORC stays curated (EXL/JPMorgan/Jefferies).
+- **Normalization migration prepared** — `supabase/migrations/
+  2026-07-16-user-job-matches.sql` (non-destructive, idempotent: creates
+  user_job_matches + RLS, backfills from job_feed, adds user_feed_v compat
+  view; jobs_pool already IS the canonical table). Staged cutover plan in
+  `docs/PLAN-normalization.md`. Stage 0 is safe to run in the SQL editor now;
+  code cutover (stages 1-4) needs a live-Supabase session.
+
 ## 2026-07-15 (t) — Phenom + Eightfold connectors; Taleo/iCIMS/SF/Careerjet probed + ruled out
 
 Enterprise-ATS expansion, every platform probed live from a datacenter first:
