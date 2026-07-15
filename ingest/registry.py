@@ -328,6 +328,6 @@ def unit_domain(label: str, uid: str) -> str:
         return "tech" if uid in curated else "general"
     if label == "instahyre":
         return "tech"             # India tech/analytics board
-    if label == "recruitee":
+    if label in ("recruitee", "foundit"):
         return "general"
     return "general"              # jobspy, aggregators

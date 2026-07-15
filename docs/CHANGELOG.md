@@ -4,6 +4,24 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (q) — foundit (Monster India) connector — the Naukri alternative (+854 India)
+
+Creative-source research for the walled India boards:
+- **Naukri** — re-confirmed hard-blocked: even the direct jobapi/v3/search with
+  appid/systemid headers returns 406 "recaptcha required" from datacenter IPs.
+  The GitHub scrapers that work run from residential IPs / solve captchas. Out.
+- **iimjobs / hirist / shine / cutshort** — no usable JSON API from our infra
+  (404/HTML-only or dead).
+- **foundit (ex-Monster India)** — WORKS: public JSON search API
+  (`/middleware/jobsearch`, appid/systemid headers) reachable from datacenter IPs.
+  New connector: **900 jobs, 854 India** across finance+tech terms (Gartner,
+  Barclays, TCS, …) with salary + skills. This is the large-India-board volume
+  Naukri would have given, from a source that doesn't wall us. domain=general.
+
+Net this session on India coverage: greenhouse/lever mining, +39 Workday tenants,
+Recruitee, and now foundit — India jobs up from ~3k to a much deeper pool.
+
+
 ## 2026-07-15 (p) — more India jobs: +39 Workday tenants, +Recruitee connector
 
 Mined the OpenJobs dataset deeper and live-verified everything:
