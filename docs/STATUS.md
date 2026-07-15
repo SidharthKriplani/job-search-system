@@ -10,7 +10,7 @@ after every meaningful change.
 The product works end-to-end for real users. Friends sign in (Google + email),
 get a personalised India-focused feed with working filters and sort, save
 searches, and get email digests. The month-long "0 jobs" era is closed; the
-signup-blocking trigger bug is fixed; sources have been expanded ~3×.
+signup-blocking trigger bug is fixed; India source coverage expanded ~4–5×.
 
 ## At a glance
 
