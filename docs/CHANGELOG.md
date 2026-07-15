@@ -4,6 +4,25 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (l) — new source research + Instahyre; raised run timeouts
+
+Researched more sources empirically (probed live, kept only real India value):
+- **Instahyre** (India tech board, JSON API) — ADDED as a connector (~420 India
+  jobs: Sprinklr, Avaamo, …). Best-effort: it rate-limits datacenter IPs, so it
+  degrades gracefully to 0 when blocked (never breaks the run). Domain=tech.
+- **Rejected as noise** (verified low India value): The Muse (3 India / 160),
+  RemoteOK (3/100), Jobicy, Himalayas — all global-remote APIs whose "India" is
+  mostly US-remote that would pollute the feed.
+- **Dead/changed APIs**: cutshort, wellfound, YC work-at-a-startup.
+- **SmartRecruiters**: probed Freshworks/Zomato/Swiggy/Razorpay/Meesho — none on
+  SR (they use other ATS). No easy expansion there.
+Verdict: the accessible India sources are now tapped; the big remaining volume
+(Naukri) stays recaptcha-walled.
+
+Timeouts raised (more sources = longer full runs): daily.yml 45->60 min,
+harvest 30->45, RefreshButton poll cap 30->45 min.
+
+
 ## 2026-07-15 (k) — scraper audit: raised harvested-board cap (recovers India coverage)
 
 Empirically audited every connector. Findings:

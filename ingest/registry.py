@@ -268,4 +268,6 @@ def unit_domain(label: str, uid: str) -> str:
         curated = {s for s, _ in (GREENHOUSE if label == "greenhouse"
                                    else LEVER if label == "lever" else ASHBY)}
         return "tech" if uid in curated else "general"
+    if label == "instahyre":
+        return "tech"             # India tech/analytics board
     return "general"              # jobspy, aggregators

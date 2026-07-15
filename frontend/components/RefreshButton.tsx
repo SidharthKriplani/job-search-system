@@ -13,7 +13,7 @@ type State = 'idle' | 'running' | 'done' | 'error'
 const EXPECTED_SEC = 600 // ~10 min
 // Absolute polling cap. If a run exceeds this we stop polling but KEEP the
 // button disabled-looking state honest via the status text + log link.
-const MAX_POLL_MS = 30 * 60_000
+const MAX_POLL_MS = 45 * 60_000
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60)
@@ -64,7 +64,7 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
       if (pollRef.current) {
         stop()
         setState('error')
-        setStatusText('Run exceeded 30 min — open the log to see why.')
+        setStatusText('Run exceeded 45 min — open the log to see why.')
       }
     }, MAX_POLL_MS)
   }
@@ -153,7 +153,7 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
         if (pollRef.current) {
           stop()
           setState('error')
-          setStatusText('Run exceeded 30 min — open the log to see why.')
+          setStatusText('Run exceeded 45 min — open the log to see why.')
         }
       }, MAX_POLL_MS)
     } catch (e: any) {
