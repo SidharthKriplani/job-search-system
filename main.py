@@ -334,13 +334,26 @@ def main():
     # Prefer the explicit shard index passed from the cron string; fall back to
     # wall-clock only if unset (manual runs use BATCH_TOTAL=1 → shard 0 anyway).
     shard_index = int(_bi) % shard_total if _bi else (datetime.now(timezone.utc).hour % shard_total)
-    logger.info(f"Fetching job pool (shard {shard_index + 1}/{shard_total}, concurrent)...")
+    # Domains the night's active users actually need → fetch those sources first.
+    priority_domains = set()
+    for u in users:
+        inds = " ".join(u.get("industries", []) or []).lower()
+        roles = " ".join(u.get("target_roles", []) or []).lower()
+        blob = inds + " " + roles
+        if any(k in blob for k in ("financ", "bank", "invest", "equity", "credit", "fintech", "kpo", "capital market")):
+            priority_domains.add("finance")
+        # Everyone gets tech (broadest coverage) + general fallbacks.
+        priority_domains.add("tech")
+    priority_domains.add("general")
+    logger.info(f"Fetching job pool (shard {shard_index + 1}/{shard_total}, priority={sorted(priority_domains)})...")
     try:
-        shared_pool = collect_jobs(shard_index, shard_total)
+        shared_pool = collect_jobs(shard_index, shard_total, priority_domains=priority_domains)
     except Exception as e:
         logger.error(f"Ingestion engine failed: {e}")
         shared_pool = []
-    logger.info(f"Shared pool: {len(shared_pool)} jobs from {dict(SOURCE_SUMMARY)}")
+    from collections import Counter as _Counter
+    dom_mix = dict(_Counter(j.get("source_domain", "general") for j in shared_pool))
+    logger.info(f"Shared pool: {len(shared_pool)} jobs from {dict(SOURCE_SUMMARY)} | domains {dom_mix}")
 
     # ── Persist the pool (instant onboarding + capped-source liveness) ─────────
     persisted = sb.upsert_pool_jobs(shared_pool)

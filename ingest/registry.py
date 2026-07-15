@@ -241,3 +241,31 @@ def _merge(curated, harvested):
 def all_greenhouse(): return _merge(GREENHOUSE, _harvested("greenhouse"))
 def all_lever():      return _merge(LEVER, _harvested("lever"))
 def all_ashby():      return _merge(ASHBY, _harvested("ashby"))
+
+
+# ── Domain tagging (finance vs tech vs general) ────────────────────────────────
+# Used to (a) prioritise fetching the sources a night's active users need, and
+# (b) give the matcher a provenance signal (a finance job from a finance-GCC
+# board outranks a keyword-only match). Coarse on purpose — finance + tech are
+# the two markets this product serves; everything else is "general".
+
+# Workday tenants that are finance/banking GCCs (the curated finance block).
+_FINANCE_WD = {
+    "statestreet","db","lseg","wf","ntrs","morningstar","blackrock","nasdaq","spgi",
+    "barclays","synchronyfinancial","broadridge","fiserv","fmr","capitalone","fis",
+    "citi","ms","ghr","factset","visa","mastercard","pwc",
+}
+
+def unit_domain(label: str, uid: str) -> str:
+    """Coarse domain for a fetch unit: 'finance' | 'tech' | 'general'."""
+    if label in ("oracle", "smartrecruiters"):
+        return "finance"          # both registries are finance GCCs
+    if label == "workday":
+        return "finance" if uid in _FINANCE_WD else "tech"
+    if label in ("greenhouse", "lever", "ashby"):
+        # Curated boards are hand-picked tech companies; harvested (in the JSON
+        # files) are unknown → general.
+        curated = {s for s, _ in (GREENHOUSE if label == "greenhouse"
+                                   else LEVER if label == "lever" else ASHBY)}
+        return "tech" if uid in curated else "general"
+    return "general"              # jobspy, aggregators

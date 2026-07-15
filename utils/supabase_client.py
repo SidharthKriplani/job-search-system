@@ -67,7 +67,7 @@ JOB_FEED_COLUMNS = {
     "user_id", "job_title", "company", "location", "salary_range", "job_url",
     "description_snippet", "posted_date", "source", "source_job_id", "job_type",
     "seniority", "is_new", "is_applied", "is_saved",
-    "is_dismissed", "match_score", "match_reasons",
+    "is_dismissed", "match_score", "match_reasons", "source_domain",
 }
 # NOTE: "experience_required" was removed — there is NO such column in job_feed
 # (see supabase/schema.sql). Whitelisting a non-existent column is a landmine:
@@ -142,7 +142,7 @@ def get_user_feed_rows(user_id: str) -> List[Dict]:
     out: List[Dict] = []
     cols = ("id, job_title, company, location, salary_range, job_url, "
             "description_snippet, posted_date, source, source_job_id, seniority, "
-            "job_type, is_applied, is_saved")
+            "job_type, is_applied, is_saved, source_domain")
     page = 1000
     try:
         start = 0
@@ -301,7 +301,7 @@ def cleanup_closed_jobs(user_id: str, pool_keys: set, pool_companies: set) -> in
 POOL_COLUMNS = {
     "source", "source_job_id", "job_title", "company", "location",
     "salary_range", "job_url", "description_snippet", "posted_date",
-    "job_type", "seniority",
+    "job_type", "seniority", "source_domain",
 }
 
 

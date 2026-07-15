@@ -4,6 +4,25 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (g) — domain-aware source routing (finance + tech)
+
+Sources are now tagged finance / tech / general (registry.unit_domain):
+Workday finance GCCs + Oracle + SmartRecruiters = finance; curated
+Greenhouse/Lever/Ashby = tech; harvested + jobspy + aggregators = general.
+- **Fetch prioritisation**: collect_jobs(priority_domains=…) orders the domains
+  the night's active users need FIRST, so relevant boards are never starved by
+  a job timeout. main.py derives priority from user industries/roles.
+- **Provenance scoring**: each job carries source_domain; filter gives a small
+  (~5-6% weight) boost when the board's domain matches the user's sector — a
+  finance job from a finance-GCC board outranks a keyword-only match from a
+  generic board (verified: Morgan Stanley/Oracle ranks above an identical
+  generic-source copy). Persisted on job_feed + jobs_pool so resync keeps it.
+- Run report + logs now show pool domain mix (e.g. finance 1020 / tech 12k /
+  general 58k — quantifies the known finance-coverage gap).
+
+⚠️ Manual step: re-run supabase/schema.sql (adds source_domain columns). Idempotent.
+
+
 ## 2026-07-15 (f) — adversarial audit: 14 fixes (3 self-inflicted this session)
 
 Ran a 3-front adversarial audit (Python pipeline / frontend+security / ops).

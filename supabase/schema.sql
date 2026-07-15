@@ -47,6 +47,7 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS seniority_level TEXT;
 -- Last date a daily digest was sent — the atomic guard that stops all 6 nightly
 -- shards from each emailing the user (claim_digest_slot).
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_digest_date DATE;
+ALTER TABLE job_feed ADD COLUMN IF NOT EXISTS source_domain TEXT;
 
 -- Heal any job_feed rows written with NULL status flags (a pre-fix resync bug
 -- inserted pool matches with NULL is_applied/is_saved, which .eq(is_applied,false)
@@ -123,6 +124,7 @@ CREATE TABLE IF NOT EXISTS job_feed (
     job_type        TEXT DEFAULT 'full_time',  -- full_time, contract, internship
     experience_required TEXT,
     seniority       TEXT,            -- junior, mid, senior, lead, manager, director
+    source_domain   TEXT,            -- finance | tech | general (provenance for scoring)
 
     -- Status
     is_new          BOOLEAN DEFAULT TRUE,
@@ -368,12 +370,14 @@ CREATE TABLE IF NOT EXISTS jobs_pool (
     posted_date     DATE,
     job_type        TEXT,
     seniority       TEXT,
+    source_domain   TEXT,
     first_seen_at   TIMESTAMPTZ DEFAULT NOW(),
     last_seen_at    TIMESTAMPTZ DEFAULT NOW(),
 
     UNIQUE(source, source_job_id)
 );
 
+ALTER TABLE jobs_pool ADD COLUMN IF NOT EXISTS source_domain TEXT;
 CREATE INDEX IF NOT EXISTS idx_jobs_pool_last_seen ON jobs_pool(last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_pool_source    ON jobs_pool(source);
 

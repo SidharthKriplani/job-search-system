@@ -182,8 +182,8 @@ _FOREIGN_HINTS = (
 
 # Component weights. With a résumé, the résumé drives the score; without, role fit does.
 # `lvl` = seniority-fit (rank the job to the user's level).
-_WEIGHTS_RESUME    = dict(title=0.18, jd=0.13, ind=0.09, loc=0.13, sal=0.06, rec=0.06, resume=0.23, lvl=0.12)
-_WEIGHTS_NO_RESUME = dict(title=0.28, jd=0.22, ind=0.13, loc=0.13, sal=0.06, rec=0.06, resume=0.0, lvl=0.12)
+_WEIGHTS_RESUME    = dict(title=0.17, jd=0.12, ind=0.09, loc=0.12, sal=0.06, rec=0.06, resume=0.22, lvl=0.11, dom=0.05)
+_WEIGHTS_NO_RESUME = dict(title=0.26, jd=0.21, ind=0.12, loc=0.12, sal=0.06, rec=0.06, resume=0.0, lvl=0.11, dom=0.06)
 
 
 def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
@@ -338,6 +338,18 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
         else:
             ind_score = 1.0  # no sector specified → don't penalise
 
+        # 3b. Source-domain provenance — a finance job from a finance-specialist
+        # board (Workday finance GCC / Oracle / SmartRecruiters) is a stronger
+        # signal than a generic board that merely contains a finance keyword.
+        sd = job.get("source_domain")
+        dom_score = 0.5  # neutral when unknown / general
+        if sd and sd != "general":
+            if sd in sectors or (sd == "tech" and not sectors):
+                dom_score = 1.0
+                reasons.append(f"From a {sd} source")
+            else:
+                dom_score = 0.4  # off-domain specialist board → mild demerit
+
         # 4. Location fit (0..1)
         if locations:
             if any(loc in location for loc in locations):
@@ -386,7 +398,8 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
         score = (
             W["title"] * title_score + W["jd"] * jd_score + W["ind"] * ind_score +
             W["loc"] * loc_score + W["sal"] * sal_score + W["rec"] * rec_score +
-            W["resume"] * resume_score + W["lvl"] * lvl_score
+            W["resume"] * resume_score + W["lvl"] * lvl_score +
+            W["dom"] * dom_score
         )
 
         job["match_score"]   = round(score, 3)

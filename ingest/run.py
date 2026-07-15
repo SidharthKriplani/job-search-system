@@ -26,6 +26,7 @@ from typing import Callable, Dict, List, Tuple
 from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters
 from .dedup import deduplicate
 from . import registry
+from .registry import unit_domain
 
 logger = logging.getLogger("ingest")
 
@@ -35,8 +36,8 @@ MAX_WORKERS = int(os.environ.get("INGEST_WORKERS", "16"))
 SOURCE_SUMMARY: Dict[str, int] = {}
 
 
-def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]]]]:
-    """Flat list of (connector_label, unit_id, fetch_callable). One per board/tenant."""
+def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]], str]]:
+    """Flat list of (connector_label, unit_id, fetch_callable, domain). One per board/tenant."""
     units: List[Tuple[str, str, Callable]] = []
 
     # Curated lists UNIONed with our own harvested lists (data/*_companies.json).
@@ -64,13 +65,25 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]]]]:
     # Broad engines run as single units (they internally cover many terms/sources).
     units.append(("jobspy", "jobspy", jobspy.fetch))
     units.append(("aggregators", "aggregators", aggregators.fetch))
-    return units
+    return [(label, uid, fn, unit_domain(label, uid)) for (label, uid, fn) in units]
 
 
-def collect_jobs(shard_index: int = 0, shard_total: int = 1) -> List[Dict]:
-    """Run this shard's fetch units concurrently, normalize + dedup, return the pool."""
+def collect_jobs(shard_index: int = 0, shard_total: int = 1,
+                 priority_domains=None) -> List[Dict]:
+    """Run this shard's fetch units concurrently, normalize + dedup, return the pool.
+
+    priority_domains: domains the night's active users need (e.g. {"finance","tech"}).
+    Units in those domains are ordered FIRST so they're never starved by a job
+    timeout, and each returned job is stamped with its source_domain for scoring.
+    """
     SOURCE_SUMMARY.clear()
     units = _build_units()
+
+    # Prioritise the domains active users actually need (stable, keeps order).
+    if priority_domains:
+        pset = set(priority_domains)
+        units.sort(key=lambda u: 0 if u[3] in pset else 1)
+
     if shard_total > 1:
         units = units[shard_index::shard_total]
         logger.info(f"[ingest] shard {shard_index+1}/{shard_total}: {len(units)} fetch units")
@@ -79,10 +92,12 @@ def collect_jobs(shard_index: int = 0, shard_total: int = 1) -> List[Dict]:
 
     raw: List[Dict] = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-        futs = {ex.submit(_safe, fn): label for label, _uid, fn in units}
+        futs = {ex.submit(_safe, fn): (label, domain) for label, _uid, fn, domain in units}
         for fut in as_completed(futs):
-            label = futs[fut]
+            label, domain = futs[fut]
             jobs = fut.result()
+            for j in jobs:
+                j["source_domain"] = domain   # stamped for scoring; stripped at upsert unless whitelisted
             SOURCE_SUMMARY[label] = SOURCE_SUMMARY.get(label, 0) + len(jobs)
             raw.extend(jobs)
 
