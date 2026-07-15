@@ -8,17 +8,37 @@ import { Briefcase, Mail, Zap, Eye, EyeOff } from 'lucide-react'
 type Mode = 'signin' | 'signup'
 
 const FRIENDLY_ERRORS: Record<string, string> = {
-  access_denied:        'Google sign-in was cancelled or blocked. Try again, or use email/password below.',
-  redirect_uri_mismatch:'OAuth configuration error — please contact support.',
-  invalid_request:      'Invalid sign-in request. Please try again.',
+  access_denied:          'Google sign-in was cancelled or blocked. Try again, or use email/password below.',
+  redirect_uri_mismatch:  'OAuth configuration error — please contact support.',
+  signup_disabled:        'New sign-ups are turned off for this app right now. Ask the admin to enable “Allow new users to sign up” in Supabase.',
+  'signups not allowed':  'New sign-ups are turned off for this app right now. Ask the admin to enable “Allow new users to sign up” in Supabase.',
+  already_registered:     'This email is already registered. Use “Sign in” (or Continue with Google / Set password if you signed up with Google).',
+  already_exists:         'This email is already registered. Use “Sign in” instead.',
+  'rate limit':           'Too many attempts — wait a minute and try again.',
+  'over_email_send_rate': 'Email limit hit — wait a few minutes, or ask the admin to turn off email confirmation.',
+  weak_password:          'Password is too weak — use at least 6 characters.',
+  invalid_login:          'Wrong email/password — or this account was created with Google (no password). Use Continue with Google, or “Set / reset password”.',
 }
 
-function friendlyError(raw: string): string {
+// Pull a human message out of whatever Supabase throws — AuthError, plain object,
+// {} with a status code, etc. Never render a bare "{}" at the user again.
+function errText(err: any): string {
+  if (!err) return 'Something went wrong. Please try again.'
+  const raw = (
+    err.message || err.error_description || err.error || err.msg ||
+    err.code || (typeof err === 'string' ? err : '')
+  ).toString().trim()
+  const hay = (raw + ' ' + (err.code || '') + ' ' + (err.status || '')).toLowerCase()
   for (const [key, msg] of Object.entries(FRIENDLY_ERRORS)) {
-    if (raw.toLowerCase().includes(key)) return msg
+    if (hay.includes(key)) return msg
   }
-  // strip empty object/JSON noise
-  if (raw.trim() === '{}' || raw.trim() === 'null' || raw.trim() === '') return 'Something went wrong. Please try again.'
+  if (!raw || raw === '{}' || raw === 'null') {
+    // Opaque error — most often a network/config problem or a blocked request.
+    const code = err.status || err.code
+    return code
+      ? `Sign-in failed (code ${code}). If this persists, the admin should check Supabase Auth settings.`
+      : 'Could not reach the sign-in service. Check your connection and try again.'
+  }
   return raw
 }
 
@@ -40,7 +60,7 @@ function LoginPage() {
 
   useEffect(() => {
     const urlError = searchParams.get('error')
-    if (urlError) setError(friendlyError(decodeURIComponent(urlError)))
+    if (urlError) setError(errText(decodeURIComponent(urlError)))
   }, [searchParams])
 
   const signInWithGoogle = async () => {
@@ -56,7 +76,7 @@ function LoginPage() {
         // on mobile. Gmail alert parsing is a separate, optional connection.
       },
     })
-    if (error) { setError(friendlyError(error.message)); setGoogleLoading(false) }
+    if (error) { console.error('google error:', error); setError(errText(error)); setGoogleLoading(false) }
   }
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -71,20 +91,20 @@ function LoginPage() {
         password,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       })
-      if (error) { setError(error.message); setLoading(false); return }
+      if (error) { console.error('signup error:', error); setError(errText(error)); setLoading(false); return }
       // If email confirmation is OFF, signUp returns a live session → go straight in.
       if (data.session) { window.location.href = '/dashboard'; return }
+      // Confirm-off but no session + a user with an empty identities array =
+      // email already registered (Supabase returns a fake success to avoid leaks).
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setError('This email is already registered. Use “Sign in” instead (or Continue with Google).')
+        setLoading(false); return
+      }
       // Otherwise confirmation is required (email may be slow/rate-limited).
       setMessage('Account created. If a confirmation email doesn’t arrive, ask the admin to disable email confirmation, then just Sign in.')
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        // Most common cause: this email was created via Google (no password set).
-        const msg = /invalid login credentials/i.test(error.message)
-          ? "Wrong email/password — or this account was created with Google (which sets no password). Use \"Continue with Google\" above, or click \"Set / reset password\" below."
-          : error.message
-        setError(msg); setLoading(false); return
-      }
+      if (error) { console.error('signin error:', error); setError(errText(error)); setLoading(false); return }
       window.location.href = '/dashboard'
       return
     }
@@ -100,7 +120,7 @@ function LoginPage() {
       redirectTo: `${window.location.origin}/auth/reset`,
     })
     setLoading(false)
-    if (error) { setError(error.message); return }
+    if (error) { setError(errText(error)); return }
     setMessage('Check your email for a link to set your password.')
   }
 
