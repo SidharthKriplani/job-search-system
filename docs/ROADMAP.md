@@ -56,10 +56,11 @@ in CHANGELOG.
       `WORKDAY_INCLUDE_HARVESTED` (flip on after normalization).
 - [ ] **More Oracle/SmartRecruiters tenants** (OpenJobs dataset still has
       unmined ORC/SR configs).
-- [ ] **Enterprise ATS platforms, one per session, prove-or-kill** — order:
-      Phenom → Eightfold → iCIMS → Taleo → SuccessFactors. Each: seed 5-10
-      hand-verified India tenants (DevTools recipe like registry.WORKDAY),
-      ship, kill if <500 India jobs/run. See docs/RESEARCH-source-expansion.md.
+- [x] ~~Enterprise ATS platforms~~ → DONE 2026-07-15: **Phenom shipped** (4
+      tenants, ~515 India jobs); **Eightfold shipped best-effort** (403s
+      datacenter IPs); Taleo/iCIMS/SuccessFactors/Careerjet probed + ruled out
+      (see RESEARCH-source-expansion.md). Remaining lever: add more verified
+      Phenom tenants (POST /widgets probe, keep if totalHits > 0).
 - [ ] **Collapse duplicate cards** across sources in the feed UI.
 - [ ] **Career OS** — quarterly market/salary pulse, watch-mode when not searching;
       tie into the Labs (GET HIRED here + GET READY).

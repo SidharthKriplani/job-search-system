@@ -4,6 +4,28 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (t) — Phenom + Eightfold connectors; Taleo/iCIMS/SF/Careerjet probed + ruled out
+
+Enterprise-ATS expansion, every platform probed live from a datacenter first:
+
+- **Phenom connector** (`connectors/phenom.py`) — public `POST /widgets` JSON
+  (ddoKey=refineSearch, keywords=India ranker). 4 verified tenants in
+  `registry.PHENOM`: NTT (~1,319 India hits), Mastercard (~241, domain=finance),
+  DuPont (~20), Danaher (~98). Live smoke: **518 jobs, ~99% India**. Job URL:
+  `https://{host}/job/{jobSeqNo}`. Cap `PHENOM_MAX_PER_COMPANY` (200). Some
+  Phenom tenants 403 datacenter IPs — only verified-open hosts enter registry.
+- **Eightfold connector** (`connectors/eightfold.py`) — BEST-EFFORT (instahyre
+  precedent): public `/api/apply/v2/jobs` 403s datacenter IPs (verified w/
+  browser UA + referer). Failsafe → contributes if unblocked, else 0 for 2
+  requests/run. Seeds: paypal, juniper. Delist if /health shows 0 for a month.
+- **Ruled out (probed, documented in RESEARCH-source-expansion.md):**
+  Taleo (uhg careerSectionUnAvailable on every portal id — legacy migrated off),
+  iCIMS (HTML-only, no public JSON — violates no-fragile-HTML rule),
+  SuccessFactors (career sites are HTML shells, no public JSON; Danaher turned
+  out to be Phenom and was added there), Careerjet (legacy API dead, v4 needs a
+  registered partner account — Jooble covers the niche).
+- Structural tests 13/13 green; schema contract verified on live Phenom data.
+
 ## 2026-07-15 (s) — Workable + BambooHR connectors, Jooble, harvester → 3 new domains (+7.5k jobs)
 
 Source expansion from the session's platform-gap audit (Workable/BambooHR were

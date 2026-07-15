@@ -279,6 +279,26 @@ BAMBOOHR = [
     ("issgh", "Inchcape Shipping Services"),  # verified 2026-07-15, 30 jobs (9 India-ish)
 ]
 
+# ── Phenom career sites (host, display) — public /widgets JSON, verified live ─
+# Each host verified 2026-07-15 to return India jobs via POST /widgets (India
+# hit counts noted). Some Phenom tenants 403 datacenter IPs — only verified-open
+# hosts belong here. To add one: POST /widgets with ddoKey=refineSearch on the
+# company's careers host; keep it if refineSearch.totalHits > 0.
+PHENOM = [
+    ("careers.services.global.ntt", "NTT"),          # ~1,319 India hits
+    ("careers.mastercard.com",      "Mastercard"),   # ~241 India hits
+    ("careers.dupont.com",          "DuPont"),       # ~20 India hits
+    ("jobs.danaher.com",            "Danaher"),      # ~98 India hits
+]
+
+# ── Eightfold tenants (tenant, company-domain, display) — BEST-EFFORT ─────────
+# Public API 403s datacenter IPs (verified 2026-07-15); failsafe → contributes
+# only if unblocked. Delist if /health shows 0 for a month.
+EIGHTFOLD = [
+    ("paypal",  "paypal.com",  "PayPal"),
+    ("juniper", "juniper.net", "Juniper Networks"),
+]
+
 # ── Harvested lists (our own, from ingest/harvester.py via Common Crawl) ───────
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Cap how many harvested boards the daily run uses (sorted by job count), so the
@@ -377,6 +397,10 @@ def unit_domain(label: str, uid: str) -> str:
         # Curated boards are hand-verified; harvested (in the JSON) → general.
         curated = {s for s, _ in (WORKABLE if label == "workable" else BAMBOOHR)}
         return "tech" if uid in curated else "general"
+    if label == "phenom":
+        return "finance" if uid == "careers.mastercard.com" else "tech"
+    if label == "eightfold":
+        return "tech"
     if label in ("greenhouse", "lever", "ashby"):
         # Curated boards are hand-picked tech companies; harvested (in the JSON
         # files) are unknown → general.

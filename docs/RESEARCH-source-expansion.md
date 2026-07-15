@@ -24,6 +24,17 @@ harvested tenants ≈ +25k mostly-non-India rows/run on a 95k pool that already
 needs the `jobs` + `user_job_matches` normalization (ROADMAP NOW). Flip the flag
 after that migration.
 
+## Enterprise platform verdicts (2026-07-15, all probed live from datacenter)
+
+| Platform | Verdict | Detail |
+|---|---|---|
+| **Phenom** | **SHIPPED** | `POST /widgets` public JSON. 4 India tenants live (NTT 1319, Mastercard 241, Danaher 98, DuPont 20). ~99% India yield. Expand by probing more hosts. |
+| **Eightfold** | **SHIPPED best-effort** | 403s datacenter IPs even w/ browser UA + referer (Naukri class). Failsafe connector, seeds paypal/juniper; contributes only if unblocked. |
+| **Taleo** | **RULED OUT** | uhg: `careerSectionUnAvailable=true` on every portal id; other legacy tenants DNS-dead (migrated off). |
+| **iCIMS** | **RULED OUT** | careers-{slug}.icims.com returns HTML only; no public JSON — would need fragile HTML parsing. |
+| **SuccessFactors** | **RULED OUT** | CSB career sites are JS shells; no public JSON found (6 tenants x 3 patterns). Danaher turned out to be Phenom -> added there. |
+| **Careerjet** | **RULED OUT** | Legacy API 401 for new users; v4 requires registered partner account. Jooble covers the niche. |
+
 ## Queued — enterprise platforms (one per session, prove-or-kill)
 
 Order by expected India yield per engineering hour. Rule: seed 5–10

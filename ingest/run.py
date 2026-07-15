@@ -23,7 +23,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Tuple
 
-from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit, workable, bamboohr
+from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit, workable, bamboohr, phenom, eightfold
 from .dedup import deduplicate
 from . import registry
 from .registry import unit_domain
@@ -54,6 +54,13 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]], str]]:
     bcap = int(os.environ.get("BAMBOOHR_MAX_PER_COMPANY", "200"))
     for slug, disp in registry.all_bamboohr():
         units.append(("bamboohr", slug, lambda s=slug, d=disp, c=bcap: bamboohr.fetch_company(s, d, c)))
+
+    pcap = int(os.environ.get("PHENOM_MAX_PER_COMPANY", "200"))
+    for host, disp in registry.PHENOM:
+        units.append(("phenom", host, lambda hh=host, d=disp, c=pcap: phenom.fetch_site(hh, d, c)))
+    ecap = int(os.environ.get("EIGHTFOLD_MAX_PER_COMPANY", "200"))
+    for tenant, domain, disp in registry.EIGHTFOLD:
+        units.append(("eightfold", tenant, lambda t=tenant, dm=domain, d=disp, c=ecap: eightfold.fetch_company(t, dm, d, c)))
 
     cap = int(os.environ.get("WORKDAY_MAX_PER_COMPANY", "150"))
     # Curated tenants unioned with harvested triples (data/workday_companies.json).

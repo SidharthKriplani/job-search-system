@@ -73,3 +73,31 @@ def test_unit_domain_new_labels():
     assert registry.unit_domain("workable", "some-harvested-slug") == "general"
     assert registry.unit_domain("bamboohr", registry.BAMBOOHR[0][0]) == "tech"
     assert registry.unit_domain("bamboohr", "some-harvested-slug") == "general"
+
+
+# ── Phenom / Eightfold (added 2026-07-15, enterprise ATS expansion) ────────────
+
+def test_phenom_registry_shape():
+    assert registry.PHENOM, "PHENOM registry is empty"
+    for row in registry.PHENOM:
+        assert len(row) == 2, f"PHENOM entry must be (host, display): {row}"
+        host, _ = row
+        assert "." in host and not host.startswith("http"), f"host must be bare domain: {host}"
+
+
+def test_eightfold_registry_shape():
+    for row in registry.EIGHTFOLD:
+        assert len(row) == 3, f"EIGHTFOLD entry must be (tenant, domain, display): {row}"
+        assert all(isinstance(x, str) and x for x in row)
+
+
+def test_enterprise_connectors_are_callable():
+    from ingest.connectors import phenom, eightfold
+    assert callable(phenom.fetch_site)
+    assert callable(eightfold.fetch_company)
+
+
+def test_unit_domain_enterprise_labels():
+    assert registry.unit_domain("phenom", "careers.mastercard.com") == "finance"
+    assert registry.unit_domain("phenom", "careers.services.global.ntt") == "tech"
+    assert registry.unit_domain("eightfold", "paypal") == "tech"

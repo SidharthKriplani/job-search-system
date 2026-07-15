@@ -30,7 +30,8 @@ signup-blocking trigger bug is fixed; sources have been expanded ~3×.
 - **Ingestion** — ~95k jobs/run from greenhouse, ashby, lever, workday (India-
   searched finance GCCs), oracle, smartrecruiters, recruitee, foundit (Monster
   India), **workable (NEW — 240 harvested + curated boards)**, **bamboohr (NEW —
-  309 harvested companies)**, jobspy (Indeed **+ LinkedIn**), adzuna (paginated,
+  309 harvested companies)**, **phenom (NEW — NTT/Mastercard/DuPont/Danaher, ~515 India jobs)**,
+  jobspy (Indeed **+ LinkedIn**), adzuna (paginated,
   finance/tech India queries), jooble (NEW, needs free `JOOBLE_API_KEY`), and
   instahyre (India, best-effort). Workable+bamboohr smoke: +7.4k deduped jobs.
   India coverage ~tripled this session (jobspy 250→~1.8k, adzuna ~400→~1.2k, +48
@@ -62,6 +63,8 @@ signup-blocking trigger bug is fixed; sources have been expanded ~3×.
 - **Google verification** — not completed (needs a domain you own; vercel.app can't
   be verified). Not needed — sign-in is scope-free so there's no warning anyway.
 - **Instahyre** — rate-limits datacenter IPs; contributes when unblocked, else 0.
+- **Eightfold** — same class: 403s datacenter IPs; best-effort connector (paypal,
+  juniper) contributes only if unblocked. Delist if /health shows 0 for a month.
 
 ## Manual steps that must be kept in sync (Supabase SQL)
 
