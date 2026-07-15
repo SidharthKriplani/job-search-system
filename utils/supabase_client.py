@@ -38,10 +38,16 @@ def get_active_users() -> List[Dict]:
 
 
 def get_gmail_token(user_id: str) -> Optional[Dict]:
-    """Return gmail_tokens row for a user, or None."""
+    """Return gmail_tokens row for a user, or None. maybe_single() returns None
+    (not an object) when the row is absent — guard it, or a gmail_connected user
+    with no token row crashes the whole per-user pass."""
     sb = get_client()
-    result = sb.table("gmail_tokens").select("*").eq("user_id", user_id).maybe_single().execute()
-    return result.data
+    try:
+        result = sb.table("gmail_tokens").select("*").eq("user_id", user_id).maybe_single().execute()
+        return result.data if result else None
+    except Exception as e:
+        logger.warning(f"[Supabase] get_gmail_token failed for {user_id[:8]}: {e}")
+        return None
 
 
 def update_gmail_token(user_id: str, access_token: str, token_expiry: Optional[str]) -> None:
@@ -186,15 +192,21 @@ def get_existing_job_keys(user_id: str) -> set:
     so the daily digest only emails new jobs (not the whole feed every day).
     """
     sb = get_client()
+    out = set()
+    page, start = 1000, 0
     try:
-        result = sb.table("job_feed") \
-            .select("source, source_job_id") \
-            .eq("user_id", user_id) \
-            .execute()
+        while True:
+            rows = sb.table("job_feed") \
+                .select("source, source_job_id") \
+                .eq("user_id", user_id) \
+                .order("id").range(start, start + page - 1).execute().data or []
+            out.update((r.get("source"), r.get("source_job_id")) for r in rows)
+            if len(rows) < page:
+                break
+            start += page
     except Exception as e:
-        logger.error(f"[Supabase] get_existing_job_keys failed: {e}")
-        return set()
-    return {(row.get("source"), row.get("source_job_id")) for row in (result.data or [])}
+        logger.error(f"[Supabase] get_existing_job_keys failed (got {len(out)}): {e}")
+    return out
 
 
 def age_out_new_flags(user_id: str, hours: int = 24) -> int:
@@ -363,6 +375,22 @@ def prune_pool(days: int = 14) -> int:
     except Exception as e:
         logger.error(f"[Supabase] prune_pool failed (after {total}): {e}")
     return total
+
+
+def claim_digest_slot(user_id: str, today_iso: str) -> bool:
+    """Atomically claim today's single digest send for a user. Returns True to
+    exactly ONE caller per day even across 6 concurrent shards: the conditional
+    UPDATE only matches rows whose last_digest_date is null or < today, and
+    Postgres row-locks serialize the racing shards so the rest see 0 rows."""
+    sb = get_client()
+    try:
+        res = sb.table("user_profiles").update({"last_digest_date": today_iso}) \
+            .eq("user_id", user_id).or_(f"last_digest_date.is.null,last_digest_date.lt.{today_iso}") \
+            .execute()
+        return bool(res.data)
+    except Exception as e:
+        logger.warning(f"[Supabase] claim_digest_slot failed for {user_id[:8]}: {e}")
+        return False
 
 
 def cleanup_stale_capped_jobs(user_id: str, stale_keys: set) -> int:

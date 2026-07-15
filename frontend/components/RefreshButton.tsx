@@ -31,12 +31,15 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
   const startedRef = useRef(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const stop = () => {
     if (pollRef.current) clearInterval(pollRef.current)
     if (timerRef.current) clearInterval(timerRef.current)
-    pollRef.current = null
-    timerRef.current = null
+    if (watchdogRef.current) clearTimeout(watchdogRef.current)  // else a stale
+    pollRef.current = null                                       // watchdog from a
+    timerRef.current = null                                      // prior run flips
+    watchdogRef.current = null                                   // a healthy run to error
   }
   useEffect(() => stop, [])
 
@@ -57,7 +60,7 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
     )
     pollRef.current = setInterval(poll, 5000)
     setTimeout(poll, 1500)
-    setTimeout(() => {
+    watchdogRef.current = setTimeout(() => {
       if (pollRef.current) {
         stop()
         setState('error')
@@ -146,7 +149,7 @@ export default function RefreshButton({ onDone }: { onDone?: () => void | Promis
       setTimeout(poll, 2500) // first check quickly
       // Poll until ACTUAL completion (capped) — never flip back to idle while
       // the backend is still running; that invites a duplicate refresh.
-      setTimeout(() => {
+      watchdogRef.current = setTimeout(() => {
         if (pollRef.current) {
           stop()
           setState('error')

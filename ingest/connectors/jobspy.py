@@ -32,11 +32,17 @@ DEFAULT_TERMS = [
 ]
 
 
-def _salary(row) -> str:
+def _salary(row):
+    # min/max come from a pandas row as float NaN when absent. NaN is truthy, so
+    # `if lo and hi` passed and int(NaN) raised ValueError — which escaped the
+    # row loop (outside the per-term try) and zeroed the ENTIRE jobspy source.
     lo, hi = row.get("min_amount"), row.get("max_amount")
     cur = row.get("currency") or ""
-    if lo and hi:
-        return f"{cur} {int(lo)}–{int(hi)}".strip()
+    try:
+        if lo is not None and hi is not None and lo == lo and hi == hi:  # NaN != NaN
+            return f"{cur} {int(lo)}–{int(hi)}".strip()
+    except (ValueError, TypeError):
+        pass
     return None
 
 

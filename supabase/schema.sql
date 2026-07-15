@@ -44,6 +44,9 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_manual_refresh TIMESTAMP
 -- Seniority level (entry|mid|senior|lead|director) — detected from the résumé,
 -- used to rank jobs to the user's rung (a Team Lead shouldn't see Analyst roles).
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS seniority_level TEXT;
+-- Last date a daily digest was sent — the atomic guard that stops all 6 nightly
+-- shards from each emailing the user (claim_digest_slot).
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_digest_date DATE;
 
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
@@ -80,15 +83,14 @@ DROP POLICY IF EXISTS "Users can view own token status" ON gmail_tokens;
 DROP POLICY IF EXISTS "Users can upsert own tokens"     ON gmail_tokens;
 DROP POLICY IF EXISTS "Users can update own tokens"     ON gmail_tokens;
 
--- Only service role can read tokens (scrapers use service key)
+-- ONLY the service role may touch this table. RLS is column-blind, so any
+-- user-facing SELECT policy would expose access_token + refresh_token (a
+-- gmail.modify refresh token) to the browser anon key — readable by any XSS or
+-- extension. The UI shows connection status from user_profiles.gmail_connected,
+-- never from here. Tokens are written server-side in the OAuth callback with
+-- the service key, which bypasses RLS, so no user INSERT/UPDATE policy is needed.
 CREATE POLICY "Service role only"
     ON gmail_tokens FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Users can view own token status"
-    ON gmail_tokens FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can upsert own tokens"
-    ON gmail_tokens FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own tokens"
-    ON gmail_tokens FOR UPDATE USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TABLE: job_feed

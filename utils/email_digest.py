@@ -10,6 +10,7 @@ Sends two types of emails:
 """
 
 import os
+import html as _html
 import logging
 from typing import List, Dict
 from datetime import date
@@ -51,22 +52,36 @@ def _send_email(to: str, subject: str, html: str) -> bool:
         return False
 
 
+def _esc(v) -> str:
+    """Escape attacker-controlled scraped strings before they enter email HTML.
+    Job titles/companies come from external boards and Gmail alerts."""
+    return _html.escape(str(v or ""), quote=True)
+
+
 def _job_row_html(job: Dict, rank: int) -> str:
     score_pct = int(job.get("match_score", 0) * 100)
     score_color = "#22c55e" if score_pct >= 70 else "#f59e0b" if score_pct >= 40 else "#94a3b8"
-    reasons = ", ".join(job.get("match_reasons", []))
+    reasons = _esc(", ".join(job.get("match_reasons", []) or []))
+    j_title = _esc(job.get("job_title", ""))
+    j_company = _esc(job.get("company", ""))
+    j_location = _esc(job.get("location", ""))
+    j_salary = _esc(job.get("salary_range", "")) if job.get("salary_range") else ""
+    # Only allow http(s) job URLs into href — a javascript:/data: or quote-breaking
+    # URL from a scraped feed must not become a link/attribute-injection.
+    _url = str(job.get("job_url", "") or "")
+    j_url = _esc(_url) if _url.startswith("http://") or _url.startswith("https://") else "#"
 
     return f"""
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
-            <a href="{job.get('job_url','#')}" style="font-size:15px;font-weight:600;color:#1e293b;text-decoration:none;">
-              {job.get('job_title','')}
+            <a href="{j_url}" style="font-size:15px;font-weight:600;color:#1e293b;text-decoration:none;">
+              {j_title}
             </a>
             <div style="color:#475569;font-size:13px;margin-top:4px;">
-              {job.get('company','')} · {job.get('location','')}
-              {f" · {job.get('salary_range')}" if job.get('salary_range') else ''}
+              {j_company} · {j_location}
+              {f" · {j_salary}" if j_salary else ''}
             </div>
             {f'<div style="color:#64748b;font-size:12px;margin-top:2px;">{reasons}</div>' if reasons else ''}
           </div>
@@ -76,10 +91,10 @@ def _job_row_html(job: Dict, rank: int) -> str:
           </span>
         </div>
         <div style="margin-top:8px;">
-          <a href="{job.get('job_url','#')}"
+          <a href="{j_url}"
              style="background:#6366f1;color:white;padding:4px 12px;border-radius:6px;
                     font-size:12px;text-decoration:none;font-weight:500;">
-            View & Apply →
+            View &amp; Apply →
           </a>
         </div>
       </td>
@@ -145,7 +160,7 @@ def send_daily_digest(
             followup_rows += f"""
             <tr>
               <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">
-                <strong>{app.get('job_title')}</strong> at {app.get('company')}<br>
+                <strong>{_esc(app.get('job_title'))}</strong> at {_esc(app.get('company'))}<br>
                 <span style="color:#64748b;font-size:12px;">
                   Stage: {app.get('stage')} · Follow-up due: {app.get('follow_up_date')}
                 </span>
@@ -169,7 +184,7 @@ def send_daily_digest(
             stale_rows += f"""
             <tr>
               <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">
-                <strong>{app.get('job_title')}</strong> at {app.get('company')}<br>
+                <strong>{_esc(app.get('job_title'))}</strong> at {_esc(app.get('company'))}<br>
                 <span style="color:#f59e0b;font-size:12px;">
                   ⚠️ Stage: {app.get('stage')} · No update in 7+ days
                 </span>

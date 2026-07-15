@@ -95,7 +95,15 @@ def resync_user(profile: Dict, pool: List[Dict] = None) -> None:
             sjid = j.get("source_job_id") or hashlib.md5((j.get("job_url") or "").encode()).hexdigest()[:20]
             return (j.get("source"), str(sjid))
         stored_keys = {_key(r) for r in stored}
-        candidates = list(stored) + [dict(j) for j in pool if _key(j) not in stored_keys]
+        def _pool_row(j):
+            r = dict(j)
+            # Never let a pool row INSERT with NULL flags: mixed upsert batches
+            # send the column union, and the feed uses .eq(is_applied,false)
+            # which excludes NULL → the job would be invisible forever.
+            r.setdefault("is_applied", False)
+            r.setdefault("is_saved", False)
+            return r
+        candidates = list(stored) + [_pool_row(j) for j in pool if _key(j) not in stored_keys]
 
         if not candidates:
             return
@@ -154,16 +162,16 @@ def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozen
     # "Data Scientist"). No-op unless USE_EMBEDDINGS=1 and fastembed installed.
     if embeddings.available():
         profile_text = " ".join(profile.get("target_roles", []) or []) + " " + (profile.get("resume_text") or "")
-        # Re-rank ONLY the head of the keyword ranking. Embedding the full
-        # shortlist (24k+ texts for a broad profile) took a 2-core runner past
-        # the 30-min job timeout. The tail below the cap keeps keyword order —
-        # nobody's reading past rank 1500 anyway.
-        cap = int(os.environ.get("EMBED_RERANK_CAP", "1500"))
-        if len(unique) > cap:
-            head = embeddings.rerank(profile_text, unique[:cap])
-            unique = head + unique[cap:]
-        else:
+        # Rerank the WHOLE shortlist or not at all. Reranking only the head
+        # deflates head scores (blend lowers them) below the untouched tail,
+        # making one sorted match_score list incomparable. And embedding 24k+
+        # texts on a 2-core runner blew the job timeout. So: rerank only when
+        # the shortlist is small enough to do fully; otherwise keep keyword order.
+        cap = int(os.environ.get("EMBED_RERANK_CAP", "2000"))
+        if len(unique) <= cap:
             unique = embeddings.rerank(profile_text, unique)
+        else:
+            logger.info(f"[embeddings] shortlist {len(unique)} > {cap} — keeping keyword order (no partial rerank)")
 
     # ── Determine which jobs are genuinely NEW (not already in the feed) ────
     # Must run BEFORE upsert. We mirror the same source_job_id fallback that
@@ -191,41 +199,44 @@ def process_user(profile: Dict, shared_pool: List[Dict], pool_keys: set = frozen
     # Report the genuinely-new count (the upsert return mixes inserts + updates).
     logger.info(f"Upserted {len(unique)} jobs ({len(new_jobs_for_digest)} genuinely new)")
 
-    # ── Re-sync the STORED feed to the CURRENT profile ─────────────────────
-    resync_user(profile, pool=shared_pool)
-
     # ── Remove postings that have CLOSED at the source ─────────────────────
-    # (absent from the current pool although their board fetch succeeded).
+    # Per-shard: cleanup reads only small columns and is correctly scoped to the
+    # companies whose boards THIS shard fetched (company-presence gate), so it
+    # must run each shard to cover all companies over the night.
     removed_closed = 0
     if pool_keys:
         removed_closed = sb.cleanup_closed_jobs(user_id, pool_keys, pool_companies)
-    # Capped sources (workday/oracle/smartrecruiters): same-run absence proves
-    # nothing, but a week unseen in jobs_pool does — remove those too.
     if stale_capped_keys:
         removed_closed += sb.cleanup_stale_capped_jobs(user_id, stale_capped_keys)
     if removed_closed:
         logger.info(f"Removed {removed_closed} closed postings")
 
-    # ── Get follow-up reminders ────────────────────────────────────────────
-    follow_ups = sb.get_follow_up_due(user_id)
-    stale      = sb.get_stale_applications(user_id, days=7)
+    # ── Once-per-day heavy finalize (resync + reminders + digest) ──────────
+    # process_user runs in all 6 nightly shards, but the full-feed resync read
+    # (~14MB) and the digest must happen ONCE — else 6× the Supabase egress and
+    # up to 6 duplicate emails. The claim is atomic (one shard wins per day).
+    from datetime import date as _date
+    if os.environ.get("RUN_DAILY_FINALIZE", "1") != "0" and \
+       sb.claim_digest_slot(user_id, _date.today().isoformat()):
+        # Re-score the stored feed against the current profile + pull pool matches.
+        resync_user(profile, pool=shared_pool)
 
-    if follow_ups:
-        logger.info(f"Follow-ups due: {len(follow_ups)}")
-    if stale:
-        logger.info(f"Stale applications: {len(stale)}")
+        follow_ups = sb.get_follow_up_due(user_id)
+        stale      = sb.get_stale_applications(user_id, days=7)
+        if follow_ups:
+            logger.info(f"Follow-ups due: {len(follow_ups)}")
+        if stale:
+            logger.info(f"Stale applications: {len(stale)}")
 
-    # ── Send digest ────────────────────────────────────────────────────────
-    if user_email:
-        send_daily_digest(
-            user_email  = user_email,
-            user_name   = user_name,
-            new_jobs    = new_jobs_for_digest[:20],  # top 20 for email
-            follow_ups  = follow_ups,
-            stale       = stale,
-        )
+        if user_email and os.environ.get("SEND_DIGEST", "1") != "0":
+            send_daily_digest(
+                user_email = user_email, user_name = user_name,
+                new_jobs = new_jobs_for_digest[:20], follow_ups = follow_ups, stale = stale,
+            )
+        elif not user_email:
+            logger.warning(f"No email for user {user_id[:8]}, skipping digest")
     else:
-        logger.warning(f"No email set for user {user_id[:8]}, skipping digest")
+        logger.info(f"Daily finalize already done today for {user_id[:8]} (shard skips resync+digest)")
 
     return {
         "user": _mask_email(user_email),
@@ -319,7 +330,10 @@ def main():
     # BATCH_TOTAL>1 on the scheduled cron; each run takes shard = (UTC hour mod N).
     # Manual / unsharded runs (BATCH_TOTAL=1) do the full pool.
     shard_total = max(1, int(os.environ.get("BATCH_TOTAL", "1")))
-    shard_index = int(os.environ.get("BATCH_INDEX", datetime.now(timezone.utc).hour % shard_total))
+    _bi = os.environ.get("BATCH_INDEX", "").strip()
+    # Prefer the explicit shard index passed from the cron string; fall back to
+    # wall-clock only if unset (manual runs use BATCH_TOTAL=1 → shard 0 anyway).
+    shard_index = int(_bi) % shard_total if _bi else (datetime.now(timezone.utc).hour % shard_total)
     logger.info(f"Fetching job pool (shard {shard_index + 1}/{shard_total}, concurrent)...")
     try:
         shared_pool = collect_jobs(shard_index, shard_total)

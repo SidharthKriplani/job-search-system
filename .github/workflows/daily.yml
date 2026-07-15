@@ -23,6 +23,13 @@ on:
 permissions:
   contents: write   # lets the run commit docs/LAST_RUN.md back to main
 
+# Serialize ALL runs of this workflow — a manual "Refresh Now" full run must not
+# execute concurrently with a scheduled shard (both write the same job_feed /
+# jobs_pool rows → deadlocks + dropped batches). New runs queue, they don't cancel.
+concurrency:
+  group: daily-scraper
+  cancel-in-progress: false
+
 jobs:
   scrape:
     name: Run Job Scrapers
@@ -67,6 +74,18 @@ jobs:
           # Scheduled runs are sharded (6 batches across the night); manual runs
           # (and the Refresh Now button) do a full single run.
           BATCH_TOTAL:           ${{ github.event_name == 'schedule' && '6' || '1' }}
+          # Shard index from the CRON STRING that fired, not wall-clock hour — a
+          # delayed GitHub cron used to compute the wrong shard (one doubled, one
+          # skipped). Manual runs (no schedule) leave this empty → full run.
+          BATCH_INDEX: >-
+            ${{
+              github.event.schedule == '30 18 * * *' && '0' ||
+              github.event.schedule == '30 19 * * *' && '1' ||
+              github.event.schedule == '30 20 * * *' && '2' ||
+              github.event.schedule == '30 21 * * *' && '3' ||
+              github.event.schedule == '30 22 * * *' && '4' ||
+              github.event.schedule == '30 23 * * *' && '5' || ''
+            }}
           LOG_LEVEL:             ${{ github.event.inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
           USE_EMBEDDINGS:        '1'
           FASTEMBED_CACHE_PATH:  ~/.cache/fastembed

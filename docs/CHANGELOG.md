@@ -4,6 +4,54 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (f) — adversarial audit: 14 fixes (3 self-inflicted this session)
+
+Ran a 3-front adversarial audit (Python pipeline / frontend+security / ops).
+Fixed, most severe first:
+
+CRITICAL
+- **Digest re-emailed old jobs as "new" forever** — get_existing_job_keys was
+  un-paginated (PostgREST 1000-row cap on a 24k feed). Now paginated.
+- **Pool matches invisible in feed** — resync's mixed upsert batches wrote pool
+  rows with is_applied/is_saved = NULL, and the feed uses .eq(is_applied,false)
+  which excludes NULL. Pool candidates now carry explicit False flags.
+
+HIGH
+- **gmail_tokens exposed OAuth refresh token to the browser** — the user SELECT
+  policy made the gmail.modify refresh token readable via the anon key. Dropped;
+  table is now service-role only (UI uses user_profiles.gmail_connected).
+- **6 duplicate digests/reminders per night** — process_user runs in all 6
+  shards; digest+reminders+resync now gated to once/day via an atomic claim.
+- **Wall-clock shard index** — a delayed cron computed the wrong shard (one
+  doubled, one skipped). BATCH_INDEX now derived from the cron string that fired.
+- **No concurrency guard** — manual "Refresh Now" could overlap a scheduled
+  shard and race job_feed writes. daily.yml now has a serialized concurrency group.
+- **get_gmail_token crashed** the whole per-user pass when a connected user had
+  no token row (maybe_single→None). Guarded.
+- **jobspy zeroed on any salary-less row** — int(NaN) escaped the per-term try
+  and killed the whole source. NaN-guarded.
+
+MEDIUM
+- **Supabase egress ~6×** — the 14MB full-feed resync read ran every shard;
+  now once/day (gated with digest). Big free-tier saver.
+- **Digest HTML injection** — scraped titles/URLs interpolated unescaped into
+  email HTML. All fields escaped; job_url restricted to http(s).
+- **Embeddings head/tail score incomparability** — partial rerank deflated head
+  scores below the untouched tail. Now reranks the full shortlist or skips.
+
+LOW
+- RefreshButton watchdog setTimeout never cleared → could flip a healthy run to
+  "error". Stored in a ref and cleared in stop().
+- harvest commit died if the tuning report was missing; placeholder reports now
+  tracked, commit uses -A + rebase-retry.
+
+Known/accepted (documented, not yet fixed): job_feed still O(users×matches) —
+500MB tier ~8-12 broad users (SCALING.md Stage-2 refactor); all-users resync
+re-reads pool per user (rare, manual only); Actions minutes ~cap on a PRIVATE
+repo (public = free).
+
+---
+
 ## 2026-07-15 (e) — product pass: instant onboarding, feedback loop, ops alarms
 
 1. **jobs_pool persistence + instant onboarding** — the nightly pool is now
