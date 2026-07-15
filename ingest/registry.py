@@ -41,7 +41,7 @@ GREENHOUSE = [
     ("robinhood", "Robinhood"),
     ("coinbase", "Coinbase"),
     ("dropbox", "Dropbox"),
-    ("doordash", "DoorDash"),
+    ("doordashusa", "DoorDash"),  # slug moved from "doordash" (404) — live-verified 2026-07-15, 459 jobs
     ("instacart", "Instacart"),
     ("brex", "Brex"),
     ("figma", "Figma"),
@@ -52,7 +52,7 @@ GREENHOUSE = [
     ("asana", "Asana"),
     ("cloudflare", "Cloudflare"),
     ("samsara", "Samsara"),
-    ("benchling", "Benchling"),
+    # benchling moved Greenhouse→Ashby 2026-07-15 (added to ASHBY below)
     ("gitlab", "GitLab"),
     ("sofi", "SoFi"),
     ("affirm", "Affirm"),
@@ -123,6 +123,7 @@ ASHBY = [
     # removed 2026-07-15: clipboardhealth 404 on Ashby/Greenhouse/Lever (own careers site now)
     ("posthog", "PostHog"),
     ("hex", "Hex"),
+    ("benchling", "Benchling"),  # moved from Greenhouse (live-verified 2026-07-15, 50 jobs)
     # Bulk-verified batch (2026-06-20)
     ("snowflake", "Snowflake"), ("notion", "Notion"), ("cohere", "Cohere"),
     ("plaid", "Plaid"), ("cerebras", "Cerebras"), ("handshake", "Handshake"),

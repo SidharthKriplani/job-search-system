@@ -130,16 +130,30 @@ def get_seen_job_ids(user_id: str, source: str) -> set:
 def get_user_feed_rows(user_id: str) -> List[Dict]:
     """Return the user's stored job_feed rows (fields needed to re-filter + prune)."""
     sb = get_client()
-    try:
-        result = sb.table("job_feed").select(
-            "id, job_title, company, location, salary_range, job_url, "
+    # Paginated: PostgREST caps a single select at 1000 rows by default, so the
+    # old un-ranged select silently re-synced only the first 1000 rows of a
+    # large feed. Page with .range() until a short page.
+    out: List[Dict] = []
+    cols = ("id, job_title, company, location, salary_range, job_url, "
             "description_snippet, posted_date, source, source_job_id, seniority, "
-            "job_type, is_applied, is_saved"
-        ).eq("user_id", user_id).execute()
-        return result.data or []
+            "job_type, is_applied, is_saved")
+    page = 1000
+    try:
+        start = 0
+        while True:
+            rows = sb.table("job_feed").select(cols) \
+                .eq("user_id", user_id) \
+                .order("id") \
+                .range(start, start + page - 1) \
+                .execute().data or []
+            out.extend(rows)
+            if len(rows) < page:
+                break
+            start += page
+        return out
     except Exception as e:
-        logger.error(f"[Supabase] get_user_feed_rows failed: {e}")
-        return []
+        logger.error(f"[Supabase] get_user_feed_rows failed (got {len(out)}): {e}")
+        return out
 
 
 def delete_jobs(job_ids: List[str], user_id: Optional[str] = None) -> int:
@@ -193,17 +207,27 @@ def age_out_new_flags(user_id: str, hours: int = 24) -> int:
     from datetime import datetime, timedelta, timezone
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     sb = get_client()
+    # Batched: one big UPDATE hit Supabase's statement timeout (57014) on a
+    # large feed. Select matching ids in pages, update in chunks of 500.
+    total = 0
     try:
-        result = sb.table("job_feed") \
-            .update({"is_new": False}) \
-            .eq("user_id", user_id) \
-            .eq("is_new", True) \
-            .lt("created_at", cutoff) \
-            .execute()
-        return len(result.data or [])
+        while True:
+            rows = sb.table("job_feed").select("id") \
+                .eq("user_id", user_id) \
+                .eq("is_new", True) \
+                .lt("created_at", cutoff) \
+                .limit(500).execute().data or []
+            if not rows:
+                break
+            ids = [r["id"] for r in rows]
+            sb.table("job_feed").update({"is_new": False}).in_("id", ids).execute()
+            total += len(ids)
+            if len(rows) < 500:
+                break
+        return total
     except Exception as e:
-        logger.error(f"[Supabase] age_out_new_flags failed: {e}")
-        return 0
+        logger.error(f"[Supabase] age_out_new_flags failed (after {total}): {e}")
+        return total
 
 
 # ─── Scraper health helpers ──────────────────────────────────────────────────

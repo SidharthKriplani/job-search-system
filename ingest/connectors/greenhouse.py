@@ -19,7 +19,9 @@ def fetch_board(slug: str, display: str) -> List[Dict]:
         return []
     out = []
     for j in data["jobs"]:
-        loc = (j.get("location") or {}).get("name", "") if isinstance(j.get("location"), dict) else ""
+        # location can be {"name": None} — the `or ""` guards a None name, which
+        # previously crashed loc.lower() and silently killed the ENTIRE board.
+        loc = ((j.get("location") or {}).get("name") or "") if isinstance(j.get("location"), dict) else ""
         job = make_job(
             title=j.get("title", ""),
             company=j.get("company_name") or display,

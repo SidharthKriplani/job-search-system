@@ -4,6 +4,29 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (b) — LIVE BLOCKER CLOSED: first observed end-to-end production run
+
+Ran the real pipeline on GitHub Actions with live secrets via a temporary
+self-reporting diag workflow (report committed back over git). Result:
+**24,466 jobs upserted to the live feed (23,987 new) — the feed is populated.**
+Root causes of the "0 jobs" era, now explained:
+- Shivali has NO active user_profiles row (Active users: 1 = Sidharth only) —
+  her empty feed was a missing-profile issue, not scraping/matching.
+- Resend digest fails 403 (sender domain unverified) — needs Resend dashboard.
+- Gmail parser fails `invalid_client` — GOOGLE_CLIENT_ID/SECRET point to a
+  missing GCP OAuth client. Needs Google console.
+
+Fixes from observing the run under real load:
+- `greenhouse.py`: location {"name": None} crashed `.lower()` and silently
+  killed entire boards → guarded.
+- `age_out_new_flags`: single UPDATE hit statement timeout (57014) on a big
+  feed → batched (id pages of 500).
+- `get_user_feed_rows`: PostgREST 1000-row default cap silently truncated
+  resync on large feeds → paginated with .range().
+- Registry: doordash→doordashusa (459 jobs), benchling Greenhouse→Ashby (50).
+
+---
+
 ## 2026-07-15 — full-project health pass (cloud sandbox audit + fixes)
 
 Verified live from a clean environment: full ingest run pulled **70,314 jobs**

@@ -5,19 +5,17 @@ _Last updated: 2026-07-15_
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
 
-## ⚠️ TOP OPEN BLOCKER (read first)
+## ✅ TOP BLOCKER CLOSED 2026-07-15
 
-**The live feed shows 0 jobs for the finance test user (Shivali) even after a
-Refresh — but the matching is proven correct in the sandbox.** Everything below
-("relevance works", "sources work") is verified in local tests; the gap is the
-LIVE scrape pipeline, which we have never actually observed. Next action:
-**read the GitHub Actions run log** ("Daily Job Scraper" → "Run job scrapers"
-step) — specifically the `=== SOURCE SUMMARY ===` block and any traceback /
-"exit code 1". That log distinguishes the four candidate causes:
-(a) latest code not deployed to the Action (connectors absent from SOURCE SUMMARY),
-(b) sources ran but returned 0, (c) jobs pulled but "upserted 0" (DB/schema),
-(d) `Active users: 0` (profile row not found), or a crash. Do NOT ship more
-matching changes until the log is read — the matching is not the problem.
+**The live pipeline has now been observed running end-to-end in production:
+24,466 jobs upserted (23,987 new) for the one active user.** The "0 jobs" era
+had three separate causes, none of them matching/scraping:
+1. **Shivali has no active `user_profiles` row** (`Active users: 1` = Sidharth
+   only). She must sign up / save Settings → her feed will populate next run.
+2. **Resend digest 403** — sender domain unverified (Resend dashboard, or set
+   `DIGEST_FROM_EMAIL` to a verified sender).
+3. **Gmail parser `invalid_client`** — GOOGLE_CLIENT_ID/SECRET secrets point to
+   a deleted/wrong GCP OAuth client (Google console).
 
 ## Phase
 
