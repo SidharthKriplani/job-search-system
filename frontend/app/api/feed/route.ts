@@ -19,6 +19,7 @@ export async function GET(req: Request) {
   const url    = new URL(req.url)
   const q      = (url.searchParams.get('q') || '').trim()
   const source   = url.searchParams.get('source') || 'All'
+  const board    = url.searchParams.get('board') || ''   // comma multi-select (preferred)
   const scope    = url.searchParams.get('scope') || 'all'
   const position = url.searchParams.get('position') || ''
   const company  = url.searchParams.get('company') || ''
@@ -37,19 +38,24 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, jobs: [], total: 0, needsProfile: true })
   }
 
+  const MIN_SCORE = Number(process.env.NEXT_PUBLIC_MIN_FEED_SCORE || 0.45)
   let query = supabase
     .from('job_feed')
     .select('*', { count: 'exact' })
     .eq('user_id', user.id)
     .eq('is_dismissed', false)
     .eq('is_applied', false)
+    .gte('match_score', MIN_SCORE)
 
   // No read-time role .or() — see dashboard/page.tsx: rows are already matched
   // by the backend; the heavy ILIKE OR blew the statement timeout → empty feed.
   if (scope === 'new')   query = query.eq('is_new', true)
   if (scope === 'saved') query = query.eq('is_saved', true)
 
-  if (source !== 'All') {
+  const boards = board.split(',').map(x => x.trim()).filter(Boolean)
+  if (boards.length) {
+    query = query.in('source', boards)
+  } else if (source !== 'All') {
     if (source === 'gmail') query = query.ilike('source', 'gmail%')
     else                    query = query.eq('source', source)
   }

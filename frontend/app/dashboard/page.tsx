@@ -10,6 +10,9 @@ export default async function DashboardPage() {
   if (!user) redirect('/')
 
   const FEED_LIMIT = 200
+  // Hide weak matches (construction/German-lang junk scored ~0.39). Cheap numeric
+  // floor — no timeout, unlike the old ILIKE role filter. Tunable via env.
+  const MIN_SCORE = Number(process.env.NEXT_PUBLIC_MIN_FEED_SCORE || 0.45)
 
   // Read-time role guard so the feed always reflects the CURRENT target role,
   // even before a backend re-filter prunes stale rows.
@@ -40,9 +43,11 @@ export default async function DashboardPage() {
   const feedQ    = () =>
     supabase.from('job_feed').select('*')
       .eq('user_id', user.id).eq('is_dismissed', false).eq('is_applied', false)
+      .gte('match_score', MIN_SCORE)
   const countQ   = (extra?: (q: any) => any) => {
     const q = supabase.from('job_feed').select('*', { count: 'exact', head: true })
       .eq('user_id', user.id).eq('is_dismissed', false).eq('is_applied', false)
+      .gte('match_score', MIN_SCORE)
     return extra ? extra(q) : q
   }
 

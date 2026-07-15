@@ -9,11 +9,6 @@ import clsx from 'clsx'
 import RefreshButton from '@/components/RefreshButton'
 import FacetSelect, { FacetOption } from '@/components/FacetSelect'
 
-const DEFAULT_SOURCES = [
-  'All', 'indeed', 'naukri', 'greenhouse', 'lever', 'ashby',
-  'adzuna_in', 'remotive', 'gmail'
-]
-
 interface Props {
   initialJobs: Job[]
   newCount: number
@@ -32,7 +27,6 @@ export default function DashboardClient({
 }: Props) {
   const [jobs, setJobs]           = useState<Job[]>(initialJobs)
   const [search, setSearch]       = useState('')
-  const [sourceFilter, setSource] = useState('All')
   const [showNew, setShowNew]     = useState(false)
   const [showSaved, setShowSaved] = useState(false)
 
@@ -40,15 +34,16 @@ export default function DashboardClient({
   const [fPosition, setFPosition] = useState<Set<string>>(new Set())
   const [fCompany,  setFCompany]  = useState<Set<string>>(new Set())
   const [fLocation, setFLocation] = useState<Set<string>>(new Set())
+  const [fBoard,    setFBoard]    = useState<Set<string>>(new Set())
   const [sort, setSort]           = useState<'relevance' | 'date'>('relevance')
-  const [facets, setFacets]       = useState<{ positions: FacetOption[]; companies: FacetOption[]; locations: FacetOption[] }>(
-    { positions: [], companies: [], locations: [] })
+  const [facets, setFacets]       = useState<{ positions: FacetOption[]; companies: FacetOption[]; locations: FacetOption[]; boards: FacetOption[] }>(
+    { positions: [], companies: [], locations: [], boards: [] })
 
   // Load dynamic filter options once (and after a refresh brings new jobs).
   const loadFacets = useCallback(async () => {
     try {
       const d = await fetch('/api/facets', { cache: 'no-store' }).then(r => r.json())
-      if (d.ok) setFacets({ positions: d.positions, companies: d.companies, locations: d.locations })
+      if (d.ok) setFacets({ positions: d.positions, companies: d.companies, locations: d.locations, boards: d.boards || [] })
     } catch { /* non-blocking */ }
   }, [])
   useEffect(() => { loadFacets() }, [loadFacets])
@@ -66,12 +61,15 @@ export default function DashboardClient({
   const [loadingMore, setLoadingMore] = useState(false)
 
   const scope = showNew ? 'new' : showSaved ? 'saved' : 'all'
-  const isFiltered = !!search || sourceFilter !== 'All' || scope !== 'all' || fPosition.size > 0 || fCompany.size > 0 || fLocation.size > 0
+  const isFiltered = !!search || scope !== 'all' || fPosition.size > 0 || fCompany.size > 0 || fLocation.size > 0 || fBoard.size > 0
 
-  const SOURCES = availableSources && availableSources.length > 1 ? availableSources : DEFAULT_SOURCES
+  const boardOptions: FacetOption[] = facets.boards.length
+    ? facets.boards
+    : (availableSources || []).filter(x => x !== 'All').map(v => ({ value: v, count: 0 }))
 
   const fetchPage = useCallback(async (offset: number): Promise<{ jobs: Job[]; total: number } | null> => {
-    const p = new URLSearchParams({ q: search, source: sourceFilter, scope, sort, offset: String(offset), limit: '50' })
+    const p = new URLSearchParams({ q: search, scope, sort, offset: String(offset), limit: '50' })
+    if (fBoard.size)    p.set('board',    Array.from(fBoard).join(','))
     if (fPosition.size) p.set('position', Array.from(fPosition).join(','))
     if (fCompany.size)  p.set('company',  Array.from(fCompany).join(','))
     if (fLocation.size) p.set('location', Array.from(fLocation).join(','))
@@ -81,7 +79,7 @@ export default function DashboardClient({
       if (!d.ok) return null
       return { jobs: d.jobs as Job[], total: d.total as number }
     } catch { return null }
-  }, [search, sourceFilter, scope, sort, fPosition, fCompany, fLocation])
+  }, [search, scope, sort, fPosition, fCompany, fLocation, fBoard])
 
   // Re-query when search (debounced) / source / scope changes. Skip the very
   // first render — initialJobs already covers the default view.
@@ -269,32 +267,15 @@ export default function DashboardClient({
           </div>
         </div>
 
-        {/* Source filter pills */}
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          {SOURCES.map(src => (
-            <button
-              key={src}
-              onClick={() => setSource(src)}
-              className={clsx(
-                'px-2.5 py-1 rounded-full text-xs font-medium transition-colors border',
-                sourceFilter === src
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
-              )}
-            >
-              {src === 'All' ? 'All Sources' : src}
-            </button>
-          ))}
-        </div>
-
         {/* Facet filters + sort */}
         <div className="flex gap-2 flex-wrap items-center mb-5">
+          <FacetSelect label="Board"    options={boardOptions}     selected={fBoard}    onChange={setFBoard} searchable />
           <FacetSelect label="Position" options={facets.positions} selected={fPosition} onChange={setFPosition} />
           <FacetSelect label="Company"  options={facets.companies} selected={fCompany}  onChange={setFCompany} searchable />
           <FacetSelect label="Location" options={facets.locations} selected={fLocation} onChange={setFLocation} />
-          {(fPosition.size || fCompany.size || fLocation.size) > 0 && (
+          {(fPosition.size || fCompany.size || fLocation.size || fBoard.size) > 0 && (
             <button
-              onClick={() => { setFPosition(new Set()); setFCompany(new Set()); setFLocation(new Set()) }}
+              onClick={() => { setFBoard(new Set()); setFPosition(new Set()); setFCompany(new Set()); setFLocation(new Set()) }}
               className="text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 underline"
             >
               Clear filters
@@ -354,7 +335,7 @@ export default function DashboardClient({
         ) : (
           <>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-              Showing {filtered.length} of {queryTotal}{isFiltered ? ' matches' : ' matches, ranked by fit'}.
+              Showing {filtered.length} of {queryTotal} matches{sort === 'date' ? ', newest first' : ', ranked by fit'}.
             </p>
             <div className="space-y-3">
               {filtered.map(job => (

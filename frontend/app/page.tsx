@@ -209,6 +209,12 @@ function LoginPage() {
         <p className="text-slate-600 text-xs text-center mt-3">
           Google sign-in also connects Gmail for job alert parsing. Email/password works for everything else.
         </p>
+
+        <p className="text-slate-600 text-[11px] text-center mt-4">
+          <a href="/privacy" className="hover:text-slate-400 underline">Privacy Policy</a>
+          <span className="mx-2">·</span>
+          <a href="/terms" className="hover:text-slate-400 underline">Terms of Service</a>
+        </p>
       </div>
     </div>
   )
