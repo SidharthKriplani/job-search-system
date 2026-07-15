@@ -35,3 +35,41 @@ def test_connectors_are_callable():
     assert callable(oracle.fetch_company)
     assert callable(smartrecruiters.fetch_company)
     assert callable(workday.fetch_company)
+
+
+# ── Workable / BambooHR / harvested-Workday (added 2026-07-15) ─────────────────
+
+def test_workable_registry_shape():
+    assert registry.WORKABLE, "WORKABLE registry is empty"
+    for row in registry.WORKABLE:
+        assert len(row) == 2, f"WORKABLE entry must be (slug, display): {row}"
+        assert all(isinstance(x, str) and x for x in row)
+
+
+def test_bamboohr_registry_shape():
+    assert registry.BAMBOOHR, "BAMBOOHR registry is empty"
+    for row in registry.BAMBOOHR:
+        assert len(row) == 2, f"BAMBOOHR entry must be (slug, display): {row}"
+        assert all(isinstance(x, str) and x for x in row)
+
+
+def test_all_workday_merges_and_dedupes():
+    merged = registry.all_workday()
+    assert len(merged) >= len(registry.WORKDAY)
+    tenants = [t for t, _, _, _ in merged]
+    assert len(tenants) == len(set(tenants)), "duplicate tenant after merge"
+    for row in merged:
+        assert len(row) == 4 and all(isinstance(x, str) and x for x in row)
+
+
+def test_new_connectors_are_callable():
+    from ingest.connectors import workable, bamboohr
+    assert callable(workable.fetch_board)
+    assert callable(bamboohr.fetch_company)
+
+
+def test_unit_domain_new_labels():
+    assert registry.unit_domain("workable", registry.WORKABLE[0][0]) == "tech"
+    assert registry.unit_domain("workable", "some-harvested-slug") == "general"
+    assert registry.unit_domain("bamboohr", registry.BAMBOOHR[0][0]) == "tech"
+    assert registry.unit_domain("bamboohr", "some-harvested-slug") == "general"

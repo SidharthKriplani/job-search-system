@@ -4,6 +4,40 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (s) — Workable + BambooHR connectors, Jooble, harvester → 3 new domains (+7.5k jobs)
+
+Source expansion from the session's platform-gap audit (Workable/BambooHR were
+the two ATS families we scraped past but had no connector for):
+
+- **Workable connector** (`connectors/workable.py`) — public widget JSON
+  (`apply.workable.com/api/v1/widget/accounts/{slug}?details=true`), curated
+  `registry.WORKABLE` ∪ harvested `data/workable_companies.json`. Harvest run:
+  2,948 candidates discovered, 240 live boards verified (2.5k+ candidates queue
+  for next weekly harvests). Cap: `WORKABLE_MAX_PER_COMPANY` (500).
+- **BambooHR connector** (`connectors/bamboohr.py`) — public careers JSON
+  (`{slug}.bamboohr.com/careers/list`), curated `registry.BAMBOOHR` ∪ harvested
+  `data/bamboohr_companies.json` (309 live companies). No JD/date in list API
+  (kept N+1-free; link carries the JD). Cap: `BAMBOOHR_MAX_PER_COMPANY` (200).
+- Smoke test through the real orchestrator path: **12,472 raw → 7,464 deduped**
+  new jobs from the two sources (227 India-located today; grows as harvest
+  accumulates India slugs).
+- **Jooble** added to `aggregators.py` — free-key India aggregator
+  (`POST jooble.org/api/{key}`), env-gated like adzuna (`JOOBLE_API_KEY`,
+  `JOOBLE_QUERIES`, `JOOBLE_LOCATION`, `JOOBLE_PAGES`). Skips cleanly w/o key.
+- **Harvester extended to workable + bamboohr** (now in the default weekly
+  target set), plus CDX robustness: retries + partial-read salvage
+  (IncompleteRead pages were silently dropping), and a `--flag value` argv
+  parsing fix.
+- **Workday triple harvester** (`harvest_workday`) — mines `*.myworkdayjobs.com`
+  from Common Crawl, extracts (tenant, wd, site) triples, verifies via the CXS
+  POST. 193 live tenants written to `data/workday_companies.json`.
+  **Gated OFF by default** (`WORKDAY_INCLUDE_HARVESTED=1` to enable): searchText
+  "India" is a loose ranker, so ~190 mostly-US tenants would add ~25k+ non-India
+  rows/run — flip on after the jobs/user_job_matches normalization (ROADMAP NOW).
+- **Run-summary guardrail** — SOURCE_SUMMARY pre-seeds every label in the shard
+  with 0, so "ran but returned 0" is visible in LAST_RUN.md vs silent absence.
+- Structural tests added for all new registries/loaders (9/9 green).
+
 ## 2026-07-15 (r) — foundit expanded 12→40 terms: 2,764 India jobs
 
 Widened foundit's query set across data/AI, software, product/design, finance

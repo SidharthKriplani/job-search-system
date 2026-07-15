@@ -1,6 +1,6 @@
 # STATUS — current state
 
-_Last updated: 2026-07-15 (late — through foundit/Recruitee/Workday-tenant adds)_
+_Last updated: 2026-07-15 (night)_
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
@@ -10,7 +10,7 @@ after every meaningful change.
 The product works end-to-end for real users. Friends sign in (Google + email),
 get a personalised India-focused feed with working filters and sort, save
 searches, and get email digests. The month-long "0 jobs" era is closed; the
-signup-blocking trigger bug is fixed; India source coverage expanded ~4–5×.
+signup-blocking trigger bug is fixed; sources have been expanded ~3×.
 
 ## At a glance
 
@@ -27,15 +27,17 @@ signup-blocking trigger bug is fixed; India source coverage expanded ~4–5×.
   with a set/reset-password flow; the `handle_new_user` trigger is bulletproofed
   (wrapped in EXCEPTION handlers) so signup can never 500 again. Multiple friends
   signed in successfully.
-- **Ingestion** — ~74k jobs/run from greenhouse, ashby, lever, **workday (66
-  tenants** — India-searched finance GCCs + global India offices), oracle,
-  smartrecruiters, jobspy (Indeed **+ LinkedIn**), adzuna (paginated, finance/tech
-  India queries), **recruitee**, instahyre (best-effort), and **foundit / Monster
-  India** — the largest single India source (~2.7k India jobs/run, the Naukri
-  alternative that isn't recaptcha-walled). India coverage went from ~3k to
-  ~4–5× deeper this session: jobspy 250→~1.8k, adzuna ~400→~1.2k, foundit ~2.7k,
-  +39 Workday tenants (~690 India), Recruitee (~130), +48 mined greenhouse/lever
-  boards, harvested-cap 400→1000.
+- **Ingestion** — ~95k jobs/run from greenhouse, ashby, lever, workday (India-
+  searched finance GCCs), oracle, smartrecruiters, recruitee, foundit (Monster
+  India), **workable (NEW — 240 harvested + curated boards)**, **bamboohr (NEW —
+  309 harvested companies)**, jobspy (Indeed **+ LinkedIn**), adzuna (paginated,
+  finance/tech India queries), jooble (NEW, needs free `JOOBLE_API_KEY`), and
+  instahyre (India, best-effort). Workable+bamboohr smoke: +7.4k deduped jobs.
+  India coverage ~tripled this session (jobspy 250→~1.8k, adzuna ~400→~1.2k, +48
+  India company boards mined from the OpenJobs dataset, +harvested-cap 400→1000).
+  Harvester now also mines workable/bamboohr weekly, and 193 verified Workday
+  tenants sit in `data/workday_companies.json` behind `WORKDAY_INCLUDE_HARVESTED`
+  (off until the data-model normalization lands).
 - **Matching** — role-graph + sector + résumé + seniority + **source-domain
   provenance** (a finance job from a finance board outranks a generic keyword
   match). Read-time relevance floor (0.45) on the default feed; dropped when the
@@ -55,11 +57,8 @@ signup-blocking trigger bug is fixed; India source coverage expanded ~4–5×.
   row per (user, job). `cap_user_feed` (2500/user) + trimmed descriptions bound it,
   but past ~10 heavy users the right fix is `jobs` (canonical) + `user_job_matches`
   (thin pointers). See ROADMAP.
-- **Naukri / iimjobs** — recaptcha-walled (re-confirmed 3 ways incl. the direct
-  jobapi/v3/search → 406 from datacenter IPs). Only reachable via the opt-in Gmail
-  connect. **foundit (Monster India) now covers most of this gap** — comparable
-  India volume, no wall. Other India boards (iimjobs/hirist/shine/cutshort) have
-  no usable API from our infra.
+- **Naukri / iimjobs** — recaptcha-walled; only reachable via the opt-in Gmail
+  connect (now available in Settings, but parsing quality unverified at scale).
 - **Google verification** — not completed (needs a domain you own; vercel.app can't
   be verified). Not needed — sign-in is scope-free so there's no warning anyway.
 - **Instahyre** — rate-limits datacenter IPs; contributes when unblocked, else 0.

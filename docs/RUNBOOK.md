@@ -77,7 +77,8 @@ first once that exists.
 
 **GitHub Actions secrets:** `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `NEXT_PUBLIC_APP_URL`,
-`ADZUNA_APP_ID` / `ADZUNA_APP_KEY` (India breadth + salary — set).
+`ADZUNA_APP_ID` / `ADZUNA_APP_KEY` (India breadth + salary — set),
+`JOOBLE_API_KEY` (optional — free key at jooble.org/api/about; skips cleanly unset).
 
 **Vercel:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 `GITHUB_DISPATCH_TOKEN` (fine-grained PAT, Actions: read & write),
@@ -88,7 +89,11 @@ first once that exists.
 `ORACLE_MAX_PER_COMPANY` (200), `JOBSPY_SITES` (indeed,linkedin),
 `JOBSPY_PER_TERM` (60), `ADZUNA_PAGES` (4), `INSTAHYRE_MAX` (1000),
 `EMBED_RERANK_CAP` (2000), `MAX_JOB_AGE_DAYS` (90), `MAX_FEED_PER_USER` (2500),
-`BATCH_TOTAL`/`BATCH_INDEX` (sharding — set by daily.yml from the cron string).
+`BATCH_TOTAL`/`BATCH_INDEX` (sharding — set by daily.yml from the cron string),
+`WORKABLE_MAX_PER_COMPANY` (500), `BAMBOOHR_MAX_PER_COMPANY` (200),
+`JOOBLE_QUERIES`/`JOOBLE_LOCATION`/`JOOBLE_PAGES` (Jooble tuning),
+`WORKDAY_INCLUDE_HARVESTED` (**0** — leave off until the jobs/user_job_matches
+normalization lands; enables ~190 harvested Workday tenants ≈ +25k rows/run).
 
 Repo is **public** → GitHub Actions minutes are free (no private-tier cap).
 

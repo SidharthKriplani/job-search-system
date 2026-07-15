@@ -23,7 +23,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Tuple
 
-from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit
+from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit, workable, bamboohr
 from .dedup import deduplicate
 from . import registry
 from .registry import unit_domain
@@ -48,8 +48,16 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]], str]]:
     for slug, disp in registry.all_ashby():
         units.append(("ashby", slug, lambda s=slug, d=disp: ashby.fetch_board(s, d)))
 
+    wcap = int(os.environ.get("WORKABLE_MAX_PER_COMPANY", "500"))
+    for slug, disp in registry.all_workable():
+        units.append(("workable", slug, lambda s=slug, d=disp, c=wcap: workable.fetch_board(s, d, c)))
+    bcap = int(os.environ.get("BAMBOOHR_MAX_PER_COMPANY", "200"))
+    for slug, disp in registry.all_bamboohr():
+        units.append(("bamboohr", slug, lambda s=slug, d=disp, c=bcap: bamboohr.fetch_company(s, d, c)))
+
     cap = int(os.environ.get("WORKDAY_MAX_PER_COMPANY", "150"))
-    for tenant, wd, site, disp in registry.WORKDAY:
+    # Curated tenants unioned with harvested triples (data/workday_companies.json).
+    for tenant, wd, site, disp in registry.all_workday():
         units.append(("workday", tenant,
                       lambda t=tenant, w=wd, st=site, d=disp: workday.fetch_company(t, w, st, d, cap)))
 
@@ -92,6 +100,12 @@ def collect_jobs(shard_index: int = 0, shard_total: int = 1,
         logger.info(f"[ingest] shard {shard_index+1}/{shard_total}: {len(units)} fetch units")
     else:
         logger.info(f"[ingest] full run: {len(units)} fetch units")
+
+    # Pre-seed every label in THIS shard with 0 so a connector that contributes
+    # nothing still shows an explicit 0 in the summary / LAST_RUN.md — silent
+    # absence and "ran but returned 0" must be distinguishable.
+    for label, _uid, _fn, _domain in units:
+        SOURCE_SUMMARY.setdefault(label, 0)
 
     raw: List[Dict] = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:

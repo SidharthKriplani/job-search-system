@@ -266,6 +266,19 @@ RECRUITEE = [
     ("vibes", "Vibes"), ("mangopay", "Mangopay"), ("11bitstudios", "11Bitstudios"),
 ]
 
+# ── Workable companies (slug, display) — public widget API, verified live ─────
+# Slug = apply.workable.com/<slug> (the account name in the widget API URL).
+# Curated is UNIONed with data/workable_companies.json (harvester) at runtime.
+WORKABLE = [
+    ("groundtruth", "GroundTruth"),   # verified 2026-07-15, 16 jobs (8 India)
+]
+
+# ── BambooHR companies (slug, display) — public careers JSON, verified live ───
+# Slug = <slug>.bamboohr.com. Curated UNIONed with data/bamboohr_companies.json.
+BAMBOOHR = [
+    ("issgh", "Inchcape Shipping Services"),  # verified 2026-07-15, 30 jobs (9 India-ish)
+]
+
 # ── Harvested lists (our own, from ingest/harvester.py via Common Crawl) ───────
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Cap how many harvested boards the daily run uses (sorted by job count), so the
@@ -299,6 +312,46 @@ def _merge(curated, harvested):
 def all_greenhouse(): return _merge(GREENHOUSE, _harvested("greenhouse"))
 def all_lever():      return _merge(LEVER, _harvested("lever"))
 def all_ashby():      return _merge(ASHBY, _harvested("ashby"))
+def all_workable():   return _merge(WORKABLE, _harvested("workable"))
+def all_bamboohr():   return _merge(BAMBOOHR, _harvested("bamboohr"))
+
+
+def _harvested_workday():
+    """Harvested Workday tenants → [(tenant, wd, site, display)], capped.
+
+    Workday identity is a (tenant, wd_number, site) TRIPLE, so its harvested
+    file is a dict {tenant: {"wd": "wd5", "site": "...", "count": N}} rather
+    than the flat {slug: count} the other ATSes use.
+    """
+    path = os.path.join(_DATA_DIR, "workday_companies.json")
+    try:
+        with open(path) as f:
+            d = json.load(f)
+    except Exception:
+        return []
+    items = sorted(d.items(), key=lambda kv: kv[1].get("count", 0), reverse=True)
+    return [(t, v["wd"], v["site"], t) for t, v in items[:_MAX_HARVESTED]
+            if v.get("wd") and v.get("site")]
+
+
+def all_workday():
+    """Curated WORKDAY unioned with harvested tenants (deduped by tenant).
+
+    Harvested tenants are OFF by default (WORKDAY_INCLUDE_HARVESTED=1 enables).
+    Rationale: workday.SEARCH_TEXT="India" is a loose ranker, not a filter — a
+    US-only tenant still returns its jobs, so ~190 harvested tenants add ~25k+
+    mostly-non-India rows/run. Flip on AFTER the jobs/user_job_matches
+    normalization lands (see ROADMAP "NOW").
+    """
+    if os.environ.get("WORKDAY_INCLUDE_HARVESTED", "0").lower() not in ("1", "true", "yes"):
+        return list(WORKDAY)
+    seen = {t for t, _, _, _ in WORKDAY}
+    out = list(WORKDAY)
+    for t, wd, site, disp in _harvested_workday():
+        if t not in seen:
+            out.append((t, wd, site, disp))
+            seen.add(t)
+    return out
 
 
 # ── Domain tagging (finance vs tech vs general) ────────────────────────────────
@@ -320,6 +373,10 @@ def unit_domain(label: str, uid: str) -> str:
         return "finance"          # both registries are finance GCCs
     if label == "workday":
         return "finance" if uid in _FINANCE_WD else "tech"
+    if label in ("workable", "bamboohr"):
+        # Curated boards are hand-verified; harvested (in the JSON) → general.
+        curated = {s for s, _ in (WORKABLE if label == "workable" else BAMBOOHR)}
+        return "tech" if uid in curated else "general"
     if label in ("greenhouse", "lever", "ashby"):
         # Curated boards are hand-picked tech companies; harvested (in the JSON
         # files) are unknown → general.

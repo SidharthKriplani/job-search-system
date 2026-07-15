@@ -7,11 +7,19 @@ tail and non-tech / India roles).
   Adzuna     — free key required (app_id + app_key). THE breadth/India engine:
                query by keyword + country + location + salary. Skips cleanly if
                ADZUNA_APP_ID / ADZUNA_APP_KEY are not set.
+  Jooble     — free key required (jooble.org/api/about). Broad India aggregator,
+               Adzuna-like breadth from a second index. Skips cleanly if
+               JOOBLE_API_KEY is not set.
 
 Configure Adzuna via env:
   ADZUNA_APP_ID, ADZUNA_APP_KEY
   ADZUNA_COUNTRIES  (default "in,gb,us")
   ADZUNA_QUERIES    (default "manager,analyst,engineer,research,finance")
+Configure Jooble via env:
+  JOOBLE_API_KEY
+  JOOBLE_QUERIES    (default same cross-sector list as Adzuna)
+  JOOBLE_LOCATION   (default "India")
+  JOOBLE_PAGES      (default 3 pages per query)
 """
 import logging
 import os
@@ -130,9 +138,48 @@ def fetch_adzuna() -> List[Dict]:
     return out
 
 
+def fetch_jooble() -> List[Dict]:
+    key = os.environ.get("JOOBLE_API_KEY")
+    if not key:
+        logger.info("[jooble] no JOOBLE_API_KEY set — skipping (free key at jooble.org/api/about)")
+        return []
+
+    queries = [q.strip() for q in os.environ.get("JOOBLE_QUERIES",
+               "data scientist,machine learning,data analyst,software engineer,"
+               "business analyst,product manager,financial analyst,investment banking,"
+               "equity research,credit analyst,risk analyst,accountant").split(",") if q.strip()]
+    location = os.environ.get("JOOBLE_LOCATION", "India")
+    pages = int(os.environ.get("JOOBLE_PAGES", "3"))
+
+    out: List[Dict] = []
+    for q in queries:
+        for page in range(1, pages + 1):
+            data = http_json(f"https://jooble.org/api/{key}", method="POST",
+                             json_body={"keywords": q, "location": location, "page": page})
+            time.sleep(0.5)
+            if not data or not data.get("jobs"):
+                break
+            for j in data["jobs"]:
+                job = make_job(
+                    title=j.get("title", ""),
+                    company=j.get("company", ""),
+                    url=j.get("link", ""),
+                    source="jooble",
+                    location=j.get("location", ""),
+                    salary_range=(j.get("salary") or None),
+                    description=j.get("snippet", ""),
+                    posted=j.get("updated"),
+                    source_job_id=str(j.get("id", "")),
+                    job_type=j.get("type"),
+                )
+                if job:
+                    out.append(job)
+    return out
+
+
 def fetch() -> List[Dict]:
     jobs: List[Dict] = []
-    for fn in (fetch_remotive, fetch_arbeitnow, fetch_adzuna):
+    for fn in (fetch_remotive, fetch_arbeitnow, fetch_adzuna, fetch_jooble):
         try:
             jobs.extend(fn())
         except Exception as e:

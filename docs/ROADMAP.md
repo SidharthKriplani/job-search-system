@@ -51,8 +51,15 @@ in CHANGELOG.
 ## LATER — polish + career OS
 
 - [ ] **Honest fit tiers** — Strong/Good/Possible instead of "83%".
-- [ ] **More Oracle/SmartRecruiters/Workday tenants** (OpenJobs dataset has 164
-      Workday configs + Recruitee/Workable adapters ready to mine).
+- [x] ~~More Workday tenants + Workable adapter~~ → DONE 2026-07-15: workable +
+      bamboohr connectors live; 193 harvested Workday tenants gated behind
+      `WORKDAY_INCLUDE_HARVESTED` (flip on after normalization).
+- [ ] **More Oracle/SmartRecruiters tenants** (OpenJobs dataset still has
+      unmined ORC/SR configs).
+- [ ] **Enterprise ATS platforms, one per session, prove-or-kill** — order:
+      Phenom → Eightfold → iCIMS → Taleo → SuccessFactors. Each: seed 5-10
+      hand-verified India tenants (DevTools recipe like registry.WORKDAY),
+      ship, kill if <500 India jobs/run. See docs/RESEARCH-source-expansion.md.
 - [ ] **Collapse duplicate cards** across sources in the feed UI.
 - [ ] **Career OS** — quarterly market/salary pulse, watch-mode when not searching;
       tie into the Labs (GET HIRED here + GET READY).
