@@ -4,6 +4,19 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-15 (j) — Adzuna scaled (pagination + finance/tech queries)
+
+Correction: Adzuna WAS live in prod (aggregators 538 vs 138 keyless) — the keys
+are set. But it was under-configured:
+- **Page 1 only** → now fetches ADZUNA_PAGES (default 4) pages/query (50/page),
+  stopping early when a query runs out. ~4x the depth per query.
+- **Generic queries** → finance + tech India-relevant set (data scientist,
+  equity research, credit analyst, fp&a, …).
+- max_days_old 14 → 30. 1.2s pacing to respect the free tier (25/min, 250/day);
+  aggregators is one nightly fetch unit so total calls stay well under the cap.
+Estimated: ~400 → ~1,000-1,500 India jobs with salary data.
+
+
 ## 2026-07-15 (i) — India coverage: jobspy scaled 6-7x (the real "too few postings" fix)
 
 Diagnosed the thin feed: the 71k pool is only ~4% India-located (2,996 jobs) —
