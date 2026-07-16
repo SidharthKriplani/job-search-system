@@ -78,11 +78,16 @@ export async function GET(req: Request) {
     query = query.gte('match_score', MIN_SCORE)
   }
 
-  // Sort: relevance (match score) or newest (date posted). posted_date can be
-  // null (undated), so push nulls last and tie-break by scraped_at.
+  // Sort: relevance (match score), newest posted (date posted), or newest in
+  // feed (scraped_at — when OUR pipeline first added it, always non-null).
+  // posted_date can be null (undated), so push nulls last and tie-break by
+  // scraped_at.
   if (sort === 'date') {
     query = query.order('posted_date', { ascending: false, nullsFirst: false })
                  .order('scraped_at', { ascending: false })
+  } else if (sort === 'added') {
+    query = query.order('scraped_at', { ascending: false })
+                 .order('match_score', { ascending: false })
   } else {
     query = query.order('match_score', { ascending: false })
                  .order('scraped_at', { ascending: false })

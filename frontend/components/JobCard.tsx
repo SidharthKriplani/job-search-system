@@ -27,6 +27,24 @@ function timeAgo(dateStr: string | null): { label: string; stale: boolean } | nu
   return { label, stale: days > 21 }
 }
 
+// Finer-grained age for scraped_at (when the job entered OUR feed) — hours
+// matter here because the pipeline runs nightly and users check daily.
+function addedAgo(dateStr: string | null): string | null {
+  if (!dateStr) return null
+  const then = new Date(dateStr).getTime()
+  if (isNaN(then)) return null
+  const mins = Math.floor((Date.now() - then) / 60000)
+  if (mins < 0) return null
+  if (mins < 60) return 'just added'
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `added ${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'added yesterday'
+  if (days < 7) return `added ${days}d ago`
+  if (days < 30) return `added ${Math.floor(days / 7)}w ago`
+  return `added ${Math.floor(days / 30)}mo ago`
+}
+
 function prettyType(t: string | null): string | null {
   if (!t) return null
   const map: Record<string, string> = {
@@ -162,6 +180,17 @@ export default function JobCard({ job, onUpdate }: Props) {
                   age.stale ? 'text-amber-600 dark:text-amber-500' : 'text-slate-400 dark:text-slate-500'
                 )}>
                   <Clock className="w-3 h-3" /> {age.label}
+                </span>
+              ) : null
+            })()}
+            {(() => {
+              const added = addedAgo(job.scraped_at)
+              return added ? (
+                <span
+                  className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500"
+                  title="When this job entered your feed"
+                >
+                  <Calendar className="w-3 h-3" /> {added}
                 </span>
               ) : null
             })()}

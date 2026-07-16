@@ -177,4 +177,11 @@ export const SOURCE_LABELS: Record<string, string> = {
   adzuna_in:        'Adzuna India',
   adzuna_gb:        'Adzuna UK',
   adzuna_us:        'Adzuna US',
+  // Source expansion (2026-07-15)
+  workable:         'Workable',
+  bamboohr:         'BambooHR',
+  phenom:           'Phenom',
+  eightfold:        'Eightfold',
+  recruitee:        'Recruitee',
+  jooble:           'Jooble',
 }

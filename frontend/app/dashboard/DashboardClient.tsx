@@ -35,7 +35,7 @@ export default function DashboardClient({
   const [fCompany,  setFCompany]  = useState<Set<string>>(new Set())
   const [fLocation, setFLocation] = useState<Set<string>>(new Set())
   const [fBoard,    setFBoard]    = useState<Set<string>>(new Set())
-  const [sort, setSort]           = useState<'relevance' | 'date'>('relevance')
+  const [sort, setSort]           = useState<'relevance' | 'date' | 'added'>('relevance')
   const [facets, setFacets]       = useState<{ positions: FacetOption[]; companies: FacetOption[]; locations: FacetOption[]; boards: FacetOption[] }>(
     { positions: [], companies: [], locations: [], boards: [] })
   const [saved, setSaved_]        = useState<any[]>([])
@@ -368,11 +368,12 @@ export default function DashboardClient({
             <span className="text-xs text-slate-400 dark:text-slate-500">Sort</span>
             <select
               value={sort}
-              onChange={e => setSort(e.target.value as 'relevance' | 'date')}
+              onChange={e => setSort(e.target.value as 'relevance' | 'date' | 'added')}
               className="px-2.5 py-2 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="relevance">Best match</option>
               <option value="date">Date posted</option>
+              <option value="added">Recently added</option>
             </select>
           </div>
         </div>
@@ -418,7 +419,7 @@ export default function DashboardClient({
         ) : (
           <>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-              Showing {filtered.length} of {queryTotal} matches{sort === 'date' ? ', newest first' : ', ranked by fit'}.
+              Showing {filtered.length} of {queryTotal} matches{sort === 'date' ? ', newest posting first' : sort === 'added' ? ', newest in your feed first' : ', ranked by fit'}.
             </p>
             <div className="space-y-3">
               {filtered.map(job => (
