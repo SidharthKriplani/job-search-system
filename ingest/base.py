@@ -134,9 +134,10 @@ def make_job(
     if remote and "remote" not in loc.lower():
         loc = (loc + " · Remote").strip(" ·") if loc else "Remote"
 
+    from .normalize import canonical_company
     return {
         "job_title":           title,
-        "company":             (company or "").strip(),
+        "company":             canonical_company(company or ""),
         "location":            loc,
         "salary_range":        salary_range or None,
         "job_url":             url,

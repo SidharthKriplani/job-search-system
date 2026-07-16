@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Sidebar from '@/components/Sidebar'
 import JobCard from '@/components/JobCard'
 import { Job, ScraperHealth } from '@/lib/types'
-import { Search, Filter, AlertCircle, CheckCircle, Clock, Bookmark, Trash2 } from 'lucide-react'
+import { Search, Filter, AlertCircle, CheckCircle, Clock, Bookmark, Trash2, ExternalLink, Building2 } from 'lucide-react'
 import clsx from 'clsx'
 import RefreshButton from '@/components/RefreshButton'
 import FacetSelect, { FacetOption } from '@/components/FacetSelect'
@@ -203,6 +203,20 @@ export default function DashboardClient({
     return true
   })
 
+  // Careers-page fallback: a company filter with 0 open matching roles should
+  // point at the company's careers page (from the `companies` dictionary),
+  // never dead-end on an empty list.
+  const [fallbackCos, setFallbackCos] = useState<{ canonical_name: string; careers_url: string | null; last_open_role_at: string | null }[]>([])
+  useEffect(() => {
+    if (loading || filtered.length > 0 || fCompany.size === 0) { setFallbackCos([]); return }
+    const names = Array.from(fCompany).join(',')
+    fetch(`/api/companies?names=${encodeURIComponent(names)}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { if (d.ok) setFallbackCos(d.companies) })
+      .catch(() => setFallbackCos([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, filtered.length, fCompany])
+
   const errorCount = scraperHealth.filter(h => h.status === 'error').length
   const warnCount  = scraperHealth.filter(h => h.status === 'warning').length
 
@@ -387,7 +401,28 @@ export default function DashboardClient({
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 px-6 text-slate-400 dark:text-slate-500">
             <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            {isFiltered ? (
+            {isFiltered && fallbackCos.length > 0 ? (
+              <>
+                <p className="font-medium text-slate-600 dark:text-slate-300">
+                  No open roles matching your profile at {fallbackCos.map(c => c.canonical_name).join(', ')} right now
+                </p>
+                <p className="text-sm mt-1">Openings change daily — check their careers page directly:</p>
+                <div className="flex flex-col items-center gap-2 mt-4">
+                  {fallbackCos.map(c => (
+                    <a key={c.canonical_name} href={c.careers_url || '#'} target="_blank" rel="noopener noreferrer"
+                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800">
+                      <Building2 className="w-4 h-4" /> {c.canonical_name} careers
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {c.last_open_role_at && (
+                        <span className="text-xs text-slate-400 font-normal">
+                          · last seen hiring {new Date(c.last_open_role_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              </>
+            ) : isFiltered ? (
               <>
                 <p className="font-medium text-slate-600 dark:text-slate-300">No jobs match these filters</p>
                 <p className="text-sm mt-1">Try clearing the search or source filter.</p>

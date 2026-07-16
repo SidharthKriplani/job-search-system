@@ -4,6 +4,27 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-16 (c) — Companies v1: normalization, cumulative facets, careers-page fallback
+
+- **Company-name normalization at ingest** (`ingest/normalize.py` wired into
+  `make_job`): legal-suffix stripping ("X India Private Limited" → "X") +
+  hand-curated alias map (`data/company_aliases.json`: BoschGroup → Bosch
+  Group, Nagarro1 → Nagarro, razorpaysoftwareprivatelimited → Razorpay, …).
+  Guarded against mid-word clipping (Cisco stays Cisco, Air India stays).
+- **`companies` dictionary table** (SQL: `supabase/migrations/
+  2026-07-16-companies-facets.sql`) — canonical_name, careers_url,
+  ats_platform, last_open_role_at. Seeded with 205 detector-verified
+  companies; nightly-refreshed from jobs_pool via refresh_facet_terms().
+- **Cumulative facets** — `facet_terms` table + self-throttled (12h)
+  refresh_facet_terms(); /api/facets now returns live counts ∪ dictionary
+  terms (count 0, greyed with — in FacetSelect). Filter options only ever
+  expand; company/location/position lists no longer shrink when jobs close.
+- **Careers-page fallback** — a company filter with 0 open matching roles now
+  shows "check their careers page →" buttons (careers_url from the companies
+  table, google-careers-search fallback) + "last seen hiring {date}" instead
+  of a dead-end empty state. New /api/companies route.
+- MANUAL STEP: run supabase/migrations/2026-07-16-companies-facets.sql once.
+
 ## 2026-07-16 (b) — Kula connector: Cashfree-class sites cracked server-side
 
 The "needs a browser" verdict on Kula was wrong. Kula careers pages

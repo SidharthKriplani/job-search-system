@@ -90,8 +90,8 @@ export default function FacetSelect({
                   selected.has(o.value) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600')}>
                   {selected.has(o.value) && <Check className="w-2.5 h-2.5 text-white" />}
                 </span>
-                <span className="flex-1 truncate">{o.value}</span>
-                <span className="text-slate-400 dark:text-slate-500 tabular-nums">{o.count}</span>
+                <span className={clsx('flex-1 truncate', o.count === 0 && 'text-slate-400 dark:text-slate-500')}>{o.value}</span>
+                <span className="text-slate-400 dark:text-slate-500 tabular-nums">{o.count === 0 ? '—' : o.count}</span>
               </button>
             ))}
           </div>

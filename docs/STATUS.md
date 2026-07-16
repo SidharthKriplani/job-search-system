@@ -69,6 +69,11 @@ signup-blocking trigger bug is fixed; sources have been expanded ~3×.
 
 ## Manual steps that must be kept in sync (Supabase SQL)
 
+**Pending once:** `supabase/migrations/2026-07-16-companies-facets.sql`
+(companies dictionary + cumulative facet_terms — powers the careers-page
+fallback and ever-expanding filters).
+
+
 Re-running the full `supabase/schema.sql` is idempotent and applies all of these.
 It adds/updates: `jobs_pool`, `run_history`, `scraper_health_history`,
 `feed_feedback`, `saved_searches`; the `source_domain` / `position` /

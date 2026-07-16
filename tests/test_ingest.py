@@ -114,3 +114,19 @@ def test_kula_registry_shape():
 def test_kula_connector_callable():
     from ingest.connectors import kula
     assert callable(kula.fetch_company)
+
+
+# ── Company normalization (added 2026-07-16) ───────────────────────────────────
+
+def test_canonical_company():
+    from ingest.normalize import canonical_company as cc
+    assert cc("Cashfree Payments India Private Limited") == "Cashfree Payments"
+    assert cc("Acme Technologies Pvt. Ltd.") == "Acme Technologies"
+    assert cc("Foo, Inc.") == "Foo"
+    assert cc("BoschGroup") == "Bosch Group"
+    assert cc("Nagarro1") == "Nagarro"
+    # brands must NOT be clipped mid-word or over-stripped
+    assert cc("Cisco") == "Cisco"
+    assert cc("Air India") == "Air India"
+    assert cc("Unacademy") == "Unacademy"
+    assert cc("") == ""
