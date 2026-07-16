@@ -39,7 +39,7 @@ export async function GET(req: Request) {
   }
 
   let query = supabase
-    .from('user_feed_v')
+    .from('job_feed')
     .select('*', { count: 'exact' })
     .eq('user_id', user.id)
     .eq('is_dismissed', false)

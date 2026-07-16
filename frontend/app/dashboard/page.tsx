@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const roles = effectiveRoles(prof?.target_roles, prof?.resume_text)
 
   // NOTE: we deliberately do NOT re-filter the feed by role at read time.
-  // Every row in user_feed_v was already matched to the profile by the backend
+  // Every row in job_feed was already matched to the profile by the backend
   // (filter_and_score) before it was written — re-applying a 150+-term ILIKE
   // OR (across description_snippet) over 24k rows blew Postgres' 8s statement
   // timeout, which errored the feed query and showed an EMPTY feed while the
@@ -41,11 +41,11 @@ export default async function DashboardPage() {
   }
 
   const feedQ    = () =>
-    supabase.from('user_feed_v').select('*')
+    supabase.from('job_feed').select('*')
       .eq('user_id', user.id).eq('is_dismissed', false).eq('is_applied', false)
       .gte('match_score', MIN_SCORE)
   const countQ   = (extra?: (q: any) => any) => {
-    const q = supabase.from('user_feed_v').select('*', { count: 'exact', head: true })
+    const q = supabase.from('job_feed').select('*', { count: 'exact', head: true })
       .eq('user_id', user.id).eq('is_dismissed', false).eq('is_applied', false)
       .gte('match_score', MIN_SCORE)
     return extra ? extra(q) : q
