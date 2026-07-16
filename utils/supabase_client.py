@@ -128,7 +128,50 @@ def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
             # "jobs on screen" and a green-but-empty run.
             logger.error(f"[Supabase] upsert_jobs batch FAILED ({len(batch)} rows lost): {e}")
 
+    # ── Normalization Stage 1: dual-write user_job_matches ────────────────────
+    # Thin pointer rows (user, job_id from jobs_pool, score, reasons). Payload
+    # deliberately excludes the is_* flags so a conflict-update never clobbers
+    # user state; is_new defaults TRUE on fresh inserts. Fully failsafe — the
+    # legacy job_feed write above stays the source of truth until Stage 3.
+    try:
+        _dual_write_matches(sb, user_id, rows)
+    except Exception as e:
+        logger.warning(f"[Supabase] dual-write matches skipped: {e}")
+
     return total_new
+
+
+def _dual_write_matches(sb, user_id: str, rows: List[Dict]) -> None:
+    """Map (source, source_job_id) → jobs_pool.id and upsert user_job_matches."""
+    by_source: Dict[str, List[str]] = {}
+    for r in rows:
+        by_source.setdefault(r["source"], []).append(str(r["source_job_id"]))
+
+    id_map: Dict[tuple, str] = {}
+    for source, sjids in by_source.items():
+        for i in range(0, len(sjids), 300):
+            chunk = sjids[i:i + 300]
+            got = (sb.table("jobs_pool").select("id, source, source_job_id")
+                     .eq("source", source).in_("source_job_id", chunk)
+                     .execute().data) or []
+            for g in got:
+                id_map[(g["source"], str(g["source_job_id"]))] = g["id"]
+
+    matches = []
+    for r in rows:
+        jid = id_map.get((r["source"], str(r["source_job_id"])))
+        if jid:
+            matches.append({
+                "user_id": user_id,
+                "job_id": jid,
+                "match_score": r.get("match_score", 0),
+                "match_reasons": r.get("match_reasons") or [],
+            })
+    for i in range(0, len(matches), 500):
+        sb.table("user_job_matches").upsert(
+            matches[i:i + 500], on_conflict="user_id,job_id",
+        ).execute()
+    logger.info(f"[Supabase] dual-write: {len(matches)}/{len(rows)} match rows synced")
 
 
 def get_seen_job_ids(user_id: str, source: str) -> set:
