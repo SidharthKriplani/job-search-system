@@ -70,8 +70,10 @@ jobs:
           # Optional: enables Adzuna (adds India + salary data to the pool).
           # Free keys at developer.adzuna.com. Leave unset to skip cleanly.
           ADZUNA_APP_ID:         ${{ secrets.ADZUNA_APP_ID }}
-	  JOOBLE_API_KEY: ${{ secrets.10f079a7-cd76-4d56-ba5d-acdf0a4d2600 }}
           ADZUNA_APP_KEY:        ${{ secrets.ADZUNA_APP_KEY }}
+          # Optional: enables Jooble (second India breadth index). Free key at
+          # jooble.org/api/about. Leave unset to skip cleanly.
+          JOOBLE_API_KEY:        ${{ secrets.JOOBLE_API_KEY }}
           # Scheduled runs are sharded (6 batches across the night); manual runs
           # (and the Refresh Now button) do a full single run.
           BATCH_TOTAL:           ${{ github.event_name == 'schedule' && '6' || '1' }}

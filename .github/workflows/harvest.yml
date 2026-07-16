@@ -36,7 +36,7 @@ jobs:
         env:
           HARVEST_VERIFY_LIMIT: '3000'
         run: |
-	python -m ingest.harvester greenhouse lever ashby workable bamboohr \
+          python -m ingest.harvester greenhouse lever ashby workable bamboohr \
             --max-pages ${{ github.event.inputs.max_pages || '8' }} \
             --max-verify 3000
           # Workday triples (tenant/wd/site) — accumulates data/workday_companies.json.
@@ -45,7 +45,6 @@ jobs:
           python -m ingest.harvester workday \
             --max-pages ${{ github.event.inputs.max_pages || '8' }} \
             --max-verify 300
-
 
       - name: Weekly relevance-tuning report
         env:
