@@ -34,7 +34,7 @@ jobs:
   scrape:
     name: Run Job Scrapers
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120   # 2,788 fetch units since harvested-cap 1000; 60 was killing runs mid-fetch
 
     steps:
       - name: Checkout
@@ -61,6 +61,7 @@ jobs:
 
       - name: Run job scrapers
         env:
+          INGEST_WORKERS:         '40'   # fetch is IO-bound; 16 workers x 2,788 units blew past 60 min
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
           GOOGLE_CLIENT_ID:      ${{ secrets.GOOGLE_CLIENT_ID }}
