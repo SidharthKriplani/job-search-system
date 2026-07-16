@@ -338,6 +338,15 @@ EIGHTFOLD = [
     ("juniper", "juniper.net", "Juniper Networks"),
 ]
 
+# ── Kula companies (slug, display) — careers.kula.ai/{slug}, RSC-payload parse ─
+# India startups on Kula ATS (found via the ATS detector). Verify a slug by
+# checking careers.kula.ai/{slug} renders an "Open Positions" list.
+KULA = [
+    ("cashfree", "Cashfree Payments"),  # verified 2026-07-16, 51 jobs
+    ("plumhq", "Plum"),                 # 54 jobs
+    ("clevertap", "CleverTap"),         # 17 jobs
+]
+
 # ── Harvested lists (our own, from ingest/harvester.py via Common Crawl) ───────
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Cap how many harvested boards the daily run uses (sorted by job count), so the
@@ -448,6 +457,8 @@ def unit_domain(label: str, uid: str) -> str:
         return "finance" if uid == "careers.mastercard.com" else "tech"
     if label == "eightfold":
         return "tech"
+    if label == "kula":
+        return "tech"             # India-startup ATS (fintech/SaaS)
     if label in ("greenhouse", "lever", "ashby"):
         # Curated boards are hand-picked tech companies; harvested (in the JSON
         # files) are unknown → general.

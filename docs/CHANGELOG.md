@@ -4,6 +4,19 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-16 (b) — Kula connector: Cashfree-class sites cracked server-side
+
+The "needs a browser" verdict on Kula was wrong. Kula careers pages
+(careers.kula.ai/{slug}) server-render the FULL jobs array into the Next.js
+RSC flight payload (self.__next_f.push chunks) — one GET + payload parse
+yields clean JSON (id, title, JD, offices/location, employment_type).
+New `connectors/kula.py` + registry.KULA, live-verified:
+**Cashfree 51 jobs, Plum 54, CleverTap 17** (~95% India). Job links
+(careers.kula.ai/{slug}/{id}) canary-checked 5/5 ok. Detector fingerprint
+flipped kula → supported; future detector runs auto-route Kula companies.
+Softer than a real API (serialization could change) — failsafe to 0 + canary
+coverage if it does.
+
 ## 2026-07-16 (a) — Phenom link fix, link canary, company-first ATS detector
 
 - **Phenom deep links FIXED** (user-reported: View Job landed on the careers

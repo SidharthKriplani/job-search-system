@@ -183,5 +183,6 @@ export const SOURCE_LABELS: Record<string, string> = {
   phenom:           'Phenom',
   eightfold:        'Eightfold',
   recruitee:        'Recruitee',
+  kula:             'Kula',
   jooble:           'Jooble',
 }

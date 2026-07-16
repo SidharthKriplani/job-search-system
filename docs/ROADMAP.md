@@ -41,8 +41,9 @@ in CHANGELOG.
 - [ ] **SuccessFactors revisit** — 10 target companies (Wipro, HCLTech,
       LTIMindtree, Capgemini). Career-site JSON wasn't found on 6 probed
       tenants; try the Indian-IT tenants specifically before ruling out.
-- [ ] **Kula (Cashfree-class)** — XHR only; needs a one-time DevTools capture
-      per Claude-in-Chrome session, then decide if server-callable.
+- [x] ~~Kula (Cashfree-class)~~ → DONE 2026-07-16: jobs are in the RSC
+      flight payload, no browser needed. connectors/kula.py live (Cashfree,
+      Plum, CleverTap).
 - [ ] **Detector cadence** — run scripts/detect_ats.py monthly in harvest.yml;
       grow data/target_companies.json (user target_companies fields + requests).
 

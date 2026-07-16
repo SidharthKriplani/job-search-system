@@ -102,3 +102,15 @@ def test_unit_domain_enterprise_labels():
     assert registry.unit_domain("phenom", "careers.mastercard.com") == "finance"
     assert registry.unit_domain("phenom", "careers.services.global.ntt") == "tech"
     assert registry.unit_domain("eightfold", "paypal") == "tech"
+
+
+def test_kula_registry_shape():
+    assert registry.KULA, "KULA registry is empty"
+    for row in registry.KULA:
+        assert len(row) == 2, f"KULA entry must be (slug, display): {row}"
+        assert all(isinstance(x, str) and x for x in row)
+
+
+def test_kula_connector_callable():
+    from ingest.connectors import kula
+    assert callable(kula.fetch_company)

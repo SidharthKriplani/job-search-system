@@ -52,7 +52,7 @@ FINGERPRINTS = [
     ("eightfold",       [r"([a-z0-9-]+)\.eightfold\.ai"], True),
     ("phenom",          [r"data-ph-id=", r"phenompeople", r"phenom-feeds"], True),
     # ── no connector yet (the gap list) ──
-    ("kula",            [r"careers\.kula\.ai/([a-z0-9-]+)", r"kula\.ai"], False),
+    ("kula",            [r"careers\.kula\.ai/([a-z0-9-]+)", r"kula\.ai"], True),
     ("keka",            [r"([a-z0-9-]+)\.keka\.com"], False),
     ("darwinbox",       [r"([a-z0-9-]+)\.darwinbox\.in", r"darwinbox\.com"], False),
     ("zoho_recruit",    [r"([a-z0-9-]+)\.zohorecruit\.(?:com|in)"], False),
