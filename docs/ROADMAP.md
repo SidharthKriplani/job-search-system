@@ -35,12 +35,16 @@ in CHANGELOG.
 
 ## NEXT — coverage (data-driven, from scripts/detect_ats.py gap report)
 
-- [ ] **Darwinbox probe** — 10 target companies detected (BigBasket, Unacademy,
-      CarDekho, Digit, PharmEasy, 1mg). Was written off as captcha-walled; the
-      detector says it's the biggest gap. Verify from a runner IP first.
-- [ ] **SuccessFactors revisit** — 10 target companies (Wipro, HCLTech,
-      LTIMindtree, Capgemini). Career-site JSON wasn't found on 6 probed
-      tenants; try the Indian-IT tenants specifically before ruling out.
+- [x] ~~Darwinbox probe~~ → CONFIRMED BLOCKED 2026-07-16: SPA shell loads but
+      the /ms/candidateapi/* layer 403s from datacenter IPs (Cloudflare +
+      Turnstile). Original verdict stands; the 10 companies stay covered via
+      foundit/jobspy/Gmail. Revisit only if infra ever gets residential IPs.
+- [ ] **SuccessFactors CSB connector (VIABLE — probed 2026-07-16)** — the
+      Career Site Builder search template is SERVER-RENDERED and shared:
+      jobs.birlasoft.com/search/?q=&locationsearch=india returns 25 rows/page
+      (jobTitle-link markup), LTIMindtree partial; HCLTech/Wipro run customized
+      templates needing per-tenant markers. Build: sf_csb.py shared parser +
+      per-tenant overrides, prove-or-kill per tenant. ~10 target companies.
 - [x] ~~Kula (Cashfree-class)~~ → DONE 2026-07-16: jobs are in the RSC
       flight payload, no browser needed. connectors/kula.py live (Cashfree,
       Plum, CleverTap).
