@@ -78,6 +78,46 @@ def main() -> None:
         if high_score:
             lines += ["", f"⚠️ **{len(high_score)} rejections had match_score ≥ 0.7** — "
                           "the scorer was confidently wrong on these; prioritise them.", ""]
+
+        # ── Pattern mining → machine-readable SUGGESTIONS (not auto-applied) ──
+        # Recurring title terms in wrong_role/wrong_seniority rejections and
+        # recurring companies in wrong_company rejections become candidate
+        # overrides. Promote reviewed entries into
+        # ingest/data/tuning_overrides.json — utils/tuning.py applies them at
+        # scoring time. Two-step by design: evidence → review → live.
+        import json as _json
+        import re as _re
+        STOP = {"and", "the", "for", "with", "of", "in", "a", "to", "senior", "junior",
+                "manager", "lead", "engineer", "analyst", "associate", "executive",
+                "specialist", "developer", "consultant", "officer", "head", "ii", "iii"}
+        term_hits = Counter()
+        for r in rows:
+            if r.get("reason") in ("wrong_role", "wrong_seniority"):
+                for w in _re.findall(r"[a-z][a-z+#/-]{2,}", (r.get("job_title") or "").lower()):
+                    if w not in STOP:
+                        term_hits[w] += 1
+        co_hits = Counter((r.get("company") or "").strip().lower()
+                          for r in rows if r.get("reason") == "wrong_company" and r.get("company"))
+
+        suggestions = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "window_days": 7,
+            "demote_title_terms": {t: 0.7 for t, n in term_hits.most_common(15) if n >= 3},
+            "demote_companies":   {c: 0.6 for c, n in co_hits.most_common(10) if n >= 3},
+            "_promote_to": "ingest/data/tuning_overrides.json (review first)",
+        }
+        try:
+            with open("ingest/data/tuning_suggestions.json", "w") as f:
+                _json.dump(suggestions, f, indent=1, sort_keys=True)
+        except Exception as e:
+            logger.warning(f"could not write suggestions: {e}")
+
+        if suggestions["demote_title_terms"] or suggestions["demote_companies"]:
+            lines += ["", "## Suggested overrides (review → promote to tuning_overrides.json)", ""]
+            for t, m in suggestions["demote_title_terms"].items():
+                lines.append(f"- demote title term `{t}` → ×{m} ({term_hits[t]} rejections)")
+            for c, m in suggestions["demote_companies"].items():
+                lines.append(f"- demote company `{c}` → ×{m} ({co_hits[c]} rejections)")
     else:
         lines.append("_No feedback this week — either the feed is good or nobody used the button._")
 

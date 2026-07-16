@@ -168,3 +168,35 @@ def test_make_job_carries_skills():
     j2 = make_job(title="T", company="X", url="https://x.com/2", source="test",
                   skills=["Custom Skill"])
     assert j2["skills"] == ["Custom Skill"]
+
+
+# ── Feedback tuning loop (added 2026-07-16) ────────────────────────────────────
+
+def test_tuning_adjust_bounds_and_noop():
+    from utils import tuning
+    # no overrides file entries → no-op
+    s, note = tuning.adjust(0.8, "Data Engineer", "Acme", None)
+    assert s == 0.8 and note is None
+    # affinity boost + demote, bounded
+    aff = {"liked": {"acme"}, "disliked": {"badco"}}
+    s2, n2 = tuning.adjust(0.8, "X", "Acme", aff)
+    assert s2 > 0.8 and n2
+    s3, n3 = tuning.adjust(0.8, "X", "BadCo", aff)
+    assert s3 < 0.8 and n3
+    # never exceeds 1.0
+    s4, _ = tuning.adjust(0.99, "X", "Acme", aff)
+    assert s4 <= 1.0
+
+
+def test_collect_affinity():
+    from utils.tuning import collect_affinity
+    jobs = [
+        {"company": "GoodCo", "is_saved": True},
+        {"company": "MehCo", "is_dismissed": True},
+        {"company": "MehCo", "is_dismissed": True},
+        {"company": "OnceCo", "is_dismissed": True},
+    ]
+    a = collect_affinity(jobs)
+    assert "goodco" in a["liked"]
+    assert "mehco" in a["disliked"]      # >=2 dismissals
+    assert "onceco" not in a["disliked"] # single dismissal isn't a signal

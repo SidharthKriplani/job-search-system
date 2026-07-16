@@ -54,9 +54,9 @@ in CHANGELOG.
 
 ## NEXT — stickiness + intelligence (the moat)
 
-- [ ] **Act on the feedback loop** — `feed_feedback` + `TUNING_REPORT.md` collect
-      "not relevant" signals weekly; read them and tune role-graph weights. Also
-      feed is_saved/applied/dismissed into ranking.
+- [x] ~~Act on the feedback loop~~ → DONE 2026-07-16: tuning overrides +
+      per-user affinity live in filter_and_score (step 9, bounded ×0.5–1.2);
+      feedback_report.py mines weekly suggestions for review-then-promote.
 - [ ] **Single source of truth for the role graph (#4)** — one JSON both Python +
       TS read; CI drift check (today hand-mirrored `role_graph.py` ↔ `roleGraph.ts`).
 - [ ] **Intelligence layer (the differentiator):**

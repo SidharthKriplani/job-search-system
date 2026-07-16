@@ -4,6 +4,23 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-16 (f) — Tier 3: the feedback loop actually tunes ranking
+
+feed_feedback stops being write-only:
+
+- **utils/tuning.py** — bounded score multipliers (×0.5..×1.2) applied as
+  step 9 of filter_and_score: (a) GLOBAL overrides from
+  ingest/data/tuning_overrides.json (curated), (b) PER-USER affinity computed
+  from the candidate set's own flags — saved/applied company → ×1.05,
+  company dismissed ≥2× → ×0.9. Cards say why ("You've dismissed this
+  company before"). Verified end-to-end through the real scorer.
+- **feedback_report.py v2** — weekly report now also MINES patterns
+  (recurring rejected-title terms, recurring wrong-companies, ≥3 signals) and
+  writes machine-readable ingest/data/tuning_suggestions.json. Two-step by
+  design: suggestions → review → promote into tuning_overrides.json; the
+  matcher never auto-mutates from a handful of angry taps.
+- 22/22 tests. No schema change, no manual step.
+
 ## 2026-07-16 (e) — Data flywheels (skills + fingerprints) + honest fit tiers
 
 Longitudinal data starts accruing TONIGHT — repost rates, skill density, and

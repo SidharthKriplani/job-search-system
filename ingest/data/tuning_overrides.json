@@ -1,0 +1,6 @@
+{
+  "_comment": "Curated score multipliers from feed_feedback evidence. Promote entries from tuning_suggestions.json after reviewing docs/TUNING_REPORT.md. demote < 1.0, boost <= 1.2. Consumed failsafe by utils/tuning.py.",
+  "demote_title_terms": {},
+  "demote_companies": {},
+  "boost_companies": {}
+}

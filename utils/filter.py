@@ -235,6 +235,12 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
     user_rank         = role_graph.user_level(profile)   # seniority rank (1–5) or None
     W                 = _WEIGHTS_RESUME if has_resume else _WEIGHTS_NO_RESUME
 
+    # ── Feedback tuning ── global overrides (curated from feed_feedback) +
+    # per-user affinity from the flags on this candidate set (stored rows carry
+    # is_saved/is_applied/is_dismissed; fresh-scrape rows don't → neutral).
+    from utils import tuning
+    affinity = tuning.collect_affinity(jobs)
+
     results: List[Dict] = []
 
     # ── Staleness cutoff ── the product promise is RECENT jobs. Postings older
@@ -401,6 +407,11 @@ def filter_and_score(jobs: List[Dict], profile: Dict) -> List[Dict]:
             W["resume"] * resume_score + W["lvl"] * lvl_score +
             W["dom"] * dom_score
         )
+
+        # 9. Feedback tuning — bounded multiplier (overrides + user affinity)
+        score, tune_note = tuning.adjust(score, title, company, affinity)
+        if tune_note:
+            reasons.append(tune_note)
 
         job["match_score"]   = round(score, 3)
         job["match_reasons"] = reasons[:4]
