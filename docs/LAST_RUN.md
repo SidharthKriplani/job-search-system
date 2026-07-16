@@ -1,13 +1,13 @@
 # Last run report
 
-- **When:** 2026-07-16 21:25 UTC (finished 21:48 UTC)
-- **Shard:** 2/6
-- **Pool:** 16807 jobs — greenhouse: 11356, lever: 66, ashby: 6109, workable: 1694, bamboohr: 468, phenom: 20, eightfold: 0, successfactors: 41, workday: 365, oracle: 70, smartrecruiters: 229, instahyre: 700
+- **When:** 2026-07-16 22:27 UTC (finished 22:49 UTC)
+- **Shard:** 4/6
+- **Pool:** 17842 jobs — greenhouse: 13283, lever: 263, ashby: 6362, workable: 1615, bamboohr: 525, phenom: 200, kula: 54, successfactors: 146, workday: 556, smartrecruiters: 262, foundit: 0
 
 | user | matched | new | closed removed |
 |------|---------|-----|----------------|
-| s***@gmail.com | 4457 | 226 | 129 |
-| (no email) | 3749 | 294 | 119 |
-| j***@gmail.com | 6945 | 1260 | 604 |
+| s***@gmail.com | 4771 | 395 | 196 |
+| (no email) | 3897 | 739 | 232 |
+| j***@gmail.com | 7609 | 1495 | 889 |
 
 No errors.
