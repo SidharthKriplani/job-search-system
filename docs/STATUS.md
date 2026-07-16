@@ -1,6 +1,6 @@
 # STATUS — current state
 
-_Last updated: 2026-07-15 (night)_
+_Last updated: 2026-07-17_
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
@@ -34,7 +34,7 @@ signup-blocking trigger bug is fixed; sources have been expanded ~3×.
   **smartrecruiters expanded 2→38 companies (~2.3k India postings: Bosch, Nagarro, …)**,
   jobspy (Indeed **+ LinkedIn**), adzuna (paginated,
   finance/tech India queries), jooble (NEW, needs free `JOOBLE_API_KEY`), and
-  instahyre (India, best-effort). Workable+bamboohr smoke: +7.4k deduped jobs.
+  instahyre (India, best-effort), **kula (Cashfree/Plum/CleverTap)**, **successfactors CSB (7 Indian IT majors, ~663 India jobs)**, **jobvite (NEW — 28 verified tenants, ~1,000 jobs)**, and **zoho_recruit (NEW — 10 India tenants with full JDs)**. Workable+bamboohr smoke: +7.4k deduped jobs.
   India coverage ~tripled this session (jobspy 250→~1.8k, adzuna ~400→~1.2k, +48
   India company boards mined from the OpenJobs dataset, +harvested-cap 400→1000).
   Harvester now also mines workable/bamboohr weekly, and 193 verified Workday

@@ -361,6 +361,62 @@ KULA = [
     ("clevertap", "CleverTap"),         # 17 jobs
 ]
 
+# ── Jobvite career sites (slug, display) — jobs.jobvite.com/{slug}/search ─────
+# Server-rendered shared template, 50 rows/page. India-tagged tenants mined from
+# the OpenJobs dataset (12,144 companies), each live-verified 2026-07-17 with
+# its job count. The l= location param is unreliable per tenant (egnyte ignores
+# it) — the connector fetches ALL rows; per-user filters handle location.
+# 7 India-tagged slugs were dead at verification and are NOT listed:
+# edifecs, enphase-energy, isg-one, kwalee, scopely, windriver, yodlee.
+JOBVITE = [
+    ("saama", "Saama"),                              # 16 jobs
+    ("egnyte", "Egnyte"),                            # 36
+    ("progress", "Progress"),                        # 41
+    ("anthology", "Anthology"),                      # 10
+    ("aryaka", "Aryaka"),                            # 4
+    ("alivecor", "AliveCor"),                        # 6
+    ("barracuda-networks-inc", "Barracuda"),         # 74
+    ("bluejeans", "BlueJeans"),                      # 2
+    ("buckman", "Buckman"),                          # 45
+    ("dmg", "DMG"),                                  # 20
+    ("double-negative-visual-effects", "DNEG"),      # 127
+    ("drillinginfo", "Enverus"),                     # 57
+    ("everyday-health-consumer", "Everyday Health"), # 6
+    ("forescout", "Forescout"),                      # 30
+    ("gigamon", "Gigamon"),                          # 41
+    ("leadventure", "LeadVenture"),                  # 24
+    ("legalzoom", "LegalZoom"),                      # 20
+    ("logrhythm", "Exabeam"),                        # 4
+    ("ness", "Ness Digital Engineering"),            # 32
+    ("power-integrations", "Power Integrations"),    # 40
+    ("relatient", "Relatient"),                      # 5
+    ("resolver", "Resolver"),                        # 13
+    ("reveal", "Reveal"),                            # 9
+    ("varonis-internal", "Varonis"),                 # 88
+    ("webmd", "WebMD"),                              # 90
+    ("wri", "World Resources Institute"),            # 1
+    ("ziffdavis", "Ziff Davis"),                     # 66
+    ("zones", "Zones"),                              # 135
+]
+
+# ── Zoho Recruit careers sites (host, display) — embedded-JSON parse ──────────
+# Full host stored because Indian tenants live on .zohorecruit.in and others on
+# .zohorecruit.com. Each verified live 2026-07-17 (job counts in comments).
+# Dead tenants parse to [] naturally (no id="jobs" input) — aurodo and setu
+# were dead at verification and are NOT listed.
+ZOHO_RECRUIT = [
+    ("sportskeeda.zohorecruit.in", "Sportskeeda"),            # 7 jobs
+    ("playsimple.zohorecruit.in", "PlaySimple Games"),        # 32
+    ("stage.zohorecruit.in", "Stage"),                        # 11
+    ("dangalgames.zohorecruit.in", "Dangal Games"),           # 1
+    ("zazz.zohorecruit.in", "Zazz"),                          # 8
+    ("vigaet.zohorecruit.in", "Vigaet"),                      # 15
+    ("singarajanstudios.zohorecruit.in", "Singarajan Studios"), # 1
+    ("phantom-fx.zohorecruit.in", "Phantom FX"),              # 6
+    ("ajmerainfotechus.zohorecruit.in", "Ajmera Infotech"),   # 0 at check, live
+    ("studioimageworks.zohorecruit.com", "Studio Image Works"), # 9
+]
+
 # ── Harvested lists (our own, from ingest/harvester.py via Common Crawl) ───────
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Cap how many harvested boards the daily run uses (sorted by job count), so the
@@ -475,6 +531,10 @@ def unit_domain(label: str, uid: str) -> str:
         return "tech"             # India-startup ATS (fintech/SaaS)
     if label == "successfactors":
         return "tech"             # Indian IT majors + enterprise
+    if label == "jobvite":
+        return "tech"             # curated mid-size tech with India offices
+    if label == "zoho_recruit":
+        return "tech"             # India startups/studios on Zoho Recruit
     if label in ("greenhouse", "lever", "ashby"):
         # Curated boards are hand-picked tech companies; harvested (in the JSON
         # files) are unknown → general.

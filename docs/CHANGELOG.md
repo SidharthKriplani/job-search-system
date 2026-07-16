@@ -4,6 +4,39 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-17 — Jobvite + Zoho Recruit connectors, CTC-to-ask heuristic
+
+Buildable-now batch (no paid sources, no LLM):
+
+- **Jobvite connector** (`ingest/connectors/jobvite.py`) — server-rendered
+  shared template at jobs.jobvite.com/{slug}/search, 50 rows/page (`p` is
+  0-based). 28 live India-tagged tenants mined from the OpenJobs dataset and
+  individually verified (~1,000 jobs: Zones 135, DNEG 127, WebMD 90, Varonis
+  88, Barracuda 74, …). The `l=` location param is IGNORED by some tenants
+  (egnyte, verified) so the connector fetches all rows and lets per-user
+  filters handle location — same trade-off as bamboohr. 7 dead slugs delisted.
+- **Zoho Recruit connector** (`ingest/connectors/zoho_recruit.py`) — the
+  careers page embeds the FULL job list (with complete JDs + Date_Opened) as
+  JSON in a hidden `id="jobs"` input; one GET per tenant, no N+1. Indian
+  tenants live on `.zohorecruit.in` (NOT .com — registry stores full hosts).
+  10 live tenants (~90 jobs: PlaySimple 32, Vigaet 15, Stage 11, Sportskeeda,
+  Phantom FX, …). Full JDs mean the skills flywheel gets rich extraction here.
+- **CTC-to-ask heuristic** — `scripts/salary_stats.py` (nightly, failsafe)
+  parses every jobs_pool.salary_range to LPA via the ONE parser
+  (utils.filter._extract_salary_lpa, imported not copied) and aggregates
+  p25/p50/p75 per (position, city) + all-city rollups into a new
+  `salary_stats` table (migration 2026-07-17-salary-stats.sql; n≥5 groups
+  only). Feed cards show "Market ₹X–Y · median · ask p75+" (tooltip: sample
+  size + heuristic disclaimer); Home gets a "CTC benchmarks" card with
+  p25–p75 band bars + median ticks. New GET /api/salary serves the table once
+  per dashboard load.
+- 26/26 tests green (new: registry shapes for both connectors, jobvite row
+  regex against captured live markup, unit_domain labels).
+- Also restored the 4 Stage-2-v2 files that a stray staged revert had
+  clobbered in the working tree (feed-v2b HEAD c8ccf75 was never wrong; the
+  index/worktree were) and added kula/successfactors to SOURCE_LABELS
+  (missed in their own ship).
+
 ## 2026-07-16 (f) — Tier 3: the feedback loop actually tunes ranking
 
 feed_feedback stops being write-only:

@@ -27,12 +27,19 @@ export default async function HomePage() {
     { count: feedCount },
     { count: savedCount },
     { data: apps },
+    { data: salaryBands },
   ] = await Promise.all([
     supabase.rpc('get_home_insights'),
     countQ(q => q.eq('is_new', true)),
     countQ(),
     countQ(q => q.eq('is_saved', true)),
     supabase.from('applications').select('stage').eq('user_id', user.id),
+    // CTC benchmarks: all-city rollups ('' city), biggest samples first.
+    supabase.from('salary_stats')
+      .select('position, n, p25, p50, p75')
+      .eq('location_city', '')
+      .order('n', { ascending: false })
+      .limit(8),
   ])
 
   // Collapse the 18 tracker stages into a 5-step funnel.
@@ -58,6 +65,7 @@ export default async function HomePage() {
       appliedTotal={(apps || []).length}
       funnel={buckets}
       insights={insights || {}}
+      salaryBands={salaryBands || []}
     />
   )
 }

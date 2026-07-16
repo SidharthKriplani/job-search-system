@@ -145,6 +145,53 @@ def test_sfcsb_connector_callable():
     assert callable(sf_csb.fetch_site)
 
 
+def test_jobvite_registry_shape():
+    assert registry.JOBVITE, "JOBVITE registry is empty"
+    for row in registry.JOBVITE:
+        assert len(row) == 2, f"JOBVITE entry must be (slug, display): {row}"
+        slug, _ = row
+        assert "/" not in slug and not slug.startswith("http")
+
+
+def test_zoho_recruit_registry_shape():
+    assert registry.ZOHO_RECRUIT, "ZOHO_RECRUIT registry is empty"
+    for row in registry.ZOHO_RECRUIT:
+        assert len(row) == 2, f"ZOHO_RECRUIT entry must be (host, display): {row}"
+        host, _ = row
+        # Full host required: Indian tenants are .zohorecruit.in, others .com
+        assert ".zohorecruit." in host and not host.startswith("http")
+
+
+def test_jobvite_zoho_connectors_callable():
+    from ingest.connectors import jobvite, zoho_recruit
+    assert callable(jobvite.fetch_company)
+    assert callable(zoho_recruit.fetch_site)
+    assert registry.unit_domain("jobvite", "saama") == "tech"
+    assert registry.unit_domain("zoho_recruit", "playsimple.zohorecruit.in") == "tech"
+
+
+def test_jobvite_row_regex():
+    from ingest.connectors.jobvite import _ROW, _clean
+    html = '''<tr>
+            <td class="jv-job-list-name">
+                <a href="/saama/job/oTagAfwD">Architect (Cloud/Data)</a>
+            </td>
+            <td class="jv-job-list-location">
+
+
+            London,
+            England
+
+            </td>
+        </tr>'''
+    m = _ROW.search(html)
+    assert m, "jobvite row regex failed on captured live markup"
+    href, jid, title, loc = m.groups()
+    assert href == "/saama/job/oTagAfwD" and jid == "oTagAfwD"
+    assert _clean(title) == "Architect (Cloud/Data)"
+    assert _clean(loc) == "London, England"
+
+
 # ── Skills flywheel (added 2026-07-16) ─────────────────────────────────────────
 
 def test_extract_skills():

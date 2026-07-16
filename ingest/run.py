@@ -23,7 +23,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Tuple
 
-from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit, workable, bamboohr, phenom, eightfold, kula, sf_csb
+from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit, workable, bamboohr, phenom, eightfold, kula, sf_csb, jobvite, zoho_recruit
 from .dedup import deduplicate
 from . import registry
 from .registry import unit_domain
@@ -67,6 +67,12 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]], str]]:
     scap = int(os.environ.get("SFCSB_MAX_PER_COMPANY", "200"))
     for host, disp in registry.SFCSB:
         units.append(("successfactors", host, lambda hh=host, d=disp, c=scap: sf_csb.fetch_site(hh, d, c)))
+    jvcap = int(os.environ.get("JOBVITE_MAX_PER_COMPANY", "300"))
+    for slug, disp in registry.JOBVITE:
+        units.append(("jobvite", slug, lambda s=slug, d=disp, c=jvcap: jobvite.fetch_company(s, d, c)))
+    zcap = int(os.environ.get("ZOHO_MAX_PER_COMPANY", "200"))
+    for host, disp in registry.ZOHO_RECRUIT:
+        units.append(("zoho_recruit", host, lambda hh=host, d=disp, c=zcap: zoho_recruit.fetch_site(hh, d, c)))
 
     cap = int(os.environ.get("WORKDAY_MAX_PER_COMPANY", "150"))
     # Curated tenants unioned with harvested triples (data/workday_companies.json).

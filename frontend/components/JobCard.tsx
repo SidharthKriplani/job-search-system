@@ -1,14 +1,29 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, DollarSign, Calendar, Clock, Briefcase, BarChart3, ExternalLink, Bookmark, X, CheckCircle, ThumbsDown } from 'lucide-react'
-import { Job, SOURCE_LABELS } from '@/lib/types'
+import { MapPin, DollarSign, Calendar, Clock, Briefcase, BarChart3, ExternalLink, Bookmark, X, CheckCircle, ThumbsDown, TrendingUp } from 'lucide-react'
+import { Job, SalaryStat, SOURCE_LABELS } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 import clsx from 'clsx'
 
 interface Props {
   job: Job
   onUpdate?: (id: string, updates: Partial<Job>) => void
+  // CTC-to-ask heuristic: lookup map keyed `${position}|${location_city}`
+  // ('' city = all-city rollup). Built once in DashboardClient from /api/salary.
+  salaryStats?: Record<string, SalaryStat>
+}
+
+// LPA formatter: 13 → "₹13L", 120 → "₹1.2Cr".
+function fmtLpa(v: number): string {
+  return v >= 100 ? `₹${(v / 100).toFixed(1)}Cr` : `₹${Math.round(v)}L`
+}
+
+// Market band for this job's (position, city), falling back to the position's
+// all-city rollup. Null when we have no benchmark — the line simply doesn't show.
+function marketFor(job: Job, stats?: Record<string, SalaryStat>): SalaryStat | null {
+  if (!stats || !job.position) return null
+  return stats[`${job.position}|${job.location_city || ''}`] || stats[`${job.position}|`] || null
 }
 
 // Relative age, e.g. "today", "3d ago", "2w ago".
@@ -62,7 +77,7 @@ const FEEDBACK_REASONS: { key: string; label: string }[] = [
   { key: 'other',           label: 'Other' },
 ]
 
-export default function JobCard({ job, onUpdate }: Props) {
+export default function JobCard({ job, onUpdate, salaryStats }: Props) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
@@ -213,6 +228,25 @@ export default function JobCard({ job, onUpdate }: Props) {
             )}
             <span className="text-slate-400 dark:text-slate-500 text-xs">{SOURCE_LABELS[job.source] || job.source}</span>
           </div>
+
+          {/* CTC-to-ask: market band from posted salaries (nightly heuristic) */}
+          {(() => {
+            const m = marketFor(job, salaryStats)
+            return m ? (
+              <div
+                className="flex items-center gap-1.5 mt-2 text-xs text-slate-500 dark:text-slate-400"
+                title={`Heuristic from ${m.n} priced postings for "${m.position}"${m.location_city ? ` in ${m.location_city}` : ' across cities'} — parsed from posted salary ranges, not verified offers.`}
+              >
+                <TrendingUp className="w-3 h-3 flex-shrink-0 text-indigo-500" />
+                <span>
+                  Market {fmtLpa(m.p25)}–{fmtLpa(m.p75)}
+                  <span className="text-slate-400 dark:text-slate-500"> · median {fmtLpa(m.p50)} · </span>
+                  <span className="font-medium text-slate-600 dark:text-slate-300">ask {fmtLpa(m.p75)}+</span>
+                  <span className="text-slate-400 dark:text-slate-500"> · {m.n} postings</span>
+                </span>
+              </div>
+            ) : null
+          })()}
 
           {/* Match reasons */}
           {job.match_reasons?.length > 0 && (

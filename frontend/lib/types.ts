@@ -61,6 +61,19 @@ export interface Job {
   match_score: number
   match_reasons: string[]
   scraped_at: string
+  position?: string | null       // role bucket (jobs_pool), keys salary_stats
+  location_city?: string | null
+}
+
+// Nightly market-salary aggregate (scripts/salary_stats.py → salary_stats).
+// Values are LPA; location_city '' is the all-city rollup for a position.
+export interface SalaryStat {
+  position: string
+  location_city: string
+  n: number
+  p25: number
+  p50: number
+  p75: number
 }
 
 export interface Application {
@@ -183,7 +196,10 @@ export const SOURCE_LABELS: Record<string, string> = {
   phenom:           'Phenom',
   eightfold:        'Eightfold',
   recruitee:        'Recruitee',
+  jooble:           'Jooble',
   kula:             'Kula',
   successfactors:   'SuccessFactors',
-  jooble:           'Jooble',
+  // Source expansion (2026-07-17)
+  jobvite:          'Jobvite',
+  zoho_recruit:     'Zoho Recruit',
 }

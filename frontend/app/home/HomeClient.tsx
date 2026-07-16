@@ -161,11 +161,48 @@ function HBarList({ items, linkPrefix }: { items: KV[]; linkPrefix?: string }) {
   )
 }
 
-export default function HomeClient({ userName, newCount, feedCount, savedCount, appliedTotal, funnel, insights }: {
+type Band = { position: string; n: number; p25: number; p50: number; p75: number }
+
+function fmtLpa(v: number): string {
+  return v >= 100 ? `₹${(v / 100).toFixed(1)}Cr` : `₹${Math.round(v)}L`
+}
+
+/** CTC bands: p25–p75 range bar with a median tick, shared LPA scale. */
+function BandList({ items }: { items: Band[] }) {
+  if (!items?.length) {
+    return (
+      <p className="text-xs text-slate-400 py-6 text-center">
+        Accrues as the nightly runs collect priced postings — check back in a few days.
+      </p>
+    )
+  }
+  const max = Math.max(...items.map(i => i.p75), 1)
+  return (
+    <div className="space-y-1.5">
+      {items.map(it => (
+        <div key={it.position}
+             className="group grid grid-cols-[7rem_1fr_3.5rem] items-center gap-2"
+             title={`${it.position}: ${fmtLpa(it.p25)}–${fmtLpa(it.p75)}, median ${fmtLpa(it.p50)} · ${it.n.toLocaleString('en-IN')} priced postings`}>
+          <span className="text-xs text-slate-600 dark:text-slate-300 truncate">{it.position}</span>
+          <div className="relative h-3.5 rounded-[4px] bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div className="absolute inset-y-0 rounded-[4px] bg-indigo-600 dark:bg-indigo-500 opacity-85 group-hover:opacity-100 transition-opacity"
+                 style={{ left: `${(it.p25 / max) * 100}%`, width: `${Math.max(((it.p75 - it.p25) / max) * 100, 1.5)}%` }} />
+            <div className="absolute inset-y-0 w-0.5 bg-white dark:bg-slate-900"
+                 style={{ left: `${(it.p50 / max) * 100}%` }} />
+          </div>
+          <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400 text-right">{fmtLpa(it.p50)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function HomeClient({ userName, newCount, feedCount, savedCount, appliedTotal, funnel, insights, salaryBands }: {
   userName: string
   newCount: number; feedCount: number; savedCount: number; appliedTotal: number
   funnel: Record<string, number>
   insights: any
+  salaryBands?: Band[]
 }) {
   const poolCurve: Pt[]  = insights.pool_curve || []
   const addedCurve: Pt[] = insights.added_curve || []
@@ -222,6 +259,9 @@ export default function HomeClient({ userName, newCount, feedCount, savedCount, 
           </Card>
           <Card title="Hot roles this week" sub="Most-posted role buckets across the market">
             <HBarList items={topPos} />
+          </Card>
+          <Card title="CTC benchmarks" sub="p25–p75 band + median from posted salary ranges (heuristic, not offers) — 'ask' = p75">
+            <BandList items={salaryBands || []} />
           </Card>
           <Card title="Your application funnel" sub="Where your applications stand">
             {appliedTotal === 0

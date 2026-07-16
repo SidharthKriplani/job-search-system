@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Sidebar from '@/components/Sidebar'
 import JobCard from '@/components/JobCard'
-import { Job, ScraperHealth } from '@/lib/types'
+import { Job, SalaryStat, ScraperHealth } from '@/lib/types'
 import { Search, Filter, AlertCircle, CheckCircle, Clock, Bookmark, Trash2, ExternalLink, Building2 } from 'lucide-react'
 import clsx from 'clsx'
 import RefreshButton from '@/components/RefreshButton'
@@ -110,6 +110,18 @@ export default function DashboardClient({
     } catch { /* non-blocking */ }
   }, [])
   useEffect(() => { loadFacets() }, [loadFacets])
+
+  // CTC-to-ask heuristic: one fetch of the nightly salary benchmarks → lookup
+  // map keyed `${position}|${location_city}` that every JobCard shares.
+  const [salaryStats, setSalaryStats] = useState<Record<string, SalaryStat>>({})
+  useEffect(() => {
+    fetch('/api/salary', { cache: 'no-store' }).then(r => r.json()).then(d => {
+      if (!d.ok) return
+      const m: Record<string, SalaryStat> = {}
+      for (const s of d.stats as SalaryStat[]) m[`${s.position}|${s.location_city}`] = s
+      setSalaryStats(m)
+    }).catch(() => { /* non-blocking — cards just skip the market line */ })
+  }, [])
 
   // Live counters (start from server, adjust as jobs leave the feed) so the stat
   // tiles stay honest without a full reload.
@@ -471,7 +483,7 @@ export default function DashboardClient({
             </p>
             <div className="space-y-3">
               {filtered.map(job => (
-                <JobCard key={job.id} job={job} onUpdate={handleUpdate} />
+                <JobCard key={job.id} job={job} onUpdate={handleUpdate} salaryStats={salaryStats} />
               ))}
             </div>
             {jobs.length < queryTotal && (

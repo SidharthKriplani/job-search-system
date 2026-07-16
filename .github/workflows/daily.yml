@@ -105,6 +105,14 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python -m scripts.track_fingerprints
 
+      - name: Aggregate salary stats (CTC-to-ask heuristic)
+        if: always()
+        continue-on-error: true
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python -m scripts.salary_stats
+
       - name: Commit run report
         if: always()
         continue-on-error: true
