@@ -65,7 +65,20 @@ def fetch_site(host: str, display: str, cap: int = 0, locale: str = "") -> List[
             break
         for j in jobs:
             seq = j.get("jobSeqNo") or j.get("jobId") or ""
+            # Phenom ships native skill tags (ml_skills, stringified list) —
+            # use them instead of lexicon extraction on the teaser.
+            native = None
+            raw_sk = j.get("ml_skills")
+            if raw_sk:
+                try:
+                    import ast
+                    parsed = ast.literal_eval(raw_sk) if isinstance(raw_sk, str) else raw_sk
+                    if isinstance(parsed, list):
+                        native = sorted({str(x).strip().title() for x in parsed if x})[:30]
+                except Exception:
+                    native = None
             job = make_job(
+                skills=native,
                 title=j.get("title", ""),
                 company=display,
                 url=f"https://{host}{locale}/job/{seq}" if seq else "",

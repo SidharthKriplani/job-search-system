@@ -69,7 +69,10 @@ in CHANGELOG.
 
 ## LATER — polish + career OS
 
-- [ ] **Honest fit tiers** — Strong/Good/Possible instead of "83%".
+- [x] ~~Honest fit tiers~~ → DONE 2026-07-16 (Strong/Good/Possible chips,
+      exact % on hover). Skills + fingerprint flywheels also live — repost
+      chips, skill-gap reasons, and the home insights dashboard now just
+      consume accruing data.
 - [x] ~~More Workday tenants + Workable adapter~~ → DONE 2026-07-15: workable +
       bamboohr connectors live; 193 harvested Workday tenants gated behind
       `WORKDAY_INCLUDE_HARVESTED` (flip on after normalization).

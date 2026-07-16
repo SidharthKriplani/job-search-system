@@ -30,6 +30,9 @@ JOB_KEYS = (
     "job_title", "company", "location", "salary_range", "job_url",
     "description_snippet", "posted_date", "source", "source_job_id",
     "job_type", "seniority",
+    # skills is POOL-ONLY: whitelist-stripped from job_feed writes; flows to
+    # jobs_pool.skills (jsonb) when INGEST_SKILLS=1 (skills flywheel).
+    "skills",
 )
 
 
@@ -123,6 +126,7 @@ def make_job(
     source_job_id: str = "",
     job_type: Optional[str] = None,
     remote: bool = False,
+    skills: Optional[list] = None,
 ) -> Optional[Dict]:
     """Build a normalized job dict. Returns None if title or url is missing."""
     title = (title or "").strip()
@@ -133,6 +137,15 @@ def make_job(
     loc = (location or "").strip()
     if remote and "remote" not in loc.lower():
         loc = (loc + " · Remote").strip(" ·") if loc else "Remote"
+
+    # Skills flywheel: extract from the FULL description HERE — after this the
+    # text is trimmed to a 280-char snippet and the information is gone.
+    # Connectors with native skill tags (phenom ml_skills) pass `skills`
+    # directly. The key is whitelist-stripped on job_feed writes and reaches
+    # jobs_pool only when INGEST_SKILLS=1 (see utils/supabase_client.py).
+    if skills is None:
+        from .skills import extract_skills
+        skills = extract_skills(f"{title}\n{description}")
 
     from .normalize import canonical_company
     return {
@@ -147,6 +160,7 @@ def make_job(
         "source_job_id":       str(source_job_id) if source_job_id else "",
         "job_type":            normalize_job_type(job_type),
         "seniority":           infer_seniority(title),
+        "skills":              skills or [],
         # NOTE: do NOT add keys that aren't columns in the job_feed table — the
         # whole dict is sent straight to Supabase upsert, and an unknown column
         # makes the insert fail (silently, returning 0). `remote` is folded into

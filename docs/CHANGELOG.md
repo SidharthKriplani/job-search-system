@@ -4,6 +4,28 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-16 (e) — Data flywheels (skills + fingerprints) + honest fit tiers
+
+Longitudinal data starts accruing TONIGHT — repost rates, skill density, and
+posting-lifetime stats all read from what these two tables collect:
+
+- **Skills flywheel** — `ingest/skills.py` (~180-skill lexicon: tech, data,
+  finance, product, enterprise) runs inside make_job on the FULL JD (the only
+  moment it exists — the stored snippet is 280 chars). Phenom's native
+  ml_skills used directly. → jobs_pool.skills (jsonb, GIN-indexed), env-gated
+  by INGEST_SKILLS (safe either deploy order). Live-verified: kula
+  ['Agile','Salesforce'], phenom native tags, greenhouse full-JD extraction.
+- **Fingerprint flywheel** — `scripts/track_fingerprints.py` (nightly step,
+  failsafe): fingerprint = md5(company|normalized_title|city); reconciles
+  appearances vs job_fingerprints; a return after ≥7d absence = REPOST
+  (reappearances++, last_gap_days). Powers "Reposted 3×" chips + role-stability
+  proxies later.
+- **Honest fit tiers** — cards show Strong/Good/Possible fit instead of "83%"
+  false precision; exact score on hover.
+- daily.yml: INGEST_SKILLS=1 + fingerprint-tracker step (continue-on-error).
+- MANUAL STEP: run supabase/migrations/2026-07-17-flywheels.sql (skills column
+  + job_fingerprints) — safe before or after deploy, flag gates the writes.
+
 ## 2026-07-16 (d) — SuccessFactors CSB connector: the Indian IT majors (+663 India jobs)
 
 `connectors/sf_csb.py` parses the SHARED, server-rendered Career Site Builder

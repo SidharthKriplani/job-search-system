@@ -143,3 +143,28 @@ def test_sfcsb_registry_shape():
 def test_sfcsb_connector_callable():
     from ingest.connectors import sf_csb
     assert callable(sf_csb.fetch_site)
+
+
+# ── Skills flywheel (added 2026-07-16) ─────────────────────────────────────────
+
+def test_extract_skills():
+    from ingest.skills import extract_skills
+    jd = ("We need 3+ years Python, strong SQL, PySpark pipelines on AWS, "
+          "Docker/Kubernetes, and experience with Tableau dashboards. "
+          "Financial modeling and DCF valuation a plus.")
+    got = extract_skills(jd)
+    for s in ("Python", "SQL", "Spark", "AWS", "Docker", "Kubernetes", "Tableau",
+              "Financial Modeling", "Valuation"):
+        assert s in got, f"missing {s} in {got}"
+    assert extract_skills("") == []
+    assert extract_skills(None) == []
+
+
+def test_make_job_carries_skills():
+    from ingest.base import make_job
+    j = make_job(title="Data Engineer", company="X", url="https://x.com/1",
+                 source="test", description="Kafka, Airflow and Snowflake required.")
+    assert "skills" in j and "Kafka" in j["skills"] and "Snowflake" in j["skills"]
+    j2 = make_job(title="T", company="X", url="https://x.com/2", source="test",
+                  skills=["Custom Skill"])
+    assert j2["skills"] == ["Custom Skill"]

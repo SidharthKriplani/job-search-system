@@ -67,6 +67,12 @@ export default function JobCard({ job, onUpdate }: Props) {
   const [saving, setSaving] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const scorePct = Math.round((job.match_score || 0) * 100)
+  // Honest fit tiers — a word humans can calibrate on, not "83%" false
+  // precision. Exact % stays available on hover for the curious.
+  const tier =
+    scorePct >= 70 ? 'Strong fit' :
+    scorePct >= 40 ? 'Good fit' :
+                     'Possible fit'
   const scoreColor =
     scorePct >= 70 ? 'bg-green-100 text-green-700' :
     scorePct >= 40 ? 'bg-amber-100 text-amber-700' :
@@ -219,9 +225,10 @@ export default function JobCard({ job, onUpdate }: Props) {
           )}
         </div>
 
-        {/* Score badge */}
-        <div className={clsx('flex-shrink-0 px-2 py-1 rounded-lg text-xs font-bold', scoreColor)}>
-          {scorePct}%
+        {/* Fit tier badge (exact score on hover) */}
+        <div className={clsx('flex-shrink-0 px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap', scoreColor)}
+             title={`Match score: ${scorePct}%`}>
+          {tier}
         </div>
       </div>
 

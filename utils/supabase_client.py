@@ -315,6 +315,12 @@ POOL_COLUMNS = {
     "salary_range", "job_url", "description_snippet", "posted_date",
     "job_type", "seniority", "source_domain", "position", "location_city",
 }
+# Skills flywheel — the `skills` jsonb column must exist on jobs_pool BEFORE
+# this flag is set (supabase/migrations/2026-07-17-flywheels.sql), otherwise
+# pool upserts would reject whole batches. Env-gated so deploying code and
+# running SQL stay order-independent and safe.
+if os.environ.get("INGEST_SKILLS", "0").lower() in ("1", "true", "yes"):
+    POOL_COLUMNS.add("skills")
 
 
 def upsert_pool_jobs(jobs: List[Dict]) -> int:

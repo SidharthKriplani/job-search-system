@@ -90,9 +90,20 @@ jobs:
               github.event.schedule == '30 23 * * *' && '5' || ''
             }}
           LOG_LEVEL:             ${{ github.event.inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
+          # Skills flywheel — requires jobs_pool.skills column
+          # (supabase/migrations/2026-07-17-flywheels.sql). Env-gated in code.
+          INGEST_SKILLS:         '1'
           USE_EMBEDDINGS:        '1'
           FASTEMBED_CACHE_PATH:  ~/.cache/fastembed
         run: python main.py
+
+      - name: Track job fingerprints (repost/lifetime flywheel)
+        if: always()
+        continue-on-error: true
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python -m scripts.track_fingerprints
 
       - name: Commit run report
         if: always()
