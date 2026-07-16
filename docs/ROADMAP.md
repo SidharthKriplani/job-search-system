@@ -33,6 +33,19 @@ in CHANGELOG.
 - [ ] **Verify Gmail parsing at scale** — now opt-in and reachable; confirm the
       parser handles real Naukri/iimjobs alert emails (title↔URL pairing bug, D-note).
 
+## NEXT — coverage (data-driven, from scripts/detect_ats.py gap report)
+
+- [ ] **Darwinbox probe** — 10 target companies detected (BigBasket, Unacademy,
+      CarDekho, Digit, PharmEasy, 1mg). Was written off as captcha-walled; the
+      detector says it's the biggest gap. Verify from a runner IP first.
+- [ ] **SuccessFactors revisit** — 10 target companies (Wipro, HCLTech,
+      LTIMindtree, Capgemini). Career-site JSON wasn't found on 6 probed
+      tenants; try the Indian-IT tenants specifically before ruling out.
+- [ ] **Kula (Cashfree-class)** — XHR only; needs a one-time DevTools capture
+      per Claude-in-Chrome session, then decide if server-callable.
+- [ ] **Detector cadence** — run scripts/detect_ats.py monthly in harvest.yml;
+      grow data/target_companies.json (user target_companies fields + requests).
+
 ## NEXT — stickiness + intelligence (the moat)
 
 - [ ] **Act on the feedback loop** — `feed_feedback` + `TUNING_REPORT.md` collect

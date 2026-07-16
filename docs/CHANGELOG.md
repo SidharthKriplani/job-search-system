@@ -4,6 +4,31 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-16 (a) — Phenom link fix, link canary, company-first ATS detector
+
+- **Phenom deep links FIXED** (user-reported: View Job landed on the careers
+  homepage). Root cause: bare `/job/{seq}` serves the SPA shell which
+  client-redirects home; the server-rendered job page needs a locale prefix.
+  `registry.PHENOM` is now (host, locale_path, display) — verified per tenant
+  by title-in-HTML probe: NTT/Danaher/ThermoFisher/GE-Aero → /global/en,
+  Mastercard/DuPont/GSK → /us/en. Canary-verified 0 broken after fix.
+- **Link canary** (`scripts/link_canary.py`) — samples N job URLs per source
+  each run, GETs them, flags sources whose links 4xx or redirect to a homepage
+  (the exact Phenom failure class). Report-only by default, `--strict` for CI.
+- **ATS detector** (`scripts/detect_ats.py` + `data/target_companies.json`,
+  ~200 curated top India + overseas employers). Probes each company's careers
+  surface, fingerprints 30 ATS platforms, extracts slugs for supported ones,
+  writes `data/ats_detection.json`, prints a GAP REPORT ranked by count.
+- **First detector run found + live-verified 7 registry adds:** Paytm (lever,
+  238 jobs), Tiger Analytics (workable, 207), Apna (workable, 111), Sarvam AI
+  (ashby, 63), Glance (greenhouse, 38), Razorpay (greenhouse, 19),
+  Observe.AI (greenhouse, 16).
+- **Gap report verdict (next builds, data-driven):** Darwinbox 10 target
+  companies (BigBasket, Unacademy, CarDekho, Digit, PharmEasy, 1mg — bigger
+  than assumed; revisit the captcha-walled verdict), SuccessFactors 10 (Wipro,
+  HCLTech, LTIMindtree, Capgemini), Kula 2 (Cashfree-class, needs DevTools
+  XHR capture), iCIMS 2, Keka 1 (Jupiter).
+
 ## 2026-07-15 (u) — +3 Phenom tenants, +36 SmartRecruiters companies, normalization SQL ready
 
 Follow-through on the remaining free coverage levers:

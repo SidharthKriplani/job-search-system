@@ -98,6 +98,11 @@ GREENHOUSE = [
     ("kraftonindia", "Krafton"), ("headoutlinkedin", "Headoutlinkedin"), ("tellius", "Tellius"),
     ("fluxon", "Fluxon"), ("anydesk", "Anydesk"), ("prophecysimpledatalabs", "Prophecysimpledatalabs"),
     ("poppulo", "Poppulo"), ("goguardian", "Goguardian"), ("spauldingridge", "Spauldingridge"),
+    # From the ATS detector (scripts/detect_ats.py) over target_companies.json,
+    # live-verified 2026-07-16 (job counts in comments):
+    ("razorpaysoftwareprivatelimited", "Razorpay"),  # 19
+    ("glance", "Glance"),                            # 38
+    ("observeai", "Observe.AI"),                     # 16
 ]
 
 LEVER = [
@@ -122,6 +127,8 @@ LEVER = [
     ("extremenetworks", "Extremenetworks"), ("bounteous", "Bounteous"), ("actian", "Actian"),
     ("entrata", "Entrata"), ("regrello", "Regrello"), ("levelai", "Levelai"),
     ("matchgroup", "Matchgroup"), ("aeratechnology", "Aeratechnology"), ("findem", "Findem"),
+    # From the ATS detector, live-verified 2026-07-16:
+    ("paytm", "Paytm"),   # 238 jobs
 ]
 
 ASHBY = [
@@ -163,6 +170,8 @@ ASHBY = [
     ("stream", "Stream"), ("scaler", "Scaler"),
     # Batch 4 — Feashliaa list, verified
     ("dandy", "Dandy"),
+    # From the ATS detector, live-verified 2026-07-16:
+    ("sarvam", "Sarvam AI"),  # 63 jobs
 ]
 
 # Workday tenants: (tenant, wd_number, site, display_name). Each VERIFIED to
@@ -291,7 +300,10 @@ RECRUITEE = [
 # Slug = apply.workable.com/<slug> (the account name in the widget API URL).
 # Curated is UNIONed with data/workable_companies.json (harvester) at runtime.
 WORKABLE = [
-    ("groundtruth", "GroundTruth"),   # verified 2026-07-15, 16 jobs (8 India)
+    ("groundtruth", "GroundTruth"),        # verified 2026-07-15, 16 jobs (8 India)
+    # From the ATS detector, live-verified 2026-07-16:
+    ("apna", "Apna"),                      # 111 jobs
+    ("tiger-analytics", "Tiger Analytics"),# 207 jobs
 ]
 
 # ── BambooHR companies (slug, display) — public careers JSON, verified live ───
@@ -300,20 +312,22 @@ BAMBOOHR = [
     ("issgh", "Inchcape Shipping Services"),  # verified 2026-07-15, 30 jobs (9 India-ish)
 ]
 
-# ── Phenom career sites (host, display) — public /widgets JSON, verified live ─
-# Each host verified 2026-07-15 to return India jobs via POST /widgets (India
-# hit counts noted). Some Phenom tenants 403 datacenter IPs — only verified-open
-# hosts belong here. To add one: POST /widgets with ddoKey=refineSearch on the
-# company's careers host; keep it if refineSearch.totalHits > 0.
+# ── Phenom career sites (host, locale_path, display) — public /widgets JSON ───
+# Each host verified to return India jobs via POST /widgets (India hit counts
+# noted). locale_path is REQUIRED for job deep links: {host}{locale}/job/{seq}
+# server-renders the job, while bare /job/{seq} serves the SPA shell that
+# bounces to the homepage (found the hard way, 2026-07-16). Verify a tenant's
+# locale by GET {host}{locale}/job/{jobSeqNo} and checking the title is in the
+# HTML. Some Phenom tenants 403 datacenter IPs — only verified-open hosts here.
 PHENOM = [
-    ("careers.services.global.ntt", "NTT"),          # ~1,319 India hits
-    ("careers.mastercard.com",      "Mastercard"),   # ~241 India hits
-    ("careers.dupont.com",          "DuPont"),       # ~20 India hits
-    ("jobs.danaher.com",            "Danaher"),      # ~98 India hits
+    ("careers.services.global.ntt", "/global/en", "NTT"),           # ~1,319 India hits
+    ("careers.mastercard.com",      "/us/en",     "Mastercard"),    # ~241
+    ("careers.dupont.com",          "/us/en",     "DuPont"),        # ~20
+    ("jobs.danaher.com",            "/global/en", "Danaher"),       # ~98
     # Batch 2 (2026-07-15 sweep of ~79 enterprise hosts; only open tenants kept)
-    ("jobs.thermofisher.com",       "Thermo Fisher"),  # ~334 India hits
-    ("jobs.gsk.com",                "GSK"),            # ~134 India hits
-    ("careers.geaerospace.com",     "GE Aerospace"),   # ~14 India hits
+    ("jobs.thermofisher.com",       "/global/en", "Thermo Fisher"), # ~334
+    ("jobs.gsk.com",                "/us/en",     "GSK"),           # ~134
+    ("careers.geaerospace.com",     "/global/en", "GE Aerospace"),  # ~14
 ]
 
 # ── Eightfold tenants (tenant, company-domain, display) — BEST-EFFORT ─────────
@@ -430,6 +444,7 @@ def unit_domain(label: str, uid: str) -> str:
         curated = {s for s, _ in (WORKABLE if label == "workable" else BAMBOOHR)}
         return "tech" if uid in curated else "general"
     if label == "phenom":
+        # uid is the host (first tuple element)
         return "finance" if uid == "careers.mastercard.com" else "tech"
     if label == "eightfold":
         return "tech"

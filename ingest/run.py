@@ -56,8 +56,8 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]], str]]:
         units.append(("bamboohr", slug, lambda s=slug, d=disp, c=bcap: bamboohr.fetch_company(s, d, c)))
 
     pcap = int(os.environ.get("PHENOM_MAX_PER_COMPANY", "200"))
-    for host, disp in registry.PHENOM:
-        units.append(("phenom", host, lambda hh=host, d=disp, c=pcap: phenom.fetch_site(hh, d, c)))
+    for host, locale, disp in registry.PHENOM:
+        units.append(("phenom", host, lambda hh=host, d=disp, c=pcap, lo=locale: phenom.fetch_site(hh, d, c, lo)))
     ecap = int(os.environ.get("EIGHTFOLD_MAX_PER_COMPANY", "200"))
     for tenant, domain, disp in registry.EIGHTFOLD:
         units.append(("eightfold", tenant, lambda t=tenant, dm=domain, d=disp, c=ecap: eightfold.fetch_company(t, dm, d, c)))

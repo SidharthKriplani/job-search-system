@@ -80,9 +80,10 @@ def test_unit_domain_new_labels():
 def test_phenom_registry_shape():
     assert registry.PHENOM, "PHENOM registry is empty"
     for row in registry.PHENOM:
-        assert len(row) == 2, f"PHENOM entry must be (host, display): {row}"
-        host, _ = row
+        assert len(row) == 3, f"PHENOM entry must be (host, locale_path, display): {row}"
+        host, locale, _ = row
         assert "." in host and not host.startswith("http"), f"host must be bare domain: {host}"
+        assert locale.startswith("/") and not locale.endswith("/"), f"locale must be /xx/yy: {locale}"
 
 
 def test_eightfold_registry_shape():

@@ -8,7 +8,10 @@ Phenom — the career-site engine behind many large enterprises' India hiring
              location, cityStateCountry, country, descriptionTeaser, postedDate,
              type, category, ...}]}}}
 
-Job page: https://{host}/job/{jobSeqNo} (SPA route, verified live).
+Job page: https://{host}{locale_path}/job/{jobSeqNo} — the locale prefix is
+REQUIRED (e.g. /global/en for NTT, /us/en for Mastercard). The bare /job/{seq}
+route serves the SPA shell which client-redirects to the homepage. locale_path
+lives per tenant in registry.PHENOM, verified by title-in-HTML probe.
 
 NOTE: keywords is a loose ranker (like Workday's searchText) — India jobs come
 back first but strays appear; the downstream location filter drops them. Some
@@ -44,8 +47,11 @@ def _body(offset: int, size: int) -> dict:
     }
 
 
-def fetch_site(host: str, display: str, cap: int = 0) -> List[Dict]:
+def fetch_site(host: str, display: str, cap: int = 0, locale: str = "") -> List[Dict]:
     cap = cap or int(os.environ.get("PHENOM_MAX_PER_COMPANY", "200"))
+    if not locale:  # look up from registry when not passed explicitly
+        from ..registry import PHENOM
+        locale = next((lp for h, lp, _d in PHENOM if h == host), "/us/en")
     out: List[Dict] = []
     offset = 0
     while offset < cap:
@@ -62,7 +68,7 @@ def fetch_site(host: str, display: str, cap: int = 0) -> List[Dict]:
             job = make_job(
                 title=j.get("title", ""),
                 company=display,
-                url=f"https://{host}/job/{seq}" if seq else "",
+                url=f"https://{host}{locale}/job/{seq}" if seq else "",
                 source=SOURCE,
                 location=j.get("location") or j.get("cityStateCountry") or "",
                 description=j.get("descriptionTeaser", ""),
@@ -83,9 +89,9 @@ def fetch() -> List[Dict]:
     from ..registry import PHENOM
     cap = int(os.environ.get("PHENOM_MAX_PER_COMPANY", "200"))
     jobs: List[Dict] = []
-    for host, display in PHENOM:
+    for host, locale, display in PHENOM:
         try:
-            jobs.extend(fetch_site(host, display, cap))
+            jobs.extend(fetch_site(host, display, cap, locale))
         except Exception as e:
             logger.warning(f"[phenom] {host} failed: {e}")
     return jobs

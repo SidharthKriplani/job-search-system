@@ -1,0 +1,1232 @@
+{
+ "AMD India": {
+  "connector": "gap",
+  "evidence": "https://careers.amd.com/careers-home/jobs",
+  "platform": "icims",
+  "slug": "amd"
+ },
+ "Accenture India": {
+  "connector": "supported",
+  "evidence": "https://www.accenture.com/us-en/careers",
+  "platform": "workday",
+  "slug": "accenture"
+ },
+ "Acko": {
+  "connector": "unknown",
+  "evidence": "https://www.acko.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Acuity Knowledge Partners": {
+  "connector": "gap",
+  "evidence": "https://www.acuityanalytics.com/working-here/",
+  "platform": "darwinbox",
+  "slug": null
+ },
+ "Adobe India": {
+  "connector": "supported",
+  "evidence": "https://careers.adobe.com/us/en",
+  "platform": "phenom",
+  "slug": null
+ },
+ "Airbus India": {
+  "connector": "supported",
+  "evidence": "https://www.airbus.com/en/careers",
+  "platform": "workday",
+  "slug": "ag"
+ },
+ "Airtel": {
+  "connector": "unknown",
+  "evidence": "https://www.airtel.in/b2b/global-connectivity-solutions",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Amazon India": {
+  "connector": "unknown",
+  "evidence": "https://jobs.amazon.in/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "American Express India": {
+  "connector": "supported",
+  "evidence": "https://careers.americanexpress.com/en/sites/CX_1",
+  "platform": "oracle_orc",
+  "slug": "egug.fa.us2.oraclecloud.com"
+ },
+ "Analog Devices India": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Angel One": {
+  "connector": "unknown",
+  "evidence": "https://www.angelone.in/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Apna": {
+  "connector": "supported",
+  "evidence": "https://careers.apna.co/",
+  "platform": "workable",
+  "slug": "apna"
+ },
+ "Apple India": {
+  "connector": "unknown",
+  "evidence": "https://www.apple.com/careers/us/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Arm India": {
+  "connector": "gap",
+  "evidence": "https://careers.arm.com/",
+  "platform": "icims",
+  "slug": "arm"
+ },
+ "Asian Paints": {
+  "connector": "gap",
+  "evidence": "https://careers.asianpaints.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "Ather Energy": {
+  "connector": "unknown",
+  "evidence": "https://careers.atherenergy.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Atlassian": {
+  "connector": "unknown",
+  "evidence": "https://www.atlassian.com/company/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Axis Bank": {
+  "connector": "unknown",
+  "evidence": "https://www.axis.bank.in/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "BSE": {
+  "connector": "unknown",
+  "evidence": "https://www.bseindia.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "BYJU'S": {
+  "connector": "unknown",
+  "evidence": "https://byjus.com/careers-at-byjus/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Bajaj Finance": {
+  "connector": "unknown",
+  "evidence": "https://www.bajajfinserv.in/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Bajaj Finserv": {
+  "connector": "unknown",
+  "evidence": "https://www.bajajfinserv.in/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "BharatPe": {
+  "connector": "unknown",
+  "evidence": "https://bharatpe.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "BigBasket": {
+  "connector": "gap",
+  "evidence": "https://careers.bigbasket.com/",
+  "platform": "darwinbox",
+  "slug": "bigbasket"
+ },
+ "Birlasoft": {
+  "connector": "gap",
+  "evidence": "https://jobs.birlasoft.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "Blinkit": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Boeing India": {
+  "connector": "supported",
+  "evidence": "https://jobs.boeing.com",
+  "platform": "workday",
+  "slug": "boeing"
+ },
+ "Bosch India": {
+  "connector": "unknown",
+  "evidence": "https://www.bosch.in/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Bridgei2i": {
+  "connector": "supported",
+  "evidence": "https://www.accenture.com/us-en/careers/explore-careers/area-of-interest/ai-data-science-careers",
+  "platform": "workday",
+  "slug": "accenture"
+ },
+ "Britannia": {
+  "connector": "gap",
+  "evidence": "https://www.britannia.co.in/careers",
+  "platform": "zoho_workerly/custom",
+  "slug": null
+ },
+ "BrowserStack": {
+  "connector": "supported",
+  "evidence": "https://www.browserstack.com:443/careers",
+  "platform": "workday",
+  "slug": "browserstack"
+ },
+ "CAMS": {
+  "connector": "unknown",
+  "evidence": "https://www.camsonline.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "CRED": {
+  "connector": "unknown",
+  "evidence": "https://careers.cred.club/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "CRISIL": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Capgemini India": {
+  "connector": "gap",
+  "evidence": "https://careers.capgemini.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "CarDekho": {
+  "connector": "gap",
+  "evidence": "https://careers.cardekho.com/",
+  "platform": "darwinbox",
+  "slug": "cardekho"
+ },
+ "Cars24": {
+  "connector": "unknown",
+  "evidence": "https://careers.cars24.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Cashfree Payments": {
+  "connector": "unknown",
+  "evidence": "https://www.cashfree.com:443/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Chargebee": {
+  "connector": "gap",
+  "evidence": "https://jobs.chargebee.com:443/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "Cisco India": {
+  "connector": "supported",
+  "evidence": "https://careers.cisco.com/global/en",
+  "platform": "phenom",
+  "slug": null
+ },
+ "Cleartrip": {
+  "connector": "gap",
+  "evidence": "https://careers.cleartrip.com/",
+  "platform": "zoho_workerly/custom",
+  "slug": null
+ },
+ "CleverTap": {
+  "connector": "gap",
+  "evidence": "https://clevertap.com/careers/",
+  "platform": "kula",
+  "slug": "clevertap"
+ },
+ "Coforge": {
+  "connector": "unknown",
+  "evidence": "https://careers.coforge.com/coforge/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Cognizant": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Cyient": {
+  "connector": "unknown",
+  "evidence": "https://careers.cyient.com/cyient/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Dabur": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Darwinbox": {
+  "connector": "gap",
+  "evidence": "https://darwinbox.com/en-us",
+  "platform": "darwinbox",
+  "slug": null
+ },
+ "Delhivery": {
+  "connector": "unknown",
+  "evidence": "https://www.delhivery.com:443/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Dell India": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Digit Insurance": {
+  "connector": "gap",
+  "evidence": "https://www.godigit.com/careers",
+  "platform": "darwinbox",
+  "slug": "godigit"
+ },
+ "Dream11": {
+  "connector": "unknown",
+  "evidence": "https://www.dream11.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "EXL Service": {
+  "connector": "supported",
+  "evidence": "https://www.exlservice.com/careers",
+  "platform": "oracle_orc",
+  "slug": "fa-ewjt-saasfaprod1.fa.ocs.oraclecloud.com"
+ },
+ "Ecom Express": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Edelweiss": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Evalueserve": {
+  "connector": "unknown",
+  "evidence": "https://www.evalueserve.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Exotel": {
+  "connector": "unknown",
+  "evidence": "https://exotel.com/about-us/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Flipkart": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Fractal Analytics": {
+  "connector": "supported",
+  "evidence": "https://fractal.wd1.myworkdayjobs.com/Careers",
+  "platform": "workday",
+  "slug": "fractal"
+ },
+ "Freshworks": {
+  "connector": "supported",
+  "evidence": "https://careers.smartrecruiters.com/Freshworks",
+  "platform": "smartrecruiters",
+  "slug": "Freshworks"
+ },
+ "GE HealthCare India": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Games24x7": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Genpact": {
+  "connector": "supported",
+  "evidence": "https://www.genpact.com/careers",
+  "platform": "workday",
+  "slug": "genpact"
+ },
+ "Glance": {
+  "connector": "supported",
+  "evidence": "https://glance.com/us/careers",
+  "platform": "greenhouse",
+  "slug": "glance"
+ },
+ "Goldman Sachs India": {
+  "connector": "unknown",
+  "evidence": "https://www.goldmansachs.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Google India": {
+  "connector": "unknown",
+  "evidence": "https://www.google.com/about/careers/applications/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Gramener": {
+  "connector": "unknown",
+  "evidence": "https://gramener.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Groww": {
+  "connector": "supported",
+  "evidence": "https://groww.in/careers",
+  "platform": "greenhouse",
+  "slug": "groww"
+ },
+ "Gupshup": {
+  "connector": "unknown",
+  "evidence": "https://www.gupshup.ai:443/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "HCLTech": {
+  "connector": "gap",
+  "evidence": "https://careers.hcltech.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "HDFC Bank": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "HDFC Life": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "HSBC India": {
+  "connector": "unknown",
+  "evidence": "https://www.hsbc.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Haptik": {
+  "connector": "gap",
+  "evidence": "https://www.haptik.ai/careers",
+  "platform": "freshteam",
+  "slug": "haptik"
+ },
+ "Hasura": {
+  "connector": "unknown",
+  "evidence": "https://promptql.io/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "HealthifyMe": {
+  "connector": "gap",
+  "evidence": "https://www.healthifyme.com:443/careers/",
+  "platform": "darwinbox",
+  "slug": "healthify"
+ },
+ "Hindustan Unilever": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Housing.com": {
+  "connector": "unknown",
+  "evidence": "https://careers.housing.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "IBM India": {
+  "connector": "unknown",
+  "evidence": "https://careers.ibm.com/en_US/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "ICICI Bank": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "ICICI Lombard": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "ICRA": {
+  "connector": "unknown",
+  "evidence": "https://www.icra.in/Home/SessionTimeOut",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "IDFC FIRST Bank": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "IIFL": {
+  "connector": "gap",
+  "evidence": "https://www.iifl.com/finance/career",
+  "platform": "darwinbox",
+  "slug": "iifl"
+ },
+ "ITC": {
+  "connector": "unknown",
+  "evidence": "https://itcportal.com/careers.html",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "InMobi": {
+  "connector": "unknown",
+  "evidence": "https://www.inmobi.com/company/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Infosys": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Intuit India": {
+  "connector": "unknown",
+  "evidence": "https://www.intuit.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "JP Morgan India": {
+  "connector": "supported",
+  "evidence": "https://www.jpmorganchase.com/careers?redirect=careers_jpm",
+  "platform": "oracle_orc",
+  "slug": "jpmc.fa.oraclecloud.com"
+ },
+ "Jio Platforms": {
+  "connector": "unknown",
+  "evidence": "https://careers.jio.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Jupiter": {
+  "connector": "gap",
+  "evidence": "https://jupiter.money/careers/",
+  "platform": "keka",
+  "slug": "jupiter"
+ },
+ "Juspay": {
+  "connector": "unknown",
+  "evidence": "https://juspay.io/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "KFintech": {
+  "connector": "unknown",
+  "evidence": "https://www.kfintech.com/jobs/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "KPIT": {
+  "connector": "unknown",
+  "evidence": "https://www.kpit.com/careers-overview/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Kotak Mahindra Bank": {
+  "connector": "unknown",
+  "evidence": "https://www.kotak.com/error/err.html",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "KreditBee": {
+  "connector": "unknown",
+  "evidence": "https://www.kreditbee.in/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Krutrim": {
+  "connector": "unknown",
+  "evidence": "https://www.olakrutrim.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "L&T": {
+  "connector": "unknown",
+  "evidence": "https://careers.larsentoubro.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "L&T Technology Services": {
+  "connector": "gap",
+  "evidence": "https://jobs.ltts.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "LTIMindtree": {
+  "connector": "gap",
+  "evidence": "https://careers.ltimindtree.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "LatentView": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Lenskart": {
+  "connector": "unknown",
+  "evidence": "https://ainterviews.com/job_board/lenskart_ho/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Lowe's India": {
+  "connector": "supported",
+  "evidence": "https://talent.lowes.com/us/en",
+  "platform": "phenom",
+  "slug": null
+ },
+ "MPL": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Mahindra": {
+  "connector": "unknown",
+  "evidence": "https://www.mahindra.com/career",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "MakeMyTrip": {
+  "connector": "unknown",
+  "evidence": "https://careers.makemytrip.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Mamaearth": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Marico": {
+  "connector": "unknown",
+  "evidence": "https://marico.com/global/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Maruti Suzuki": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Meesho": {
+  "connector": "unknown",
+  "evidence": "https://jobs.meesho.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Meta India": {
+  "connector": "unknown",
+  "evidence": "https://www.metacareers.com/?utm_source=meta.com&utm_medium=redirect",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Micron India": {
+  "connector": "supported",
+  "evidence": "https://careers.micron.com/careers",
+  "platform": "workday",
+  "slug": "micron"
+ },
+ "Microsoft India": {
+  "connector": "unknown",
+  "evidence": "https://careers.microsoft.com/v2/global/en/home.html",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "MoEngage": {
+  "connector": "unknown",
+  "evidence": "https://www.moengage.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Morgan Stanley India": {
+  "connector": "unknown",
+  "evidence": "https://www.morganstanley.com/people",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Motilal Oswal": {
+  "connector": "unknown",
+  "evidence": "https://www.motilaloswal.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Mphasis": {
+  "connector": "unknown",
+  "evidence": "https://careers.mphasis.com/home.html",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Mu Sigma": {
+  "connector": "unknown",
+  "evidence": "https://www.mu-sigma.com/career/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Myntra": {
+  "connector": "unknown",
+  "evidence": "https://careers.myntra.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "NSE": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Navi": {
+  "connector": "gap",
+  "evidence": "https://navi.com/careers",
+  "platform": "zoho_workerly/custom",
+  "slug": null
+ },
+ "Nestle India": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Netcore Cloud": {
+  "connector": "unknown",
+  "evidence": "https://netcorecloud.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Netflix India": {
+  "connector": "unknown",
+  "evidence": "https://www.netflix.com/NotFound?prev=https%3A%2F%2Fwww.netflix.com%2Fcareers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "NoBroker": {
+  "connector": "unknown",
+  "evidence": "https://www.nobroker.in/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Nutanix India": {
+  "connector": "gap",
+  "evidence": "https://jobs.jobvite.com/nutanix",
+  "platform": "jobvite",
+  "slug": "nutanix"
+ },
+ "Nykaa": {
+  "connector": "unknown",
+  "evidence": "https://careers.nykaa.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "OYO": {
+  "connector": "unknown",
+  "evidence": "https://www.oyorooms.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Observe.AI": {
+  "connector": "supported",
+  "evidence": "https://observe.ai/careers",
+  "platform": "greenhouse",
+  "slug": "embed"
+ },
+ "Ola": {
+  "connector": "gap",
+  "evidence": "https://www.olacabs.com/careers",
+  "platform": "zoho_workerly/custom",
+  "slug": null
+ },
+ "Ola Electric": {
+  "connector": "gap",
+  "evidence": "https://www.olaelectric.com/careers",
+  "platform": "zoho_workerly/custom",
+  "slug": null
+ },
+ "Oracle India": {
+  "connector": "supported",
+  "evidence": "https://careers.oracle.com/en/sites/jobsearch",
+  "platform": "oracle_orc",
+  "slug": "eeho.fa.us2.oraclecloud.com"
+ },
+ "Ozonetel": {
+  "connector": "unknown",
+  "evidence": "https://ozonetel.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Palo Alto Networks India": {
+  "connector": "unknown",
+  "evidence": "https://jobs.paloaltonetworks.com/en",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "PayPal India": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Paytm": {
+  "connector": "supported",
+  "evidence": "https://paytm.com/careers",
+  "platform": "lever",
+  "slug": "paytm"
+ },
+ "Persistent Systems": {
+  "connector": "unknown",
+  "evidence": "https://careers.persistent.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "PharmEasy": {
+  "connector": "gap",
+  "evidence": "https://pharmeasy.in/careers/",
+  "platform": "darwinbox",
+  "slug": "myhr"
+ },
+ "PhonePe": {
+  "connector": "unknown",
+  "evidence": "https://www.phonepe.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "PhysicsWallah": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Pine Labs": {
+  "connector": "unknown",
+  "evidence": "https://www.pinelabs.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Plum": {
+  "connector": "gap",
+  "evidence": "https://www.plumhq.com/careers",
+  "platform": "kula",
+  "slug": "plumhq"
+ },
+ "PolicyBazaar": {
+  "connector": "unknown",
+  "evidence": "https://www.policybazaar.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Postman": {
+  "connector": "unknown",
+  "evidence": "https://www.postman.com/company/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Practo": {
+  "connector": "unknown",
+  "evidence": "https://careers.practo.com/practo/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Pure Storage India": {
+  "connector": "unknown",
+  "evidence": "https://www.everpuredata.com/company/careers.html",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Qualcomm India": {
+  "connector": "supported",
+  "evidence": "https://careers.qualcomm.com/careers",
+  "platform": "eightfold",
+  "slug": "app"
+ },
+ "Quantiphi": {
+  "connector": "supported",
+  "evidence": "https://quantiphi.com/careers/",
+  "platform": "workday",
+  "slug": "quantiphi"
+ },
+ "RBL Bank": {
+  "connector": "unknown",
+  "evidence": "https://www.rbl.bank.in:443/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Rapido": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Razorpay": {
+  "connector": "supported",
+  "evidence": "https://razorpay.com/careers/",
+  "platform": "greenhouse",
+  "slug": "razorpaysoftwareprivatelimited"
+ },
+ "Red Hat India": {
+  "connector": "unknown",
+  "evidence": "https://www.redhat.com/en/jobs",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Reliance Jio": {
+  "connector": "unknown",
+  "evidence": "https://careers.jio.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Reliance Retail": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "SAP Labs India": {
+  "connector": "gap",
+  "evidence": "https://jobs.sap.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "SBI": {
+  "connector": "unknown",
+  "evidence": "https://sbi.bank.in/web/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "SG Analytics": {
+  "connector": "unknown",
+  "evidence": "https://www.sganalytics.com:443/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Salesforce India": {
+  "connector": "unknown",
+  "evidence": "https://www.salesforce.com/company/careers/?bc=OTH",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Sarvam AI": {
+  "connector": "supported",
+  "evidence": "https://www.sarvam.ai/careers",
+  "platform": "ashby",
+  "slug": "sarvam"
+ },
+ "ServiceNow India": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "ShareChat": {
+  "connector": "unknown",
+  "evidence": "https://sharechat.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Shell India": {
+  "connector": "supported",
+  "evidence": "https://shell.wd3.myworkdayjobs.com/shellcareers",
+  "platform": "workday",
+  "slug": "shell"
+ },
+ "Siemens India": {
+  "connector": "unknown",
+  "evidence": "https://www.siemens.com/en-us/company/jobs/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Sigmoid": {
+  "connector": "unknown",
+  "evidence": "https://www.sigmoid.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Spinny": {
+  "connector": "unknown",
+  "evidence": "https://www.spinny.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Standard Chartered GBS": {
+  "connector": "unknown",
+  "evidence": "https://www.sc.com/en/global-careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Swiggy": {
+  "connector": "unknown",
+  "evidence": "https://careers.swiggy.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "TCS": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Target India": {
+  "connector": "supported",
+  "evidence": "https://corporate.target.com/careers",
+  "platform": "workday",
+  "slug": "target"
+ },
+ "Tata 1mg": {
+  "connector": "gap",
+  "evidence": "https://www.1mg.com/jobs",
+  "platform": "darwinbox",
+  "slug": "1mg"
+ },
+ "Tata Digital": {
+  "connector": "unknown",
+  "evidence": "https://www.tataneu.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Tata Elxsi": {
+  "connector": "unknown",
+  "evidence": "https://www.tataelxsi.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Tata Motors": {
+  "connector": "gap",
+  "evidence": "https://careers.tatamotors.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "Tech Mahindra": {
+  "connector": "unknown",
+  "evidence": "https://careers.techmahindra.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Tesco Bengaluru": {
+  "connector": "gap",
+  "evidence": "https://careers.tesco.com/en_GB/careers",
+  "platform": "avature",
+  "slug": "tesco"
+ },
+ "Texas Instruments India": {
+  "connector": "supported",
+  "evidence": "https://careers.ti.com/en/sites/CX",
+  "platform": "oracle_orc",
+  "slug": "edbz.fa.us2.oraclecloud.com"
+ },
+ "Tiger Analytics": {
+  "connector": "supported",
+  "evidence": "https://www.tigeranalytics.com/about-us/current-openings/",
+  "platform": "workable",
+  "slug": "j"
+ },
+ "Tredence": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "UBS India": {
+  "connector": "unknown",
+  "evidence": "https://careers.ubs.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Uber": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Uber India": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Unacademy": {
+  "connector": "gap",
+  "evidence": "https://unacademy.com/careers",
+  "platform": "darwinbox",
+  "slug": "unacademy"
+ },
+ "Upstox": {
+  "connector": "unknown",
+  "evidence": "https://upstox.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Urban Company": {
+  "connector": "unknown",
+  "evidence": "https://careers.urbancompany.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "VMware India": {
+  "connector": "unknown",
+  "evidence": "https://www.broadcom.com/company/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Vedantu": {
+  "connector": "unknown",
+  "evidence": "https://courses.vedantu.com/career-page/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Visa India": {
+  "connector": "supported",
+  "evidence": "https://corporate.visa.com/en/careers.html",
+  "platform": "workday",
+  "slug": "visa"
+ },
+ "WNS": {
+  "connector": "unknown",
+  "evidence": "https://www.wns.com/about-us/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Walmart Global Tech India": {
+  "connector": "unknown",
+  "evidence": "https://careers.walmart.com/us/en/home",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "WebEngage": {
+  "connector": "unknown",
+  "evidence": "https://webengage.com/current-openings/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Whatfix": {
+  "connector": "unknown",
+  "evidence": "https://whatfix.com/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Wipro": {
+  "connector": "gap",
+  "evidence": "https://careers.wipro.com/",
+  "platform": "successfactors",
+  "slug": null
+ },
+ "Yellow.ai": {
+  "connector": "unknown",
+  "evidence": "https://careers.yellow.ai/jobs/Careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Yes Bank": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Zensar": {
+  "connector": "supported",
+  "evidence": "https://www.zensar.com/careers",
+  "platform": "oracle_orc",
+  "slug": "fa-etvl-saasfaprod1.fa.ocs.oraclecloud.com"
+ },
+ "Zepto": {
+  "connector": "unknown",
+  "evidence": "https://zepto.talentrecruit.com/career-page",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Zerodha": {
+  "connector": "unknown",
+  "evidence": "https://careers.zerodha.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Zoho": {
+  "connector": "unknown",
+  "evidence": "https://www.zoho.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Zomato": {
+  "connector": "unknown",
+  "evidence": "https://www.eternal.com/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "Zscaler India": {
+  "connector": "unknown",
+  "evidence": "https://www.zscaler.com:443/careers",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "boAt": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "bp India (Castrol/TSI)": {
+  "connector": "supported",
+  "evidence": "https://careers.bp.com/",
+  "platform": "workday",
+  "slug": "bpinternational"
+ },
+ "cult.fit": {
+  "connector": "unknown",
+  "evidence": "https://careers.cult.fit/cult/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "ixigo": {
+  "connector": "unknown",
+  "evidence": null,
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "slice": {
+  "connector": "unknown",
+  "evidence": "https://slice.bank.in/careers/",
+  "platform": "custom/unknown",
+  "slug": null
+ },
+ "upGrad": {
+  "connector": "unknown",
+  "evidence": "https://careers.upgrad.com/",
+  "platform": "custom/unknown",
+  "slug": null
+ }
+}
