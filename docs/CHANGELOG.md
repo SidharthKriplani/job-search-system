@@ -4,6 +4,40 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-17 — Settings-scope contract: profile locations bound the feed
+
+Settings are now the feed's OUTER BOUNDARY, not a suggestion:
+
+- **`lib/locationScope.ts` (new)** — expands freeform profile locations
+  ("Bengaluru", "Delhi NCR", "remote") to canonical `location_city` values via
+  the `facet_terms` dictionary, with an Indian-metro alias map
+  (bengaluru↔bangalore, gurgaon↔gurugram, NCR→its cities, remote→WFH variants).
+  Zero matches (typo'd settings) → NO constraint + a visible
+  `locations_unmatched` note, never a silently blank feed.
+- **`/api/feed`** — applies the expanded location boundary to both RPCs when
+  profile locations are set; UI location filters INTERSECT the boundary (a
+  stale saved-search value outside it returns an honest 0 + note, never a
+  leak). `scopeOff=1` lifts the location boundary (roles stay binding — they
+  are identity, not a filter). When a scoped view totals 0, one extra count
+  without `p_locations` returns `outsideTotal` for the diagnostic.
+- **`/api/facets`** — Location OPTIONS trimmed to the boundary (live + the
+  cumulative-dictionary merge). Companies keep the full dictionary on purpose
+  (0-count companies power the careers-page fallback); positions stay
+  live/role-scoped.
+- **Dashboard** — scope chips row ("Scoped to your settings: roles · 📍
+  locations · edit · Browse all locations"), sessionStorage-backed override,
+  and two new empty-state diagnoses: filter-outside-scope, and scoped-empty
+  with "Browse all locations (N)".
+- Initial server render (`dashboard/page.tsx`) uses the same expansion, so
+  first paint and client re-queries agree.
+
+Why: populated settings previously constrained SCORING but not READS — a user
+with locations=[Bengaluru] still saw (and could filter to) every city in the
+pool. Known gap: `salary_floor` is still scoring-side only; a hard filter needs
+a `p_salary_floor` param on the feed RPCs (SQL migration) — deferred.
+
+---
+
 ## 2026-07-17 — Jobvite + Zoho Recruit connectors, CTC-to-ask heuristic
 
 Buildable-now batch (no paid sources, no LLM):

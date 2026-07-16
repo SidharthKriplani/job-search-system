@@ -5,6 +5,17 @@ decision is reversed, add a new entry that supersedes it).
 
 ---
 
+### D31 — Settings are the feed's outer boundary; filters narrow, never widen (2026-07-17)
+With locations set in Settings, the feed query, the Location facet options, and
+the initial render all inherit that boundary; facet filters can only narrow
+within it. One explicit, session-scoped "Browse all locations" override exists
+because exploration is a real job-search mode — without it users gut their
+settings just to look around, which corrupts the profile the matcher depends
+on. Roles are NOT overridable from the feed (identity, not filter). Location
+matching goes through a dictionary expansion with metro aliases rather than
+exact string equality, and an unmatched profile location degrades to
+"unconstrained + visible warning" — a typo must never silently blank the feed.
+
 ### D30 — Sign-in requests NO Gmail scope; Gmail is opt-in (2026-07-15)
 Every Google sign-in used to request the restricted `gmail.modify` scope, which
 triggered Google's "unverified app" warning, demanded full verification (blocked

@@ -1,6 +1,6 @@
 # STATUS — current state
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-17 (settings-scope contract shipped to frontend)_
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
@@ -11,6 +11,17 @@ The product works end-to-end for real users. Friends sign in (Google + email),
 get a personalised India-focused feed with working filters and sort, save
 searches, and get email digests. The month-long "0 jobs" era is closed; the
 signup-blocking trigger bug is fixed; sources have been expanded ~3×.
+
+## Latest change
+
+**Settings-scope contract (frontend)** — profile `locations` now bound the feed
+end-to-end: initial render, `/api/feed` re-queries, and the Location facet
+options all inherit the boundary; UI filters can only narrow within it. New
+"Browse all locations" session override, scope chips row, and over-constraint
+diagnostics ("0 inside your locations — N exist elsewhere"). Roles were already
+binding (ingest scoring + read-guard); salary_floor remains scoring-side only
+(no hard filter — the feed RPCs have no salary param yet). See CHANGELOG
+2026-07-17 and DECISIONS D31.
 
 ## At a glance
 

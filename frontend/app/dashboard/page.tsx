@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { effectiveRoles } from '@/lib/feedFilter'
+import { scopedLocationsFor } from '@/lib/locationScope'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -13,7 +14,7 @@ export default async function DashboardPage() {
   const MIN_SCORE = Number(process.env.NEXT_PUBLIC_MIN_FEED_SCORE || 0.45)
 
   const { data: prof } = await supabase
-    .from('user_profiles').select('target_roles, industries, resume_text').eq('user_id', user.id).maybeSingle()
+    .from('user_profiles').select('target_roles, industries, resume_text, locations').eq('user_id', user.id).maybeSingle()
   const roles = effectiveRoles(prof?.target_roles, prof?.resume_text)
 
   const needsProfile = !(roles.length || prof?.industries?.length)
@@ -24,6 +25,7 @@ export default async function DashboardPage() {
         appliedCount={0} scraperHealth={[]}
         userName={user.user_metadata?.full_name || user.email || 'there'}
         availableSources={['All']} needsProfile
+        profileRoles={[]} profileLocations={[]}
       />
     )
   }
@@ -31,7 +33,10 @@ export default async function DashboardPage() {
   // Stage 2 v2: reads via SECURITY DEFINER RPCs (user_job_matches x jobs_pool,
   // caller bound to auth.uid() inside) — measured ~24 ms; the RLS-view path
   // blew the statement timeout. See supabase/migrations/2026-07-17-stage2-v2.sql.
-  const base = { p_q: '', p_scope: 'all', p_boards: [], p_positions: [], p_companies: [], p_locations: [], p_min_score: MIN_SCORE }
+  // Settings-scope contract: profile locations bound the initial render too,
+  // so first paint and client re-queries agree (see /api/feed).
+  const locScope = await scopedLocationsFor(supabase, prof?.locations)
+  const base = { p_q: '', p_scope: 'all', p_boards: [], p_positions: [], p_companies: [], p_locations: locScope.active ? locScope.scoped : [], p_min_score: MIN_SCORE }
   const [
     { data: jobs },
     { data: newCount },
@@ -67,6 +72,8 @@ export default async function DashboardPage() {
       scraperHealth={scraperHealth || []}
       userName={user.user_metadata?.full_name || user.email || 'there'}
       availableSources={availableSources}
+      profileRoles={prof?.target_roles || []}
+      profileLocations={prof?.locations || []}
     />
   )
 }

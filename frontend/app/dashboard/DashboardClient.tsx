@@ -19,11 +19,13 @@ interface Props {
   userName: string
   availableSources?: string[]
   needsProfile?: boolean
+  profileRoles?: string[]
+  profileLocations?: string[]
 }
 
 export default function DashboardClient({
   initialJobs, newCount, totalCount, feedLimit, appliedCount, scraperHealth, userName,
-  availableSources, needsProfile,
+  availableSources, needsProfile, profileRoles, profileLocations,
 }: Props) {
   const [jobs, setJobs]           = useState<Job[]>(initialJobs)
   const [search, setSearch]       = useState('')
@@ -39,6 +41,30 @@ export default function DashboardClient({
   const [facets, setFacets]       = useState<{ positions: FacetOption[]; companies: FacetOption[]; locations: FacetOption[]; boards: FacetOption[] }>(
     { positions: [], companies: [], locations: [], boards: [] })
   const [saved, setSaved_]        = useState<any[]>([])
+
+  // ── Settings-scope contract ─────────────────────────────────────────────
+  // Profile locations are the feed's outer boundary; "Browse all" lifts it
+  // for THIS session only (sessionStorage — deliberate: exploration is a
+  // mode, not a setting).
+  const scopeConfigured = (profileLocations || []).length > 0
+  const [scopeOff, setScopeOff] = useState(false)
+  const [feedMeta, setFeedMeta] = useState<{ scopeNote?: string | null; outsideTotal?: number | null }>({})
+  useEffect(() => {
+    try { if (sessionStorage.getItem('jss-scope-off') === '1') setScopeOff(true) } catch { /* no-op */ }
+    // Server rendered a scoped-empty feed → fetch the diagnostic count once.
+    if (scopeConfigured && totalCount === 0) {
+      fetch('/api/feed?limit=1', { cache: 'no-store' }).then(r => r.json())
+        .then(d => { if (d?.ok) setFeedMeta({ scopeNote: d.scopeNote, outsideTotal: d.outsideTotal }) })
+        .catch(() => { /* best-effort */ })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const toggleScope = () => {
+    setScopeOff(v => {
+      try { sessionStorage.setItem('jss-scope-off', v ? '0' : '1') } catch { /* no-op */ }
+      return !v
+    })
+  }
   const [showSavedMenu, setShowSavedMenu] = useState(false)
   const savedMenuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -105,11 +131,11 @@ export default function DashboardClient({
   // Load dynamic filter options once (and after a refresh brings new jobs).
   const loadFacets = useCallback(async () => {
     try {
-      const d = await fetch('/api/facets', { cache: 'no-store' }).then(r => r.json())
+      const d = await fetch(`/api/facets${scopeOff ? '?scopeOff=1' : ''}`, { cache: 'no-store' }).then(r => r.json())
       if (d.ok) setFacets({ positions: d.positions, companies: d.companies, locations: d.locations, boards: d.boards || [] })
     } catch { /* non-blocking */ }
-  }, [])
-  useEffect(() => { loadFacets() }, [loadFacets])
+  }, [scopeOff])
+  useEffect(() => { loadFacets() }, [loadFacets]) // re-runs on scope toggle too
 
   // CTC-to-ask heuristic: one fetch of the nightly salary benchmarks → lookup
   // map keyed `${position}|${location_city}` that every JobCard shares.
@@ -148,13 +174,15 @@ export default function DashboardClient({
     if (fPosition.size) p.set('position', Array.from(fPosition).join(','))
     if (fCompany.size)  p.set('company',  Array.from(fCompany).join(','))
     if (fLocation.size) p.set('location', Array.from(fLocation).join(','))
+    if (scopeOff)       p.set('scopeOff', '1')
     try {
       const r = await fetch(`/api/feed?${p.toString()}`, { cache: 'no-store' })
       const d = await r.json()
       if (!d.ok) return null
+      setFeedMeta({ scopeNote: d.scopeNote, outsideTotal: d.outsideTotal })
       return { jobs: d.jobs as Job[], total: d.total as number }
     } catch { return null }
-  }, [search, scope, sort, fPosition, fCompany, fLocation, fBoard])
+  }, [search, scope, sort, fPosition, fCompany, fLocation, fBoard, scopeOff])
 
   // Re-query when search (debounced) / source / scope changes. Skip the very
   // first render — initialJobs already covers the default view.
@@ -313,6 +341,31 @@ export default function DashboardClient({
           </div>
         )}
 
+        {/* Settings-scope chips — visible boundary, one-tap override */}
+        {scopeConfigured && (
+          <div className="flex items-center gap-2 flex-wrap mb-4">
+            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+              {scopeOff ? 'Browsing all locations' : 'Scoped to your settings'}
+            </span>
+            {!scopeOff && (profileRoles || []).slice(0, 3).map(r => (
+              <span key={r} className="px-2 py-0.5 rounded-full text-[11px] bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">{r}</span>
+            ))}
+            {!scopeOff && (profileLocations || []).map(l => (
+              <span key={l} className="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">📍 {l}</span>
+            ))}
+            <a href="/settings" className="text-[11px] text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 underline">edit</a>
+            <button onClick={toggleScope}
+              className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+              {scopeOff ? '← Back to my locations' : 'Browse all locations'}
+            </button>
+            {feedMeta.scopeNote === 'locations_unmatched' && !scopeOff && (
+              <span className="text-[11px] text-amber-600 dark:text-amber-400">
+                Couldn't match your saved locations to any job locations — showing all. Check spelling in Settings.
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
           {/* Search */}
@@ -450,7 +503,35 @@ export default function DashboardClient({
             ) : isFiltered ? (
               <>
                 <p className="font-medium text-slate-600 dark:text-slate-300">No jobs match these filters</p>
-                <p className="text-sm mt-1">Try clearing the search or source filter.</p>
+                {feedMeta.scopeNote === 'filter_outside_scope' ? (
+                  <p className="text-sm mt-1">
+                    Your location filter is outside your settings scope ({(profileLocations || []).join(', ')}).{' '}
+                    <button onClick={toggleScope} className="text-indigo-600 dark:text-indigo-400 hover:underline">Browse all locations</button> or{' '}
+                    <a href="/settings" className="text-indigo-600 dark:text-indigo-400 hover:underline">edit Settings</a>.
+                  </p>
+                ) : (
+                  <p className="text-sm mt-1">Try clearing the search or source filter.</p>
+                )}
+              </>
+            ) : scopeConfigured && !scopeOff && (feedMeta.outsideTotal ?? 0) > 0 ? (
+              <>
+                <p className="font-medium text-slate-600 dark:text-slate-300">
+                  0 matches inside your saved locations
+                </p>
+                <p className="text-sm mt-1.5 max-w-md mx-auto">
+                  {feedMeta.outsideTotal} matching role{(feedMeta.outsideTotal ?? 0) > 1 ? 's exist' : ' exists'} in other locations.
+                  Your locations ({(profileLocations || []).join(', ')}) may be too narrow for today's pool.
+                </p>
+                <div className="flex items-center justify-center gap-3 mt-4">
+                  <button onClick={toggleScope}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white">
+                    Browse all locations ({feedMeta.outsideTotal})
+                  </button>
+                  <a href="/settings"
+                    className="px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    Edit locations
+                  </a>
+                </div>
               </>
             ) : (
               <>
