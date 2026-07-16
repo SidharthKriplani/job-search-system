@@ -80,7 +80,8 @@ export default function JobCard({ job, onUpdate }: Props) {
 
   const update = async (updates: Partial<Job>) => {
     setSaving(true)
-    await supabase.from('job_feed').update(updates).eq('id', job.id)
+    // Post-cutover the feed row id IS the user_job_matches id (user_feed_v).
+    await supabase.from('user_job_matches').update(updates).eq('id', job.id)
     onUpdate?.(job.id, updates)
     setSaving(false)
   }

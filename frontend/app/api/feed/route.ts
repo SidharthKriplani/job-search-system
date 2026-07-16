@@ -3,11 +3,14 @@ import { createClient } from '@/lib/supabase-server'
 import { effectiveRoles } from '@/lib/feedFilter'
 
 /**
- * Server-side feed query — so search, source filter, and "New/Saved" run against
- * the WHOLE feed in Postgres, not just the first 200 rows loaded in the browser.
- * Also powers "Load more" pagination via offset/limit.
+ * Server-side feed query — Stage 2 v2: reads go through the SECURITY DEFINER
+ * RPCs (get_user_feed_page / get_user_feed_total), which join
+ * user_job_matches × jobs_pool with the caller hard-bound to auth.uid().
+ * Measured at ~24 ms vs 4,687 ms for the RLS view — see
+ * supabase/migrations/2026-07-17-stage2-v2.sql.
  *
- * Query params: q, source, scope (all|new|saved), offset, limit.
+ * Query params: q, board, position, company, location, scope (all|new|saved),
+ * sort (relevance|date|added), offset, limit.
  */
 const PAGE = 50
 
@@ -17,9 +20,8 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ ok: false, error: 'Not authenticated' }, { status: 401 })
 
   const url    = new URL(req.url)
-  const q      = (url.searchParams.get('q') || '').trim()
-  const source   = url.searchParams.get('source') || 'All'
-  const board    = url.searchParams.get('board') || ''   // comma multi-select (preferred)
+  const q        = (url.searchParams.get('q') || '').trim()
+  const board    = url.searchParams.get('board') || ''
   const scope    = url.searchParams.get('scope') || 'all'
   const position = url.searchParams.get('position') || ''
   const company  = url.searchParams.get('company') || ''
@@ -28,72 +30,30 @@ export async function GET(req: Request) {
   const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0)
   const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || String(PAGE), 10) || PAGE)
 
-  // Roles = explicit target roles UNION roles detected in the résumé.
   const { data: prof } = await supabase
     .from('user_profiles').select('target_roles, industries, resume_text').eq('user_id', user.id).maybeSingle()
   const roles = effectiveRoles(prof?.target_roles, prof?.resume_text)
-
-  // No profile → no firehose. Return empty + a flag the UI uses to prompt setup.
   if (!(roles.length || prof?.industries?.length)) {
     return NextResponse.json({ ok: true, jobs: [], total: 0, needsProfile: true })
   }
 
-  let query = supabase
-    .from('job_feed')
-    .select('*', { count: 'exact' })
-    .eq('user_id', user.id)
-    .eq('is_dismissed', false)
-    .eq('is_applied', false)
-
-  // No read-time role .or() — see dashboard/page.tsx: rows are already matched
-  // by the backend; the heavy ILIKE OR blew the statement timeout → empty feed.
-  if (scope === 'new')   query = query.eq('is_new', true)
-  if (scope === 'saved') query = query.eq('is_saved', true)
-
-  const boards = board.split(',').map(x => x.trim()).filter(Boolean)
-  if (boards.length) {
-    query = query.in('source', boards)
-  } else if (source !== 'All') {
-    if (source === 'gmail') query = query.ilike('source', 'gmail%')
-    else                    query = query.eq('source', source)
-  }
-  // Facet filters (exact bucket values from get_feed_facets). Comma = multi-select.
   const multi = (v: string) => v.split(',').map(x => x.trim()).filter(Boolean)
-  const pos = multi(position); if (pos.length) query = query.in('position', pos)
-  const loc = multi(location); if (loc.length) query = query.in('location_city', loc)
-  const co  = multi(company);  if (co.length)  query = query.in('company', co)
+  const boards = multi(board), pos = multi(position), cos = multi(company), locs = multi(location)
 
-  if (q) {
-    // Escape commas/parens that would break PostgREST's or() filter grammar.
-    const safe = q.replace(/[,()]/g, ' ')
-    query = query.or(`job_title.ilike.%${safe}%,company.ilike.%${safe}%,location.ilike.%${safe}%`)
+  // Relevance floor only on the unfiltered browse view (0 disables it in SQL).
+  const narrowed = !!q || boards.length > 0 || pos.length > 0 || locs.length > 0 || cos.length > 0 || scope !== 'all'
+  const minScore = narrowed ? 0 : Number(process.env.NEXT_PUBLIC_MIN_FEED_SCORE || 0.45)
+
+  const filters = {
+    p_q: q, p_scope: scope, p_boards: boards, p_positions: pos,
+    p_companies: cos, p_locations: locs, p_min_score: minScore,
   }
+  const [{ data: jobs, error: e1 }, { data: total, error: e2 }] = await Promise.all([
+    supabase.rpc('get_user_feed_page', { ...filters, p_sort: sort, p_limit: limit, p_offset: offset }),
+    supabase.rpc('get_user_feed_total', filters),
+  ])
 
-  // Relevance floor applies ONLY to the default browse view. Once the user has
-  // searched or applied any filter, THEY are doing the narrowing, so showing
-  // weaker matches they explicitly asked for is correct — no floor.
-  const narrowed = !!q || boards.length > 0 || pos.length > 0 || loc.length > 0 || co.length > 0 || scope !== 'all'
-  if (!narrowed) {
-    const MIN_SCORE = Number(process.env.NEXT_PUBLIC_MIN_FEED_SCORE || 0.45)
-    query = query.gte('match_score', MIN_SCORE)
-  }
-
-  // Sort: relevance (match score), newest posted (date posted), or newest in
-  // feed (scraped_at — when OUR pipeline first added it, always non-null).
-  // posted_date can be null (undated), so push nulls last and tie-break by
-  // scraped_at.
-  if (sort === 'date') {
-    query = query.order('posted_date', { ascending: false, nullsFirst: false })
-                 .order('scraped_at', { ascending: false })
-  } else if (sort === 'added') {
-    query = query.order('scraped_at', { ascending: false })
-                 .order('match_score', { ascending: false })
-  } else {
-    query = query.order('match_score', { ascending: false })
-                 .order('scraped_at', { ascending: false })
-  }
-  const { data, count, error } = await query.range(offset, offset + limit - 1)
-
+  const error = e1 || e2
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, jobs: data || [], total: count || 0 })
+  return NextResponse.json({ ok: true, jobs: jobs || [], total: Number(total) || 0 })
 }
