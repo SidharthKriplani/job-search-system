@@ -338,6 +338,20 @@ EIGHTFOLD = [
     ("juniper", "juniper.net", "Juniper Networks"),
 ]
 
+# ── SuccessFactors CSB sites (host, display) — shared server-rendered template ─
+# The Indian IT majors nothing else reaches. Verified 2026-07-16 (rows/page in
+# comments). HCLTech/Wipro/Chargebee run CUSTOMIZED client-rendered templates →
+# 0 rows → deliberately not listed (prove-or-kill).
+SFCSB = [
+    ("jobs.birlasoft.com",       "Birlasoft"),      # 25/page
+    ("careers.capgemini.com",    "Capgemini"),      # 25/page
+    ("jobs.sap.com",             "SAP"),            # 25/page
+    ("careers.asianpaints.com",  "Asian Paints"),   # 25/page
+    ("careers.tatamotors.com",   "Tata Motors"),    # 25/page
+    ("jobs.ltts.com",            "LTTS"),           # 9+
+    ("careers.ltimindtree.com",  "LTIMindtree"),    # partial, paginates
+]
+
 # ── Kula companies (slug, display) — careers.kula.ai/{slug}, RSC-payload parse ─
 # India startups on Kula ATS (found via the ATS detector). Verify a slug by
 # checking careers.kula.ai/{slug} renders an "Open Positions" list.
@@ -459,6 +473,8 @@ def unit_domain(label: str, uid: str) -> str:
         return "tech"
     if label == "kula":
         return "tech"             # India-startup ATS (fintech/SaaS)
+    if label == "successfactors":
+        return "tech"             # Indian IT majors + enterprise
     if label in ("greenhouse", "lever", "ashby"):
         # Curated boards are hand-picked tech companies; harvested (in the JSON
         # files) are unknown → general.

@@ -39,7 +39,8 @@ in CHANGELOG.
       the /ms/candidateapi/* layer 403s from datacenter IPs (Cloudflare +
       Turnstile). Original verdict stands; the 10 companies stay covered via
       foundit/jobspy/Gmail. Revisit only if infra ever gets residential IPs.
-- [ ] **SuccessFactors CSB connector (VIABLE — probed 2026-07-16)** — the
+- [x] ~~SuccessFactors CSB connector~~ → DONE 2026-07-16: sf_csb.py live,
+      7 tenants, 663 India jobs. Remaining detail: — the
       Career Site Builder search template is SERVER-RENDERED and shared:
       jobs.birlasoft.com/search/?q=&locationsearch=india returns 25 rows/page
       (jobTitle-link markup), LTIMindtree partial; HCLTech/Wipro run customized

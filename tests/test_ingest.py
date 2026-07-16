@@ -130,3 +130,16 @@ def test_canonical_company():
     assert cc("Air India") == "Air India"
     assert cc("Unacademy") == "Unacademy"
     assert cc("") == ""
+
+
+def test_sfcsb_registry_shape():
+    assert registry.SFCSB, "SFCSB registry is empty"
+    for row in registry.SFCSB:
+        assert len(row) == 2, f"SFCSB entry must be (host, display): {row}"
+        host, _ = row
+        assert "." in host and not host.startswith("http")
+
+
+def test_sfcsb_connector_callable():
+    from ingest.connectors import sf_csb
+    assert callable(sf_csb.fetch_site)

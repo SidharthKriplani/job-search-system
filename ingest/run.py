@@ -23,7 +23,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Tuple
 
-from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit, workable, bamboohr, phenom, eightfold, kula
+from .connectors import greenhouse, lever, ashby, aggregators, jobspy, workday, oracle, smartrecruiters, instahyre, recruitee, foundit, workable, bamboohr, phenom, eightfold, kula, sf_csb
 from .dedup import deduplicate
 from . import registry
 from .registry import unit_domain
@@ -64,6 +64,9 @@ def _build_units() -> List[Tuple[str, str, Callable[[], List[Dict]], str]]:
     kcap = int(os.environ.get("KULA_MAX_PER_COMPANY", "200"))
     for slug, disp in registry.KULA:
         units.append(("kula", slug, lambda s=slug, d=disp, c=kcap: kula.fetch_company(s, d, c)))
+    scap = int(os.environ.get("SFCSB_MAX_PER_COMPANY", "200"))
+    for host, disp in registry.SFCSB:
+        units.append(("successfactors", host, lambda hh=host, d=disp, c=scap: sf_csb.fetch_site(hh, d, c)))
 
     cap = int(os.environ.get("WORKDAY_MAX_PER_COMPANY", "150"))
     # Curated tenants unioned with harvested triples (data/workday_companies.json).

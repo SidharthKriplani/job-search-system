@@ -4,6 +4,19 @@ Dated log of meaningful changes, newest first. Format: what + why.
 
 ---
 
+## 2026-07-16 (d) — SuccessFactors CSB connector: the Indian IT majors (+663 India jobs)
+
+`connectors/sf_csb.py` parses the SHARED, server-rendered Career Site Builder
+search template (/search/?locationsearch=India&startrow=N, 25 rows/page,
+tr.data-row → jobTitle-link + jobLocation + jobDate). One parser, 7 verified
+tenants in registry.SFCSB: **Birlasoft 175, Asian Paints 196 (200 cap),
+Tata Motors 146, Capgemini 83, SAP 48, LTTS 9, LTIMindtree 2 — 663 India
+jobs**, links canary-checked 6/6, dates parsed to ISO.
+HCLTech / Wipro / Chargebee run customized client-rendered templates → 0 rows
+→ deliberately NOT registered (prove-or-kill). Template is SAP-versioned and
+shared across tenants — closer to Workday stability than ad-hoc scraping;
+failsafe + canary cover template drift. New source label: successfactors.
+
 ## 2026-07-16 (c) — Companies v1: normalization, cumulative facets, careers-page fallback
 
 - **Company-name normalization at ingest** (`ingest/normalize.py` wired into
