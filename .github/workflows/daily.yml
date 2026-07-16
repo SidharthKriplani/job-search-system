@@ -93,7 +93,7 @@ jobs:
           LOG_LEVEL:             ${{ github.event.inputs.debug == 'true' && 'DEBUG' || 'INFO' }}
           # Skills flywheel — requires jobs_pool.skills column
           # (supabase/migrations/2026-07-17-flywheels.sql). Env-gated in code.
-          INGEST_SKILLS:         '1'
+          INGEST_SKILLS: '0'   # A/B OFF 2026-07-17: prime suspect for 2h runs (CPU-bound regex under the GIL)
           USE_EMBEDDINGS:        '1'
           FASTEMBED_CACHE_PATH:  ~/.cache/fastembed
         run: python main.py
