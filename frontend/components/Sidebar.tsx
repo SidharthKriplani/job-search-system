@@ -5,12 +5,13 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import {
   LayoutDashboard, Briefcase, Users, Settings,
-  LogOut, Zap, Activity
+  LogOut, Zap, Activity, Home
 } from 'lucide-react'
 import clsx from 'clsx'
 import ThemeToggle from './ThemeToggle'
 
 const NAV = [
+  { href: '/home',          label: 'Home',         icon: Home },
   { href: '/dashboard',     label: 'Job Feed',     icon: LayoutDashboard },
   { href: '/applications',  label: 'Applications', icon: Briefcase },
   { href: '/referrals',     label: 'Referrals',    icon: Users },
@@ -94,7 +95,7 @@ export default function Sidebar() {
       </header>
 
       {/* ── Mobile: bottom tab nav ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-5
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-6
                       bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800
                       pb-[env(safe-area-inset-bottom)]">
         {NAV.map(({ href, label, icon: Icon }) => {

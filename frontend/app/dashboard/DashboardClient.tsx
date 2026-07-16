@@ -50,6 +50,19 @@ export default function DashboardClient({
     return () => document.removeEventListener('mousedown', onDoc)
   }, [showSavedMenu])
 
+  // Deep links from /home ("Top hiring companies" → /dashboard?company=X).
+  // window.location (not useSearchParams) — avoids the Suspense requirement.
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search)
+      const co = p.get('company')
+      if (co) setFCompany(new Set([co]))
+      const q0 = p.get('q')
+      if (q0) setSearch(q0)
+    } catch { /* no-op */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const loadSaved = useCallback(async () => {
     try {
       const d = await fetch('/api/saved-searches', { cache: 'no-store' }).then(r => r.json())

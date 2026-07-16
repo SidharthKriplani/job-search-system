@@ -65,3 +65,10 @@ GRANT UPDATE (is_new, is_applied, is_saved, is_dismissed, updated_at)
 -- Sanity:
 --   SELECT count(*) FROM user_feed_v;                         -- ≈ job_feed active count
 --   SELECT get_feed_facets('<your-uuid>');                     -- returns jsonb
+
+-- 5) CRITICAL (added after prod incident 2026-07-16): user_feed_v runs
+--    security_invoker, so the authenticated role must be able to SELECT from
+--    BOTH sides of the join. user_job_matches had a policy; jobs_pool only had
+--    the service-role policy -> the join returned 0 rows -> empty feed.
+DROP POLICY IF EXISTS "pool readable" ON jobs_pool;
+CREATE POLICY "pool readable" ON jobs_pool FOR SELECT TO authenticated USING (true);
