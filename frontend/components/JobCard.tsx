@@ -84,13 +84,15 @@ export default function JobCard({ job, onUpdate, salaryStats }: Props) {
   const scorePct = Math.round((job.match_score || 0) * 100)
   // Honest fit tiers — a word humans can calibrate on, not "83%" false
   // precision. Exact % stays available on hover for the curious.
+  // Recalibrated 2026-07-23: at 40k+ jobs the old 70/40 cutoffs made "Strong
+  // fit" near-universal and therefore meaningless. Strong is now scarce.
   const tier =
-    scorePct >= 70 ? 'Strong fit' :
-    scorePct >= 40 ? 'Good fit' :
+    scorePct >= 82 ? 'Strong fit' :
+    scorePct >= 58 ? 'Good fit' :
                      'Possible fit'
   const scoreColor =
-    scorePct >= 70 ? 'bg-green-100 text-green-700' :
-    scorePct >= 40 ? 'bg-amber-100 text-amber-700' :
+    scorePct >= 82 ? 'bg-green-100 text-green-700' :
+    scorePct >= 58 ? 'bg-amber-100 text-amber-700' :
                      'bg-slate-100 text-slate-500'
 
   const update = async (updates: Partial<Job>) => {

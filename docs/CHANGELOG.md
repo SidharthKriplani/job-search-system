@@ -1261,3 +1261,16 @@ deploy cleans them up.
   trigger now creates the `user_profiles` row + backfills (email/password users
   were invisible to the scraper); `naukri_refresh.py` guarded against missing
   columns. Full detail in root `AUDIT.md`.
+
+- **2026-07-16 — ingest runtime A/B (feed-v2b, not yet on main).** daily.yml:
+  `INGEST_WORKERS` 16→40, `timeout-minutes` 60→120, then `INGEST_SKILLS: '0'`
+  after run #209 exceeded even the 2h cap (thread scaling did nothing → CPU-bound
+  skills-regex under the GIL is the prime suspect). Needs cherry-pick to main +
+  one observed run to confirm.
+
+## 2026-07-23 — Feed trust fixes (feed-v2b)
+Why: user report — visible duplicates, "Strong fit" on everything, 42k-row landing view,
+dirty titles. What: display-level duplicate collapse (DashboardClient, normalized
+title+company+location); fit tiers 70/40 → 82/58 (JobCard); New-only default view; title
+hygiene at upsert choke point (supabase_client). Open: DB-level canonical dedup (pair with
+cleanup migration), coverage-gap audit. (FEEDBACK/STATUS 2026-07-23.)

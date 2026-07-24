@@ -29,7 +29,7 @@ export default function DashboardClient({
 }: Props) {
   const [jobs, setJobs]           = useState<Job[]>(initialJobs)
   const [search, setSearch]       = useState('')
-  const [showNew, setShowNew]     = useState(false)
+  const [showNew, setShowNew]     = useState(true)  // default: new-since-last-visit (2026-07-23 — the 42k warehouse is opt-in, not the landing view)
   const [showSaved, setShowSaved] = useState(false)
 
   // Facet filters (server-side, multi-select) + sort.
@@ -250,9 +250,22 @@ export default function DashboardClient({
     }
   }
 
-  const filtered = jobs.filter(job => {
+  const prefiltered = jobs.filter(job => {
     if (job.is_dismissed) return false
     if (job.is_applied) return false   // applied jobs live in the tracker, not the feed
+    return true
+  })
+  // Duplicate collapse (2026-07-23): the same role can land as multiple rows
+  // (URL drift across daily runs, or the same job via two sources). Collapse by
+  // normalized (title, company, location), keeping the first (list is ranked) —
+  // display-level fix; DB-level canonical dedup is tracked in docs/STATUS.md.
+  const dupKey = (j: Job) =>
+    [j.job_title, j.company, j.location].map(x => (x || '').toLowerCase().replace(/[^a-z0-9]/g, '')).join('|')
+  const seenDup = new Set<string>()
+  const filtered = prefiltered.filter(job => {
+    const k = dupKey(job)
+    if (seenDup.has(k)) return false
+    seenDup.add(k)
     return true
   })
 

@@ -1,6 +1,16 @@
 # STATUS — current state
 
-_Last updated: 2026-07-17 (settings-scope contract shipped to frontend)_
+_Last updated: 2026-07-16 (ingest runtime A/B staged on feed-v2b)_
+
+> **OPEN — daily-run runtime (16 Jul):** runs #207/#208 killed at the 60-min cap
+> (16 workers); after bumping to `INGEST_WORKERS: 40` + `timeout-minutes: 120`,
+> #209 was STILL killed at 2h00m — more threads didn't help, which fingerprints
+> the bottleneck as **CPU-bound under the GIL** (prime suspect: skills regex,
+> ~180 patterns × ~110k JDs). A/B staged on `feed-v2b` in `.github/workflows/daily.yml`:
+> `INGEST_SKILLS: '0'`. **Pending (Sidharth):** cherry-pick the daily.yml change to
+> `main`, watch the next run's duration; also still open — merge `feed-v2b` after
+> preview click-through, rotate the leaked Jooble key (treat 10f079a7-… as burned).
+
 
 The single source of truth for where the project is **right now**. Update this
 after every meaningful change.
@@ -13,6 +23,15 @@ searches, and get email digests. The month-long "0 jobs" era is closed; the
 signup-blocking trigger bug is fixed; sources have been expanded ~3×.
 
 ## Latest change
+
+**Feed trust fixes (2026-07-23, feed-v2b)** — duplicate collapse (display-level, by
+normalized title+company+location), fit-tier recalibration (Strong >=82 / Good >=58 — was
+70/40 and near-universal), New-only as the default feed view, and scraped-title hygiene at
+the upsert choke point. OPEN follow-ups: DB-level canonical dedup (must pair URL
+canonicalization with a cleanup migration — do NOT ship alone), and the coverage-gap audit
+(user reports market jobs missing from feed). See FEEDBACK 2026-07-23.
+
+## Previous change
 
 **Settings-scope contract (frontend)** — profile `locations` now bound the feed
 end-to-end: initial render, `/api/feed` re-queries, and the Location facet

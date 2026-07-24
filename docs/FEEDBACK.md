@@ -120,3 +120,16 @@ how the product learns its owner's priorities.
 One bullet per item: **what they said** → what it changed (link a Decision or
 Changelog entry where relevant). Capture tone/positioning feedback too, not just
 bugs.
+
+## 2026-07-23 — Sidharth: "working shitty", duplicates visible, everything Strong fit, coverage doubts
+- Report: two identical Danaher rows (added 2d vs 3d ago); "Strong fit" on nearly everything;
+  42k-row feed overwhelming; dirty scraped titles ("...GenAi/LLM, , MCP"); separately, market
+  jobs he sees elsewhere aren't appearing in the feed (coverage gap — NOT fixed this pass).
+- Shipped same day (supervisor session, branch feed-v2b): (1) display-level duplicate collapse
+  by normalized title+company+location in DashboardClient; (2) fit tiers recalibrated 70/40 ->
+  82/58 so Strong is scarce; (3) feed defaults to New-only view (warehouse is opt-in);
+  (4) title-hygiene cleanup at the upsert choke point in supabase_client.
+- NOT done (needs a schema-aware session): DB-level canonical dedup (URL canonicalization
+  re-keys source_job_id -> must ship WITH a one-time duplicate-cleanup migration, else one
+  run of full re-insertion); coverage-gap investigation (is the read-guard/role binding
+  filtering out real market jobs? sample audit needed vs LinkedIn/Naukri hand-pulls).

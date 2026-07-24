@@ -96,12 +96,23 @@ def upsert_jobs(user_id: str, jobs: List[Dict]) -> int:
         return 0
 
     import hashlib
+    import re
     sb = get_client()
     rows = []
     for job in jobs:
         # Keep only real job_feed columns — stray keys (e.g. a "remote" flag)
         # would make Supabase reject the entire batch.
         row = {k: v for k, v in job.items() if k in JOB_FEED_COLUMNS}
+        # Title hygiene (2026-07-23): scraped titles arrive with double commas,
+        # stray separators, and repeated whitespace ("...GenAi/LLM, , MCP...").
+        # Clean at this single choke point so every source benefits.
+        if row.get("job_title"):
+            t = str(row["job_title"])
+            t = re.sub(r"\s*,\s*,+", ", ", t)          # ", ," -> ", "
+            t = re.sub(r"\s*([,;|·])\s*", r" ", t)    # normalize separator spacing
+            t = re.sub(r"[,;|\-\s]+$", "", t)           # trailing separators
+            t = re.sub(r"\s{2,}", " ", t).strip()
+            row["job_title"] = t
         _enrich_facets(row)
         row["user_id"] = user_id
         if not row.get("source_job_id"):
