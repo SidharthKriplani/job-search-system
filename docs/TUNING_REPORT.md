@@ -1,6 +1,6 @@
 # Relevance tuning report
 
-_Window: last 7 days · generated 2026-09-20 07:39 UTC_
+_Window: last 7 days · generated 2026-09-27 08:19 UTC_
 
 **0 'not relevant' signals** from users this week.
 
